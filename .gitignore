@@ -1,0 +1,7 @@
+.build/
+*.d
+*.o
+*.swpd
+*.swp
+.DS_Store
+**/data.mdb

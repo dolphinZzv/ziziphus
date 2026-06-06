@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+postgres:
+  dsn: "postgres://postgres@localhost:5432/imdb?sslmode=disable"
+  max_conns: 20
+  migrations: "internal/storage/db/migrations"
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
+jwt:
+  secret: "dev-secret-key-change-in-production"
+  expire_hours: 168
+
+snowflake:
+  worker_id: 1
+  start_time: "2025-01-01T00:00:00Z"
+
+ratelimit:
+  msg_per_sec: 30
+  max_body_bytes: 10240
+  burst_size: 50

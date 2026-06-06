@@ -1,0 +1,60 @@
+import SwiftUI
+import IMCore
+
+struct RegisterView: View {
+    @EnvironmentObject private var loginVM: LoginViewModel
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            Image(systemName: "person.crop.circle.badge.plus")
+                .font(.system(size: 60))
+                .foregroundColor(.blue)
+
+            Text("注册")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+
+            VStack(spacing: 16) {
+                TextField("名称", text: $loginVM.name)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 300)
+
+                SecureField("密码", text: $loginVM.password)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 300)
+            }
+
+            if let error = loginVM.errorMessage {
+                Text(error)
+                    .foregroundColor(.red)
+                    .font(.callout)
+            }
+
+            Button(action: loginVM.register) {
+                if loginVM.isLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .scaleEffect(0.8)
+                } else {
+                    Text("注册")
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .frame(maxWidth: 300)
+            .disabled(loginVM.isLoading)
+
+            Button("已有账号？点击登录") {
+                loginVM.switchMode()
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.blue)
+
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
