@@ -1,19 +1,19 @@
 .PHONY: server server-stop macos macos-stop
 
 # 后端服务
-server:
+server: server-stop
 	cd server && go build -o /tmp/im-server ./cmd/im-server/
 	/tmp/im-server --config server/config/config.yaml &
 	@echo "Server started (PID: $$!)"
 
 server-stop:
-	@pkill -f "/tmp/im-server" || true
+	@pkill -f "/tmp/im-server" 2>/dev/null || true
 	@echo "Server stopped"
 
 APP_BUNDLE = client/.build/debug/IMApp-macOS.app
 
 # macOS 客户端
-macos:
+macos: macos-stop
 	cd client && swift build --target IMApp-macOS
 	mkdir -p "$(APP_BUNDLE)/Contents/MacOS"
 	cp client/.build/debug/IMApp-macOS "$(APP_BUNDLE)/Contents/MacOS/"
@@ -27,5 +27,5 @@ macos:
 	open "$(APP_BUNDLE)"
 
 macos-stop:
-	pkill -f "IMApp-macOS" || true
+	pkill -f "IMApp-macOS" 2>/dev/null || true
 	@echo "App closed"
