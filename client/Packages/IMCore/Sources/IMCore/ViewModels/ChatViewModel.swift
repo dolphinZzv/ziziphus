@@ -127,6 +127,7 @@ public class ChatViewModel: ObservableObject {
             convID: convID,
             senderID: AuthManager.shared.currentUser?.userID ?? "",
             body: text,
+            timestamp: Int64(Date().timeIntervalSince1970 * 1000),
             clientSeq: clientSeq,
             status: .sending
         )
@@ -173,6 +174,13 @@ public class ChatViewModel: ObservableObject {
 
     // MARK: - Helpers
     private func sortMessages() {
-        messages.sort { $0.convSeq < $1.convSeq || ($0.convSeq == $1.convSeq && $0.msgID < $1.msgID) }
+        messages.sort { a, b in
+            // Unsent local messages (msgID == 0) go to the end
+            if a.msgID == 0 && b.msgID != 0 { return false }
+            if a.msgID != 0 && b.msgID == 0 { return true }
+            // Sort by timestamp ascending (oldest first)
+            if a.timestamp != b.timestamp { return a.timestamp < b.timestamp }
+            return a.convSeq < b.convSeq
+        }
     }
 }

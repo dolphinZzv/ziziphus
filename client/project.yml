@@ -3,9 +3,23 @@ options:
   bundleIdPrefix: com.dolphinz
   deploymentTarget:
     macOS: "15.0"
+    iOS: "17.0"
 
 settings:
   SWIFT_VERSION: "6.0"
+
+schemes:
+  IMApp:
+    build:
+      targets:
+        IMApp: all
+    test:
+      targets:
+        - IMAppUITests
+  IMApp-iOS:
+    build:
+      targets:
+        IMApp-iOS: all
 
 packages:
   IMCore:
@@ -24,6 +38,23 @@ targets:
       DEVELOPMENT_TEAM: ""
       CODE_SIGN_STYLE: Manual
       CODE_SIGN_IDENTITY: "-"
+      GENERATE_INFOPLIST_FILE: YES
+
+  IMApp-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: ios/Sources/IMApp
+      - path: ios/Resources
+    dependencies:
+      - package: IMCore
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.dolphinz.imapp
+      DEVELOPMENT_TEAM: ZNNCFNN477
+      CODE_SIGN_STYLE: Automatic
+      CODE_SIGN_IDENTITY: Apple Development
+      INFOPLIST_FILE: ios/Resources/Info.plist
+      IPHONEOS_DEPLOYMENT_TARGET: "17.0"
 
   IMAppUITests:
     type: bundle.ui-testing
@@ -37,3 +68,4 @@ targets:
       TEST_TARGET_NAME: IMApp
       CODE_SIGN_STYLE: Manual
       CODE_SIGN_IDENTITY: "-"
+      GENERATE_INFOPLIST_FILE: YES

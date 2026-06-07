@@ -1,14 +1,16 @@
 import SwiftUI
+import IMCore
 
 struct SearchBarView: View {
     @Binding var text: String
+    @EnvironmentObject private var localizationManager: LocalizationManager
     var onCommit: (() -> Void)?
 
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
-            TextField("搜索用户...", text: $text)
+            TextField(loc("search.placeholder"), text: $text)
                 .textFieldStyle(.plain)
                 .onSubmit { onCommit?() }
             if !text.isEmpty {

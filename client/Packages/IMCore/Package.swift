@@ -12,5 +12,6 @@ let package = Package(
     ],
     targets: [
         .target(name: "IMCore"),
+        .testTarget(name: "IMCoreE2ETests", dependencies: ["IMCore"]),
     ]
 )

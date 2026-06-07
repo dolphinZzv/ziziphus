@@ -4,7 +4,7 @@ import Combine
 @MainActor
 public class LoginViewModel: ObservableObject {
     @Published public var name = ""
-    @Published public var userID = ""
+    @Published public var account = ""
     @Published public var password = ""
     @Published public var isRegistering = false
     @Published public var isLoading = false
@@ -17,15 +17,17 @@ public class LoginViewModel: ObservableObject {
     public init() {}
 
     public func login() {
-        guard !userID.isEmpty, !password.isEmpty else {
-            errorMessage = "请输入用户ID和密码"
+        guard !account.isEmpty, !password.isEmpty else {
+            errorMessage = loc("login.account_password_required")
             return
         }
+        ConversationCache.shared.deleteAll()
+        MessageCache.shared.deleteAll()
         isLoading = true
         errorMessage = nil
         Task {
             do {
-                _ = try await authService.login(userID: userID, password: password)
+                _ = try await authService.login(account: account, password: password)
                 isLoggedIn = true
                 wsClient.connect()
             } catch {
@@ -36,17 +38,21 @@ public class LoginViewModel: ObservableObject {
     }
 
     public func register() {
-        guard !name.isEmpty, !password.isEmpty else {
-            errorMessage = "请输入名称和密码"
+        guard !account.isEmpty, !name.isEmpty, !password.isEmpty else {
+            errorMessage = loc("login.all_required")
             return
         }
+        ConversationCache.shared.deleteAll()
+        MessageCache.shared.deleteAll()
         isLoading = true
         errorMessage = nil
         Task {
             do {
-                _ = try await authService.register(name: name, password: password)
-                isLoggedIn = true
-                wsClient.connect()
+                _ = try await authService.register(account: account, name: name, password: password)
+                // Registration succeeded, switch to login
+                password = ""
+                isRegistering = false
+                errorMessage = loc("login.register_success")
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -61,7 +67,6 @@ public class LoginViewModel: ObservableObject {
 
     public func checkExistingSession() async {
         if AuthManager.shared.isLoggedIn, AuthManager.shared.readToken() != nil {
-            // token exists, try to validate
             do {
                 _ = try await authService.getMe()
                 isLoggedIn = true

@@ -1,13 +1,15 @@
 import SwiftUI
+import IMCore
 
 struct InputBarView: View {
     @Binding var text: String
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let onSend: () -> Void
     let onTyping: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
-            TextField("输入消息...", text: $text)
+            TextField(loc("chat.placeholder"), text: $text)
                 .textFieldStyle(.roundedBorder)
                 .onChange(of: text) { _, _ in
                     onTyping()
@@ -24,6 +26,6 @@ struct InputBarView: View {
             .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(12)
-        .background(Color(.windowBackgroundColor))
+        .background(Color.white)
     }
 }

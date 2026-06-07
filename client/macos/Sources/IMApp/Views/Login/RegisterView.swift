@@ -3,6 +3,7 @@ import IMCore
 
 struct RegisterView: View {
     @EnvironmentObject private var loginVM: LoginViewModel
+    @EnvironmentObject private var localizationManager: LocalizationManager
 
     var body: some View {
         VStack(spacing: 20) {
@@ -12,16 +13,20 @@ struct RegisterView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.blue)
 
-            Text("注册")
+            Text(loc("login.register_title"))
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
             VStack(spacing: 16) {
-                TextField("名称", text: $loginVM.name)
+                TextField(loc("login.account_placeholder"), text: $loginVM.account)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 300)
 
-                SecureField("密码", text: $loginVM.password)
+                TextField(loc("login.name_placeholder"), text: $loginVM.name)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 300)
+
+                SecureField(loc("login.password_placeholder"), text: $loginVM.password)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 300)
             }
@@ -38,7 +43,7 @@ struct RegisterView: View {
                         .progressViewStyle(.circular)
                         .scaleEffect(0.8)
                 } else {
-                    Text("注册")
+                    Text(loc("login.register_button"))
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -46,7 +51,7 @@ struct RegisterView: View {
             .frame(maxWidth: 300)
             .disabled(loginVM.isLoading)
 
-            Button("已有账号？点击登录") {
+            Button(loc("login.switch_to_login")) {
                 loginVM.switchMode()
             }
             .buttonStyle(.plain)
@@ -57,4 +62,9 @@ struct RegisterView: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+#Preview {
+    RegisterView()
+        .environmentObject(LoginViewModel())
 }

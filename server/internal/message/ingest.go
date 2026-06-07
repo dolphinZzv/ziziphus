@@ -31,6 +31,7 @@ type idGenerator interface {
 
 type seqCache interface {
 	GetAndIncrementConvSeq(ctx context.Context, convID string) (int64, error)
+	SetUserSeq(ctx context.Context, userID, convID string, seq int64) error
 	SetRecentMsg(ctx context.Context, convID string, msgID int64, score float64) error
 }
 
@@ -115,6 +116,9 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 		return nil, err
 	}
 	metrics.MessagesSentTotal.Inc()
+
+	// 6. set sender's user_seq so self-messages don't count as unread
+	in.seqCache.SetUserSeq(ctx, senderID, payload.ConvID, convSeq)
 
 	// 6. cache recent
 	in.seqCache.SetRecentMsg(ctx, payload.ConvID, msgID, float64(msgID))

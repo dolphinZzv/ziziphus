@@ -12,17 +12,22 @@ struct RegisterView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.blue)
 
-            Text("注册")
+            Text(loc("login.register_title"))
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
             VStack(spacing: 16) {
-                TextField("名称", text: $loginVM.name)
+                TextField(loc("login.account_placeholder"), text: $loginVM.account)
                     .textFieldStyle(.roundedBorder)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
 
-                SecureField("密码", text: $loginVM.password)
+                TextField(loc("login.name_placeholder"), text: $loginVM.name)
+                    .textFieldStyle(.roundedBorder)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+
+                SecureField(loc("login.password_placeholder"), text: $loginVM.password)
                     .textFieldStyle(.roundedBorder)
             }
             .padding(.horizontal, 40)
@@ -39,7 +44,7 @@ struct RegisterView: View {
                         .progressViewStyle(.circular)
                         .tint(.white)
                 } else {
-                    Text("注册")
+                    Text(loc("login.register_button"))
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -47,7 +52,7 @@ struct RegisterView: View {
             .padding(.horizontal, 40)
             .disabled(loginVM.isLoading)
 
-            Button("已有账号？点击登录") {
+            Button(loc("login.switch_to_login")) {
                 loginVM.switchMode()
             }
             .foregroundColor(.blue)

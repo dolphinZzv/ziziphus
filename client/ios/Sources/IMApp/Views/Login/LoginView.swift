@@ -5,24 +5,24 @@ struct LoginView: View {
     @EnvironmentObject private var loginVM: LoginViewModel
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             Spacer()
 
             Image(systemName: "message.fill")
                 .font(.system(size: 60))
                 .foregroundColor(.blue)
 
-            Text("登录")
+            Text("DolphinZ")
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
             VStack(spacing: 16) {
-                TextField("用户ID", text: $loginVM.userID)
+                TextField(loc("login.account_placeholder"), text: $loginVM.account)
                     .textFieldStyle(.roundedBorder)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
 
-                SecureField("密码", text: $loginVM.password)
+                SecureField(loc("login.password_placeholder"), text: $loginVM.password)
                     .textFieldStyle(.roundedBorder)
             }
             .padding(.horizontal, 40)
@@ -39,7 +39,7 @@ struct LoginView: View {
                         .progressViewStyle(.circular)
                         .tint(.white)
                 } else {
-                    Text("登录")
+                    Text(loc("login.login_button"))
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -47,7 +47,7 @@ struct LoginView: View {
             .padding(.horizontal, 40)
             .disabled(loginVM.isLoading)
 
-            Button("没有账号？点击注册") {
+            Button(loc("login.switch_to_register")) {
                 loginVM.switchMode()
             }
             .foregroundColor(.blue)
@@ -55,5 +55,11 @@ struct LoginView: View {
             Spacer()
         }
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+#Preview {
+    LoginView()
+        .environmentObject(LoginViewModel())
 }

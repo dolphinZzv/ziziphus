@@ -2,9 +2,11 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/dolphinz/im-server/pkg/logger"
 	"github.com/dolphinz/im-server/pkg/model"
 )
 
@@ -18,9 +20,9 @@ func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
 
 func (r *UserRepo) Create(ctx context.Context, u *model.User) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO users (id, type, name, avatar, status, password, ext_meta, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		u.ID, u.Type, u.Name, u.Avatar, u.Status, u.Password, u.ExtMeta, time.UnixMilli(u.CreatedAt))
+		`INSERT INTO users (id, type, name, avatar, status, password, ext_meta, created_at, account)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		u.ID, u.Type, u.Name, u.Avatar, u.Status, u.Password, u.ExtMeta, time.UnixMilli(u.CreatedAt), u.Account)
 	return err
 }
 
@@ -28,9 +30,14 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*model.User, error) 
 	u := &model.User{}
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, type, name, avatar, status, password, ext_meta, created_at FROM users WHERE id = $1`, id).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &u.Password, &u.ExtMeta, &createdAt)
+		`SELECT id, type, name, avatar, status, password, ext_meta, created_at, account FROM users WHERE id = $1`, id).
+		Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &u.Password, &u.ExtMeta, &createdAt, &u.Account)
 	if err != nil {
+		logger.Error("GetByID query failed",
+			"id", id,
+			"error", err,
+			"scan_types", fmt.Sprintf("%T %T %T %T %T %T %T %T %T",
+				&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &u.Password, &u.ExtMeta, &createdAt, &u.Account))
 		return nil, err
 	}
 	u.CreatedAt = createdAt.UnixMilli()
@@ -39,7 +46,7 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*model.User, error) 
 
 func (r *UserRepo) GetByIDs(ctx context.Context, ids []string) (map[string]*model.User, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, type, name, avatar, status, created_at FROM users WHERE id = ANY($1)`, ids)
+		`SELECT id, type, name, avatar, status, created_at, account FROM users WHERE id = ANY($1)`, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +55,7 @@ func (r *UserRepo) GetByIDs(ctx context.Context, ids []string) (map[string]*mode
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &createdAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &createdAt, &u.Account); err != nil {
 			return nil, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -65,7 +72,7 @@ func (r *UserRepo) Search(ctx context.Context, q string, page, size int) ([]*mod
 	}
 	offset := (page - 1) * size
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, type, name, avatar, status, created_at FROM users WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+		`SELECT id, type, name, avatar, status, created_at, account FROM users WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
 		"%"+q+"%", size, offset)
 	if err != nil {
 		return nil, 0, err
@@ -75,13 +82,26 @@ func (r *UserRepo) Search(ctx context.Context, q string, page, size int) ([]*mod
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &createdAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &createdAt, &u.Account); err != nil {
 			return nil, 0, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
 		users = append(users, u)
 	}
 	return users, count, nil
+}
+
+func (r *UserRepo) GetByAccount(ctx context.Context, account string) (*model.User, error) {
+	u := &model.User{}
+	var createdAt time.Time
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, type, name, avatar, status, password, ext_meta, created_at, account FROM users WHERE account = $1`, account).
+		Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &u.Password, &u.ExtMeta, &createdAt, &u.Account)
+	if err != nil {
+		return nil, err
+	}
+	u.CreatedAt = createdAt.UnixMilli()
+	return u, nil
 }
 
 func (r *UserRepo) Update(ctx context.Context, id, name, avatar string) error {

@@ -22,7 +22,7 @@ public enum HTTPMethod: String {
 
 public class APIClient: @unchecked Sendable {
     public static let shared = APIClient()
-    public var baseURL = "http://localhost:8080"
+    public var baseURL = "http://192.168.2.111:8080"
 
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -48,9 +48,11 @@ public class APIClient: @unchecked Sendable {
 
         let wrapper = try decoder.decode(APIResponse<T>.self, from: data)
 
+        // Use the server's actual message for 401 so login failures show
+        // "密码错误" / "用户不存在" instead of a generic "登录已过期"
         if status == 401 {
             await MainActor.run { AuthManager.shared.logout() }
-            throw APIError.unauthorized
+            throw APIError.server(code: wrapper.code, message: wrapper.msg)
         }
 
         if wrapper.code != 0 {
@@ -73,6 +75,10 @@ public class APIClient: @unchecked Sendable {
 
         if status == 401 {
             await MainActor.run { AuthManager.shared.logout() }
+            // Try to extract the server message for a better error message
+            if let wrapper = try? decoder.decode(APIResponse<EmptyData>.self, from: data) {
+                throw APIError.server(code: wrapper.code, message: wrapper.msg)
+            }
             throw APIError.unauthorized
         }
 
@@ -127,6 +133,8 @@ public class APIClient: @unchecked Sendable {
 }
 
 // MARK: - Helpers
+private struct EmptyData: Codable, Sendable {}
+
 private struct AnyEncodable: Encodable {
     private let value: any Encodable
     init(_ value: any Encodable) {

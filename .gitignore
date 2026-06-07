@@ -7,3 +7,8 @@
 **/data.mdb
 **/xcuserdata/
 **/.swiftpm/
+build
+server/im-server
+server/coverage.out
+server/handler_cov.out
+server/config/rsa_key.pem

@@ -106,10 +106,10 @@ func (m *Manager) AddMember(ctx context.Context, convID, userID string, operator
 	// verify operator is member
 	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
 	if err != nil {
-		return model.NewAppError(model.ErrNotFound, "会话不存在")
+		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
 	}
 	if role < model.ConvRoleAdmin {
-		return model.NewAppError(model.ErrNoPermission, "权限不足")
+		return &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
 	}
 	return m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleMember)
 }
@@ -121,10 +121,10 @@ func (m *Manager) RemoveMember(ctx context.Context, convID, userID, operatorID s
 	}
 	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
 	if err != nil {
-		return model.NewAppError(model.ErrNotFound, "会话不存在")
+		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
 	}
 	if role < model.ConvRoleAdmin {
-		return model.NewAppError(model.ErrNoPermission, "权限不足")
+		return &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
 	}
 	return m.convRepo.RemoveMember(ctx, convID, userID)
 }

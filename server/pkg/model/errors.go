@@ -3,6 +3,7 @@ package model
 type AppError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+	Key     string // i18n lookup key; set by sentinel errors or service layer
 }
 
 func (e *AppError) Error() string {
@@ -23,10 +24,10 @@ func NewAppError(code int, msg string) *AppError {
 }
 
 var (
-	ErrBadMsgContent  = &AppError{Code: ErrBadMessage, Message: "消息内容非法"}
-	ErrConvNotFound   = &AppError{Code: ErrNotFound, Message: "会话不存在或无权限"}
-	ErrRateLimited    = &AppError{Code: ErrRateLimit, Message: "消息频率超限"}
-	ErrNotInConv      = &AppError{Code: ErrNoPermission, Message: "发送者不在会话中"}
-	ErrMsgTooLarge    = &AppError{Code: ErrTooLarge, Message: "消息体过大"}
-	ErrInternalServer = &AppError{Code: ErrInternal, Message: "服务端内部错误"}
+	ErrBadMsgContent  = &AppError{Code: ErrBadMessage, Message: "消息内容非法", Key: "err.bad_msg_content"}
+	ErrConvNotFound   = &AppError{Code: ErrNotFound, Message: "会话不存在或无权限", Key: "err.conv_not_found"}
+	ErrRateLimited    = &AppError{Code: ErrRateLimit, Message: "消息频率超限", Key: "err.rate_limited"}
+	ErrNotInConv      = &AppError{Code: ErrNoPermission, Message: "发送者不在会话中", Key: "err.not_in_conv"}
+	ErrMsgTooLarge    = &AppError{Code: ErrTooLarge, Message: "消息体过大", Key: "err.msg_too_large"}
+	ErrInternalServer = &AppError{Code: ErrInternal, Message: "服务端内部错误", Key: "err.internal_server"}
 )

@@ -7,6 +7,9 @@ struct GroupDetailView: View {
     @StateObject private var vm = GroupManagementViewModel()
     @State private var showAddMember = false
     @State private var showLeaveAlert = false
+    @State private var confirmRemoveMember: ConvMember?
+    @State private var errorMessage = ""
+    @State private var showError = false
     @Environment(\.dismiss) private var dismiss
 
     private let currentUserID = AuthManager.shared.currentUser?.userID ?? ""
@@ -29,14 +32,18 @@ struct GroupDetailView: View {
                     VStack(alignment: .leading) {
                         Text(convName)
                             .fontWeight(.medium)
-                        Text("\(vm.members.count) 位成员")
+                        Text(String(format: loc("group.member_count"), vm.members.count))
                             .font(.caption)
                             .foregroundColor(.secondary)
+                        Text("\(loc("profile.id_label")) \(convID)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .textSelection(.enabled)
                     }
                 }
                 .padding(.vertical, 4)
             } header: {
-                Text("群信息")
+                Text(loc("group.info"))
             }
 
             // Members
@@ -64,9 +71,7 @@ struct GroupDetailView: View {
                             }
                             Spacer()
                             if canRemove(member) {
-                                Button(action: {
-                                    Task { try? await vm.removeMember(convID: convID, userID: member.userID) }
-                                }) {
+                                Button(action: { confirmRemoveMember = member }) {
                                     Image(systemName: "xmark.circle")
                                         .foregroundColor(.red)
                                 }
@@ -75,50 +80,92 @@ struct GroupDetailView: View {
                     }
                 }
             } header: {
-                Text("群成员")
+                Text(loc("group.members_title"))
             }
 
             // Actions
             Section {
                 Button(action: { showAddMember = true }) {
-                    Label("添加成员", systemImage: "person.badge.plus")
+                    Label(loc("group.add_member"), systemImage: "person.badge.plus")
                 }
 
                 Button(role: .destructive, action: { showLeaveAlert = true }) {
-                    Label("退出群聊", systemImage: "arrow.right.square")
+                    Label(loc("group.leave"), systemImage: "arrow.right.square")
                 }
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("群详情")
+        .navigationTitle(loc("group.info"))
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAddMember) {
             NavigationStack {
                 AddMemberView(convID: convID, onAdd: { userID in
-                    Task { try? await vm.addMember(convID: convID, userID: userID) }
-                    showAddMember = false
+                    Task {
+                        do {
+                            try await vm.addMember(convID: convID, userID: userID)
+                            showAddMember = false
+                        } catch {
+                            errorMessage = error.localizedDescription
+                            showError = true
+                        }
+                    }
                 })
             }
         }
-        .alert("退出群聊", isPresented: $showLeaveAlert) {
-            Button("取消", role: .cancel) {}
-            Button("退出", role: .destructive) {
+        .alert(loc("group.leave"), isPresented: $showLeaveAlert) {
+            Button(loc("common.cancel"), role: .cancel) {}
+            Button(loc("group.leave"), role: .destructive) {
                 Task {
-                    try? await vm.leaveGroup(convID: convID)
-                    dismiss()
+                    do {
+                        try await vm.leaveGroup(convID: convID)
+                        dismiss()
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        showError = true
+                    }
                 }
             }
         } message: {
-            Text("确定要退出群聊「\(convName)」吗？")
+            Text(String(format: loc("group.leave_confirm_message"), convName))
+        }
+        .alert(loc("group.remove_confirm_title"), isPresented: .init(
+            get: { confirmRemoveMember != nil },
+            set: { if !$0 { confirmRemoveMember = nil } }
+        )) {
+            Button(loc("common.cancel"), role: .cancel) { confirmRemoveMember = nil }
+            Button(loc("group.remove_button"), role: .destructive) {
+                if let member = confirmRemoveMember {
+                    Task {
+                        do {
+                            try await vm.removeMember(convID: convID, userID: member.userID)
+                        } catch {
+                            errorMessage = error.localizedDescription
+                            showError = true
+                        }
+                    }
+                }
+                confirmRemoveMember = nil
+            }
+        } message: {
+            let name = confirmRemoveMember.flatMap { member in
+                let user = vm.membersInfo[member.userID]
+                return user?.name ?? member.userID
+            } ?? ""
+            Text(String(format: loc("group.remove_confirm_message"), name))
+        }
+        .alert(loc("group.error_title"), isPresented: $showError) {
+            Button(loc("common.confirm"), role: .cancel) {}
+        } message: {
+            Text(errorMessage)
         }
         .onAppear { vm.loadDetail(convID: convID) }
     }
 
     private func roleName(_ role: ConvRole) -> String {
         switch role {
-        case .owner: return "群主"
-        case .admin: return "管理员"
-        case .member: return "成员"
+        case .owner: return loc("group.owner")
+        case .admin: return loc("group.admin")
+        case .member: return loc("group.member")
         }
     }
 
@@ -144,7 +191,7 @@ private struct AddMemberView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                TextField("搜索用户...", text: $vm.query)
+                TextField(loc("search.placeholder"), text: $vm.query)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
             }
@@ -155,7 +202,7 @@ private struct AddMemberView: View {
 
             List {
                 if vm.results.isEmpty && !vm.query.isEmpty && !vm.isSearching {
-                    Text("未找到用户")
+                    Text(loc("search.no_results"))
                         .foregroundColor(.secondary)
                 } else {
                     ForEach(vm.results) { user in
@@ -177,7 +224,7 @@ private struct AddMemberView: View {
             }
             .listStyle(.plain)
         }
-        .navigationTitle("添加成员")
+        .navigationTitle(loc("group.add_member"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

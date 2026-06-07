@@ -1,4 +1,5 @@
 import SwiftUI
+import IMCore
 
 struct InputBarView: View {
     @Binding var text: String
@@ -7,7 +8,7 @@ struct InputBarView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            TextField("输入消息...", text: $text)
+            TextField(loc("chat.placeholder"), text: $text)
                 .textFieldStyle(.roundedBorder)
                 .onChange(of: text) { _, _ in
                     onTyping()

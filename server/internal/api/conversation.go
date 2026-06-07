@@ -3,23 +3,35 @@ package api
 import (
 	"context"
 	"encoding/json"
+
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/dolphinz/im-server/internal/auth"
 	"github.com/dolphinz/im-server/internal/storage/db"
+	"github.com/dolphinz/im-server/pkg/i18n"
 	"github.com/dolphinz/im-server/pkg/logger"
 	"github.com/dolphinz/im-server/pkg/model"
 )
 
+type userGetter interface {
+	GetByID(ctx context.Context, id string) (*model.User, error)
+}
+
+type convDataRepo interface {
+	GetUserConvs(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
+	UpdateNameAvatar(ctx context.Context, convID, name, avatar string) error
+}
+
 type ConvHandler struct {
-	convMgr     convManager
-	convRepo    *db.ConvRepo
-	seqCache    convSeqCache
-	readMarker  readMarker
-	sysMsg      sysMsgSender
-	idGen       func() int64
+	convMgr    convManager
+	convRepo   convDataRepo
+	seqCache   convSeqCache
+	readMarker readMarker
+	sysMsg     sysMsgSender
+	userGetter userGetter
+	idGen      func() int64
 }
 
 type sysMsgSender interface {
@@ -33,6 +45,7 @@ type readMarker interface {
 type convManager interface {
 	Get(ctx context.Context, convID string) (*model.Conversation, error)
 	CreateGroup(ctx context.Context, name, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error)
+	GetOrCreateP2P(ctx context.Context, userA, userB string) (*model.Conversation, error)
 	AddMember(ctx context.Context, convID, userID, operatorID string) error
 	RemoveMember(ctx context.Context, convID, userID, operatorID string) error
 	Leave(ctx context.Context, convID, userID string) error
@@ -44,9 +57,9 @@ type convSeqCache interface {
 	GetUnreadCount(ctx context.Context, userID, convID string) (int64, error)
 }
 
-func NewConvHandler(convMgr convManager, convRepo *db.ConvRepo, seqCache convSeqCache, readMarker readMarker, sysMsg sysMsgSender, idGen func() int64) *ConvHandler {
-	return &ConvHandler{convMgr: convMgr, convRepo: convRepo, seqCache: seqCache, readMarker: readMarker, sysMsg: sysMsg, idGen: idGen}
-}
+func NewConvHandler(convMgr convManager, convRepo convDataRepo, seqCache convSeqCache, readMarker readMarker, sysMsg sysMsgSender, userGetter userGetter, idGen func() int64) *ConvHandler {
+		return &ConvHandler{convMgr: convMgr, convRepo: convRepo, seqCache: seqCache, readMarker: readMarker, sysMsg: sysMsg, userGetter: userGetter, idGen: idGen}
+	}
 
 type createGroupReq struct {
 	Name      string   `json:"name"`
@@ -66,7 +79,7 @@ func (h *ConvHandler) List(w http.ResponseWriter, r *http.Request) {
 	items, total, err := h.convRepo.GetUserConvs(r.Context(), userID, page, size)
 	if err != nil {
 		logger.Error("list conversations failed", "user_id", userID, "error", err)
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	for _, item := range items {
@@ -82,19 +95,19 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 
 	conv, err := h.convMgr.Get(r.Context(), convID)
 	if err != nil {
-		NotFound(w)
+		NotFound(w, r)
 		return
 	}
 
 	isMember, err := h.convMgr.IsMember(r.Context(), convID, userID)
 	if err != nil || !isMember {
-		Error(w, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: "不在会话中"})
+		Error(w, r,http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.not_in_conv_specific")})
 		return
 	}
 
 	members, err := h.convMgr.GetMembers(r.Context(), convID)
 	if err != nil {
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 
@@ -120,24 +133,24 @@ type updateGroupReq struct {
 func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	var req updateGroupReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
 	convID := chi.URLParam(r, "conv_id")
 
 	conv, err := h.convMgr.Get(r.Context(), convID)
 	if err != nil {
-		NotFound(w)
+		NotFound(w, r)
 		return
 	}
 	if conv.Type != model.ConvGroup {
-		Error(w, http.StatusBadRequest, &model.AppError{Code: model.ErrBadMessage, Message: "仅支持群组"})
+		Error(w, r,http.StatusBadRequest, &model.AppError{Code: model.ErrBadMessage, Message: i18n.T(r.Context(), "err.group_only")})
 		return
 	}
 
 	if err := h.convRepo.UpdateNameAvatar(r.Context(), convID, req.Name, req.Avatar); err != nil {
 		logger.Error("update group failed", "conv_id", convID, "error", err)
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 
@@ -151,27 +164,67 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	var req createGroupReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
 	if req.Name == "" {
-		BadRequest(w, "群组名称不能为空")
+		BadRequest(w, r, i18n.T(r.Context(), "err.name_required"))
 		return
 	}
 	userID := auth.UserFromCtx(r.Context())
 	conv, err := h.convMgr.CreateGroup(r.Context(), req.Name, userID, req.MemberIDs, h.idGen)
 	if err != nil {
 		logger.Error("create group failed", "error", err)
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	if h.sysMsg != nil {
-		h.sysMsg.SendSystemMessage(r.Context(), conv.ConvID, userID+" 创建了群")
+		h.sysMsg.SendSystemMessage(r.Context(), conv.ConvID, i18n.T(r.Context(), "sys.group_created", userID))
 	}
 
 	JSON(w, map[string]interface{}{
 		"conv_id": conv.ConvID,
 		"name":    conv.Name,
+	})
+}
+
+type createP2PReq struct {
+	UserID string `json:"user_id"`
+}
+
+func (h *ConvHandler) CreateP2P(w http.ResponseWriter, r *http.Request) {
+	var req createP2PReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+	if req.UserID == "" {
+		BadRequest(w, r, i18n.T(r.Context(), "err.user_id_required"))
+		return
+	}
+	userID := auth.UserFromCtx(r.Context())
+	if userID == req.UserID {
+		BadRequest(w, r, i18n.T(r.Context(), "err.cannot_chat_self"))
+		return
+	}
+
+	conv, err := h.convMgr.GetOrCreateP2P(r.Context(), userID, req.UserID)
+	if err != nil {
+		logger.Error("create p2p failed", "error", err)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+
+	// Resolve the partner's display name
+	partnerName := ""
+	if partner, err := h.userGetter.GetByID(r.Context(), req.UserID); err == nil {
+		partnerName = partner.Name
+	}
+
+	JSON(w, map[string]interface{}{
+		"conv_id": conv.ConvID,
+		"type":    conv.Type,
+		"name":    partnerName,
 	})
 }
 
@@ -182,7 +235,7 @@ type addMembersReq struct {
 func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 	var req addMembersReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
 	convID := chi.URLParam(r, "conv_id")
@@ -197,13 +250,13 @@ func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	if lastErr != nil {
 		if appErr, ok := lastErr.(*model.AppError); ok {
-			Error(w, http.StatusForbidden, appErr)
+			Error(w, r,http.StatusForbidden, appErr)
 			return
 		}
 	}
 	if h.sysMsg != nil {
 		for _, mid := range req.UserIDs {
-			h.sysMsg.SendSystemMessage(r.Context(), convID, mid+" 被加入群")
+			h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_added", mid))
 		}
 	}
 	JSON(w, map[string]interface{}{"conv_id": convID})
@@ -216,14 +269,14 @@ func (h *ConvHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.convMgr.RemoveMember(r.Context(), convID, targetID, userID); err != nil {
 		if appErr, ok := err.(*model.AppError); ok {
-			Error(w, http.StatusForbidden, appErr)
+			Error(w, r,http.StatusForbidden, appErr)
 			return
 		}
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	if h.sysMsg != nil {
-		h.sysMsg.SendSystemMessage(r.Context(), convID, targetID+" 被移出群")
+		h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_removed", targetID))
 	}
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }
@@ -233,11 +286,11 @@ func (h *ConvHandler) Leave(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 
 	if err := h.convMgr.Leave(r.Context(), convID, userID); err != nil {
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	if h.sysMsg != nil {
-		h.sysMsg.SendSystemMessage(r.Context(), convID, userID+" 退出了群")
+		h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_left", userID))
 	}
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }
@@ -249,7 +302,7 @@ type markReadReq struct {
 func (h *ConvHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req markReadReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
 	convID := chi.URLParam(r, "conv_id")
@@ -267,7 +320,7 @@ func (h *ConvHandler) UnreadTotal(w http.ResponseWriter, r *http.Request) {
 
 	items, _, err := h.convRepo.GetUserConvs(r.Context(), userID, 1, 1000)
 	if err != nil {
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 

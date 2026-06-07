@@ -129,7 +129,7 @@ func main() {
 
 	// HTTP API handlers
 	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr)
-	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, sf.NextID)
+	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo)
 	contactHandler := api.NewContactHandler(contactRepo, userRepo, sessMgr)
 	handlers := &api.Handlers{

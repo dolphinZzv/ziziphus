@@ -22,6 +22,11 @@ struct ContentView: View {
     }
 }
 
+#Preview {
+    ContentView()
+        .environmentObject(LoginViewModel())
+}
+
 struct MainTabView: View {
     var body: some View {
         TabView {
@@ -29,16 +34,16 @@ struct MainTabView: View {
                 ConversationListView()
             }
             .tabItem {
-                Label("会话", systemImage: "message.fill")
+                Label(loc("conv.title"), systemImage: "message.fill")
             }
 
             NavigationStack {
                 ContactListView()
-                    .navigationTitle("联系人")
             }
             .tabItem {
-                Label("联系人", systemImage: "person.crop.circle")
+                Label(loc("contact.title"), systemImage: "person.crop.circle")
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

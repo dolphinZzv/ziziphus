@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/dolphinz/im-server/pkg/i18n"
 	"github.com/dolphinz/im-server/pkg/model"
 )
 
@@ -26,12 +27,12 @@ func AuthMiddleware(service *Service) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tokenStr := extractBearerToken(r)
 			if tokenStr == "" {
-				writeAuthError(w)
+				writeAuthError(w, r)
 				return
 			}
 			claims, err := service.ParseToken(tokenStr)
 			if err != nil {
-				writeAuthError(w)
+				writeAuthError(w, r)
 				return
 			}
 			ctx := context.WithValue(r.Context(), CtxKeyUserID, claims.UserID)
@@ -58,10 +59,15 @@ func extractBearerToken(r *http.Request) string {
 	return r.URL.Query().Get("token")
 }
 
-func writeAuthError(w http.ResponseWriter) {
+func writeAuthError(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
-	w.Write([]byte(`{"code":4002,"msg":"未授权","data":null}`))
+	msg := i18n.TWithLang(i18n.DetectLanguage(r), "err.unauthorized")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"code": model.ErrNoPermission,
+		"msg":  msg,
+		"data": nil,
+	})
 }
 
 type HTTPResponse struct {

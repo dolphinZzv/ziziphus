@@ -7,6 +7,7 @@ struct ChatView: View {
     let convType: ConvType
     @StateObject private var vm: ChatViewModel
     @State private var showGroupDetail = false
+    @State private var showP2PDetail = false
 
     init(convID: String, convName: String, convType: ConvType = .p2p) {
         self.convID = convID
@@ -37,6 +38,11 @@ struct ChatView: View {
                     }
                     .padding(.horizontal)
                 }
+                .onAppear {
+                    if let last = vm.messages.last {
+                        proxy.scrollTo(last.id, anchor: .bottom)
+                    }
+                }
                 .onChange(of: vm.messages.count) { _, _ in
                     if let last = vm.messages.last {
                         proxy.scrollTo(last.id, anchor: .bottom)
@@ -52,12 +58,17 @@ struct ChatView: View {
         }
         .navigationTitle(convName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            if convType == .group {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showGroupDetail = true }) {
-                        Image(systemName: "info.circle")
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    if convType == .group {
+                        showGroupDetail = true
+                    } else {
+                        showP2PDetail = true
                     }
+                }) {
+                    Image(systemName: "info.circle")
                 }
             }
         }
@@ -65,6 +76,9 @@ struct ChatView: View {
             NavigationStack {
                 GroupDetailView(convID: convID, convName: convName)
             }
+        }
+        .sheet(isPresented: $showP2PDetail) {
+            P2PDetailView(convID: convID, convName: convName)
         }
         .onAppear {
             vm.loadInitialMessages()

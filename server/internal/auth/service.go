@@ -27,6 +27,7 @@ type Service struct {
 type userRepository interface {
 	Create(ctx context.Context, u *model.User) error
 	GetByID(ctx context.Context, id string) (*model.User, error)
+	GetByAccount(ctx context.Context, account string) (*model.User, error)
 }
 
 func NewService(crypto *Crypto, jwtSecret string, expireHours int, userRepo userRepository) *Service {
@@ -38,7 +39,14 @@ func NewService(crypto *Crypto, jwtSecret string, expireHours int, userRepo user
 	}
 }
 
-func (s *Service) Register(ctx context.Context, name, password string) (*model.User, string, error) {
+func (s *Service) Register(ctx context.Context, name, password, account string) (*model.User, string, error) {
+	if account != "" {
+		existing, _ := s.userRepo.GetByAccount(ctx, account)
+		if existing != nil {
+			return nil, "", &model.AppError{Code: model.ErrBadMessage, Message: "账户已存在", Key: "auth.account_exists"}
+		}
+	}
+
 	snowflake := model.NewSnowflake(time.Now().UnixMilli(), time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
 	userID := model.GenerateUserID(snowflake.NextID)
 
@@ -50,6 +58,7 @@ func (s *Service) Register(ctx context.Context, name, password string) (*model.U
 
 	user := &model.User{
 		ID:        userID,
+		Account:   account,
 		Type:      model.UserHuman,
 		Name:      name,
 		Status:    model.UserOffline,
@@ -68,30 +77,31 @@ func (s *Service) Register(ctx context.Context, name, password string) (*model.U
 	return user, token, nil
 }
 
-func (s *Service) Login(ctx context.Context, userID, password string) (string, int64, error) {
-	user, err := s.userRepo.GetByID(ctx, userID)
+func (s *Service) Login(ctx context.Context, account, password string) (string, int64, string, error) {
+	user, err := s.userRepo.GetByAccount(ctx, account)
 	if err != nil {
-		return "", 0, fmt.Errorf("user not found: %w", err)
+		logger.Info("Login user not found", "account", account, "error", err)
+		return "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "用户不存在", Key: "auth.user_not_found"}
 	}
 
 	var ciphertext []byte
 	ciphertext, err = base64.StdEncoding.DecodeString(user.Password)
 	if err != nil {
-		return "", 0, fmt.Errorf("decode password: %w", err)
+		return "", 0, "", fmt.Errorf("decode password: %w", err)
 	}
 	decrypted, err := s.crypto.Decrypt(ctx, ciphertext)
 	if err != nil {
-		return "", 0, fmt.Errorf("decrypt password: %w", err)
+		return "", 0, "", fmt.Errorf("decrypt password: %w", err)
 	}
 	if string(decrypted) != password {
-		return "", 0, model.NewAppError(model.ErrNoPermission, "密码错误")
+		return "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "密码错误", Key: "auth.wrong_password"}
 	}
 
-	token, err := s.generateToken(userID, int(user.Type))
+	token, err := s.generateToken(user.ID, int(user.Type))
 	if err != nil {
-		return "", 0, err
+		return "", 0, "", err
 	}
-	return token, time.Now().Add(s.expireDur).Unix(), nil
+	return token, time.Now().Add(s.expireDur).Unix(), user.ID, nil
 }
 
 func (s *Service) ParseToken(tokenStr string) (*Claims, error) {

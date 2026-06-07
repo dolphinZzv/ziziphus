@@ -1,4 +1,5 @@
 import SwiftUI
+import IMCore
 
 struct SearchBarView: View {
     @Binding var text: String
@@ -7,7 +8,7 @@ struct SearchBarView: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
-            TextField("搜索用户...", text: $text)
+            TextField(loc("search.placeholder"), text: $text)
                 .textFieldStyle(.plain)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)

@@ -3,6 +3,7 @@ import IMCore
 
 struct ContentView: View {
     @EnvironmentObject private var loginVM: LoginViewModel
+    @EnvironmentObject private var localizationManager: LocalizationManager
 
     var body: some View {
         Group {
@@ -38,10 +39,17 @@ struct MainTabView: View {
         } detail: {
             if let convID = selectedConvID {
                 ChatView(convID: convID, convName: selectedConvName, convType: selectedConvType)
+                    .id(convID)
+                    .background(Color.white)
             } else {
-                Text("选择一个会话")
+                Text(loc("conv.no_conversations"))
                     .foregroundColor(.secondary)
             }
         }
     }
+}
+
+#Preview {
+    ContentView()
+        .environmentObject(LoginViewModel())
 }

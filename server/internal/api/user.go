@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/dolphinz/im-server/internal/auth"
+	"github.com/dolphinz/im-server/pkg/i18n"
 	"github.com/dolphinz/im-server/pkg/logger"
 	"github.com/dolphinz/im-server/pkg/model"
 	"github.com/go-chi/chi/v5"
@@ -37,6 +38,7 @@ func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChe
 
 type registerReq struct {
 	Name     string `json:"name"`
+	Account  string `json:"account"`
 	Password string `json:"password"`
 	Avatar   string `json:"avatar"`
 }
@@ -44,52 +46,58 @@ type registerReq struct {
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
 	if req.Name == "" || req.Password == "" {
-		BadRequest(w, "名称和密码不能为空")
+		BadRequest(w, r, i18n.T(r.Context(), "err.name_password_required"))
 		return
 	}
-	user, token, err := h.authSvc.Register(r.Context(), req.Name, req.Password)
+	user, token, err := h.authSvc.Register(r.Context(), req.Name, req.Password, req.Account)
 	if err != nil {
+		if appErr, ok := err.(*model.AppError); ok {
+			Error(w, r,http.StatusBadRequest, appErr)
+			return
+		}
 		logger.Error("register failed", "error", err)
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{
 		"user_id": user.ID,
+		"account": user.Account,
 		"name":    user.Name,
 		"token":   token,
 	})
 }
 
 type loginReq struct {
-	UserID   string `json:"user_id"`
+	Account  string `json:"account"`
 	Password string `json:"password"`
 }
 
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
-	token, expiresAt, err := h.authSvc.Login(r.Context(), req.UserID, req.Password)
+	token, expiresAt, userID, err := h.authSvc.Login(r.Context(), req.Account, req.Password)
 	if err != nil {
 		if appErr, ok := err.(*model.AppError); ok {
-			Error(w, http.StatusUnauthorized, appErr)
+			Error(w, r,http.StatusUnauthorized, appErr)
 			return
 		}
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	user, _ := h.userRepo.GetByID(r.Context(), req.UserID)
+	user, _ := h.userRepo.GetByID(r.Context(), userID)
 	if user != nil {
 		user.Password = ""
 	}
 	JSON(w, map[string]interface{}{
-		"user_id":    req.UserID,
+		"user_id":    userID,
+		"account":    req.Account,
 		"name":       user.Name,
 		"token":      token,
 		"expires_at": expiresAt,
@@ -100,7 +108,7 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	user, err := h.userRepo.GetByID(r.Context(), userID)
 	if err != nil {
-		NotFound(w)
+		NotFound(w, r)
 		return
 	}
 	user.Password = ""
@@ -110,12 +118,12 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "user_id")
 	if userID == "" {
-		BadRequest(w, "user_id 不能为空")
+		BadRequest(w, r, i18n.T(r.Context(), "err.user_id_required"))
 		return
 	}
 	user, err := h.userRepo.GetByID(r.Context(), userID)
 	if err != nil {
-		NotFound(w)
+		NotFound(w, r)
 		return
 	}
 	user.Password = ""
@@ -139,12 +147,12 @@ type batchReq struct {
 func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 	var req batchReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
 	users, err := h.userRepo.GetByIDs(r.Context(), req.UserIDs)
 	if err != nil {
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	result := make(map[string]interface{}, len(users))
@@ -157,6 +165,7 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 		}
 		result[id] = map[string]interface{}{
 			"user_id": u.ID,
+			"account": u.Account,
 			"name":    u.Name,
 			"avatar":  u.Avatar,
 			"type":    u.Type,
@@ -174,12 +183,12 @@ type updateMeReq struct {
 func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	var req updateMeReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
 	userID := auth.UserFromCtx(r.Context())
 	if err := h.userRepo.Update(r.Context(), userID, req.Name, req.Avatar); err != nil {
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{
@@ -201,13 +210,14 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 	users, total, err := h.userRepo.Search(r.Context(), q, page, size)
 	if err != nil {
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	items := make([]map[string]interface{}, 0, len(users))
 	for _, u := range users {
 		items = append(items, map[string]interface{}{
 			"user_id": u.ID,
+			"account": u.Account,
 			"name":    u.Name,
 			"avatar":  u.Avatar,
 			"type":    u.Type,

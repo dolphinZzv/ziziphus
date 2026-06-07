@@ -22,6 +22,31 @@ public class ConversationService {
         return detail
     }
 
+    // MARK: - Create P2P
+    public func createP2P(userID: String) async throws -> (convID: String, name: String) {
+        struct P2PReq: Codable, Sendable {
+            let userID: String
+            enum CodingKeys: String, CodingKey {
+                case userID = "user_id"
+            }
+        }
+        struct P2PResp: Codable, Sendable {
+            let convID: String
+            let name: String
+            let type: ConvType
+            enum CodingKeys: String, CodingKey {
+                case convID = "conv_id"
+                case name, type
+            }
+        }
+        let resp: P2PResp = try await api.request(
+            "/api/v1/conversations/p2p",
+            method: .post,
+            body: P2PReq(userID: userID)
+        )
+        return (resp.convID, resp.name)
+    }
+
     // MARK: - Create Group
     public func createGroup(name: String, memberIDs: [String]) async throws -> Conversation {
         let detail: Conversation = try await api.request(

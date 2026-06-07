@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/dolphinz/im-server/pkg/i18n"
 )
 
 type Handlers struct {
@@ -20,6 +21,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.RealIP)
+	r.Use(i18n.Middleware)
 
 	// public routes
 	r.Group(func(r chi.Router) {
@@ -40,6 +42,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Get("/api/v1/conversations", h.Conversation.List)
 		r.Get("/api/v1/conversations/{conv_id}", h.Conversation.GetDetail)
 		r.Post("/api/v1/conversations/group", h.Conversation.CreateGroup)
+		r.Post("/api/v1/conversations/p2p", h.Conversation.CreateP2P)
 		r.Put("/api/v1/conversations/{conv_id}", h.Conversation.UpdateGroup)
 		r.Post("/api/v1/conversations/{conv_id}/members", h.Conversation.AddMembers)
 		r.Delete("/api/v1/conversations/{conv_id}/members/{user_id}", h.Conversation.RemoveMember)

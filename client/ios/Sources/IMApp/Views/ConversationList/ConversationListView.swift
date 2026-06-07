@@ -1,9 +1,18 @@
 import SwiftUI
 import IMCore
 
+struct ChatDestination: Identifiable, Hashable {
+    let convID: String
+    let name: String
+    let type: ConvType
+    var id: String { convID }
+}
+
 struct ConversationListView: View {
     @StateObject private var vm = ConversationListViewModel()
-    @State private var showCreateGroup = false
+    @State private var showNewChat = false
+    @State private var showProfile = false
+    @State private var navigateToChat: ChatDestination?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,7 +22,7 @@ struct ConversationListView: View {
                     Circle()
                         .fill(vm.connectionStatus == .connecting ? Color.orange : Color.red)
                         .frame(width: 6, height: 6)
-                    Text(vm.connectionStatus == .connecting ? "连接中..." : "连接已断开")
+                    Text(vm.connectionStatus == .connecting ? loc("common.loading") : loc("conv.disconnected"))
                         .font(.caption)
                 }
                 .padding(.vertical, 4)
@@ -21,42 +30,66 @@ struct ConversationListView: View {
                 .background(Color(.systemGroupedBackground))
             }
 
-            List {
-                if vm.isLoading && vm.conversations.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                } else if vm.conversations.isEmpty {
-                    Text("暂无会话")
+            if vm.isLoading && vm.conversations.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if vm.conversations.isEmpty {
+                VStack {
+                    Spacer()
+                    Text(loc("conv.no_conversations"))
                         .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                } else {
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
                     ForEach(vm.conversations) { conv in
                         NavigationLink {
                             ChatView(convID: conv.convID, convName: conv.name, convType: conv.type)
                         } label: {
                             ConversationRowView(conv: conv)
                         }
+                        .listRowSeparator(.hidden)
+                        .overlay(alignment: .bottom) {
+                            Rectangle()
+                                .fill(Color(.separator))
+                                .frame(height: 0.5)
+                        }
                     }
                 }
-            }
-            .listStyle(.plain)
-            .refreshable {
-                vm.refresh()
+                .listStyle(.plain)
+                .refreshable {
+                    vm.refresh()
+                }
             }
         }
-        .navigationTitle("会话")
+        .navigationTitle(loc("conv.title"))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            Button(action: { showCreateGroup = true }) {
-                Image(systemName: "person.3.fill")
+            ToolbarItemGroup(placement: .navigationBarLeading) {
+                Button(action: { showProfile = true }) {
+                    Image(systemName: "person.circle")
+                        .font(.body)
+                }
+            }
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                Button(action: { showNewChat = true }) {
+                    Image(systemName: "plus")
+                        .font(.body)
+                }
             }
         }
-        .sheet(isPresented: $showCreateGroup) {
-            CreateGroupView { conv in
-                showCreateGroup = false
-                vm.refresh()
+        .sheet(isPresented: $showNewChat) {
+            NewConversationView { convID, name, convType in
+                showNewChat = false
+                navigateToChat = ChatDestination(convID: convID, name: name, type: convType)
             }
+        }
+        .navigationDestination(item: $navigateToChat) { dest in
+            ChatView(convID: dest.convID, convName: dest.name, convType: dest.type)
+        }
+        .sheet(isPresented: $showProfile) {
+            ProfileView()
         }
         .onAppear {
             vm.loadConversations()

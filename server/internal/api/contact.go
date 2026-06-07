@@ -1,25 +1,37 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/dolphinz/im-server/internal/auth"
-	"github.com/dolphinz/im-server/internal/storage/db"
+	"github.com/dolphinz/im-server/pkg/i18n"
 	"github.com/dolphinz/im-server/pkg/logger"
 	"github.com/dolphinz/im-server/pkg/model"
 	"github.com/go-chi/chi/v5"
 )
 
+type contactStorage interface {
+	Add(ctx context.Context, c *model.Contact) error
+	Remove(ctx context.Context, userID, contactID string) error
+	List(ctx context.Context, userID string, page, size int) ([]*model.Contact, int, error)
+	UpdateNickname(ctx context.Context, userID, contactID, nickname string) error
+}
+
+type userQueryRepo interface {
+	GetByIDs(ctx context.Context, ids []string) (map[string]*model.User, error)
+}
+
 type ContactHandler struct {
-	contactRepo *db.ContactRepo
-	userRepo    *db.UserRepo
+	contactRepo contactStorage
+	userRepo    userQueryRepo
 	sessMgr     sessionChecker
 }
 
-func NewContactHandler(contactRepo *db.ContactRepo, userRepo *db.UserRepo, sessMgr sessionChecker) *ContactHandler {
+func NewContactHandler(contactRepo contactStorage, userRepo userQueryRepo, sessMgr sessionChecker) *ContactHandler {
 	return &ContactHandler{contactRepo: contactRepo, userRepo: userRepo, sessMgr: sessMgr}
 }
 
@@ -42,7 +54,7 @@ func (h *ContactHandler) List(w http.ResponseWriter, r *http.Request) {
 	contacts, total, err := h.contactRepo.List(r.Context(), userID, page, size)
 	if err != nil {
 		logger.Error("list contacts failed", "user_id", userID, "error", err)
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 
@@ -77,17 +89,17 @@ func (h *ContactHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *ContactHandler) Add(w http.ResponseWriter, r *http.Request) {
 	var req addContactReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
 	if req.UserID == "" {
-		BadRequest(w, "user_id 不能为空")
+		BadRequest(w, r, i18n.T(r.Context(), "err.contact_user_id_required"))
 		return
 	}
 
 	userID := auth.UserFromCtx(r.Context())
 	if req.UserID == userID {
-		BadRequest(w, "不能添加自己为联系人")
+		BadRequest(w, r, i18n.T(r.Context(), "err.cannot_add_self"))
 		return
 	}
 
@@ -99,7 +111,7 @@ func (h *ContactHandler) Add(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.contactRepo.Add(r.Context(), contact); err != nil {
 		logger.Error("add contact failed", "user_id", userID, "contact_id", req.UserID, "error", err)
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{"user_id": req.UserID, "nickname": req.Nickname})
@@ -111,7 +123,7 @@ func (h *ContactHandler) Remove(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.contactRepo.Remove(r.Context(), userID, contactID); err != nil {
 		logger.Error("remove contact failed", "user_id", userID, "contact_id", contactID, "error", err)
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{"user_id": contactID})
@@ -124,7 +136,7 @@ type updateContactNicknameReq struct {
 func (h *ContactHandler) UpdateNickname(w http.ResponseWriter, r *http.Request) {
 	var req updateContactNicknameReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		BadRequest(w, "参数错误")
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
 	userID := auth.UserFromCtx(r.Context())
@@ -132,7 +144,7 @@ func (h *ContactHandler) UpdateNickname(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.contactRepo.UpdateNickname(r.Context(), userID, contactID, req.Nickname); err != nil {
 		logger.Error("update contact nickname failed", "user_id", userID, "contact_id", contactID, "error", err)
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{"user_id": contactID, "nickname": req.Nickname})

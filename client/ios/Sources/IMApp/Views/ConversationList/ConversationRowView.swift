@@ -4,23 +4,49 @@ import IMCore
 struct ConversationRowView: View {
     let conv: ConvListItem
 
+    private var avatarColor: Color {
+        let colors: [Color] = [.blue, .green, .orange, .purple, .pink, .teal, .indigo, .mint]
+        let hash = abs(conv.convID.hashValue)
+        return colors[hash % colors.count]
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
-            Circle()
-                .fill(Color.blue.opacity(0.2))
-                .frame(width: 48, height: 48)
-                .overlay {
-                    Text(String(conv.name.prefix(1)))
-                        .fontWeight(.semibold)
-                        .foregroundColor(.blue)
-                }
+            if conv.type == .group {
+                Circle()
+                    .fill(avatarColor.opacity(0.2))
+                    .frame(width: 48, height: 48)
+                    .overlay {
+                        Image(systemName: "person.3.fill")
+                            .font(.caption)
+                            .foregroundColor(avatarColor)
+                    }
+            } else {
+                Circle()
+                    .fill(avatarColor.opacity(0.2))
+                    .frame(width: 48, height: 48)
+                    .overlay {
+                        Text(String(conv.name.prefix(1)))
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(avatarColor)
+                    }
+            }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack {
-                    Text(conv.name)
-                        .fontWeight(.medium)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text(conv.name)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+
+                        if conv.mute {
+                            Image(systemName: "bell.slash.fill")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
 
                     Spacer()
 
@@ -31,17 +57,38 @@ struct ConversationRowView: View {
                     }
                 }
 
-                HStack {
+                HStack(spacing: 4) {
                     if let last = conv.lastMessage {
+                        if conv.type == .group {
+                            Text(last.senderID)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                            Text(":")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
                         Text(last.body)
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
+                    } else {
+                        Text(loc("chat.no_messages"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
                     Spacer()
 
-                    if conv.unreadCount > 0 {
+                    if conv.mentionMe {
+                        Text(loc("conv.mention"))
+                            .font(.caption2)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.orange)
+                            .clipShape(Capsule())
+                    } else if conv.unreadCount > 0 {
                         Text("\(conv.unreadCount)")
                             .font(.caption2)
                             .foregroundColor(.white)
@@ -53,7 +100,7 @@ struct ConversationRowView: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
     }
 
     private func formatTime(_ timestamp: Int64) -> String {

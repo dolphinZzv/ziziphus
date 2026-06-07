@@ -32,6 +32,8 @@ public class WebSocketClient: ObservableObject {
 
     // MARK: - Connection
     public func connect() {
+        if connectionStatus == .connected { return }
+
         guard let token = AuthManager.shared.readToken() else {
             connectionStatus = .disconnected
             return
@@ -40,7 +42,8 @@ public class WebSocketClient: ObservableObject {
         isActive = true
         connectionStatus = .connecting
 
-        guard let url = URL(string: "ws://localhost:8080/ws?token=\(token)") else {
+        guard let encodedToken = token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "ws://192.168.2.111:8080/ws?token=\(encodedToken)") else {
             connectionStatus = .disconnected
             return
         }

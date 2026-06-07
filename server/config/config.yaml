@@ -14,6 +14,7 @@ redis:
 jwt:
   secret: "dev-secret-key-change-in-production"
   expire_hours: 168
+  private_key_path: "config/rsa_key.pem"
 
 snowflake:
   worker_id: 1

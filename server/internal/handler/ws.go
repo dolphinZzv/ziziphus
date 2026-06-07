@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/dolphinz/im-server/internal/auth"
 	"github.com/dolphinz/im-server/internal/gateway"
+	"github.com/dolphinz/im-server/pkg/i18n"
 	"github.com/dolphinz/im-server/pkg/logger"
 	"github.com/dolphinz/im-server/pkg/model"
 	"github.com/dolphinz/im-server/pkg/protocol"
@@ -81,7 +82,7 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, err := h.authMW(r.Context(), token)
 	if err != nil {
 		logger.Warn("ws auth failed", "error", err)
-		writeWSError(conn, model.ErrNoPermission, "未授权")
+		writeWSError(conn, model.ErrNoPermission, i18n.T(r.Context(), "err.unauthorized"))
 		return
 	}
 	userID := auth.UserFromCtx(ctx)
@@ -89,7 +90,7 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sess, err := h.sessMgr.Create(ctx, userID, model.DeviceDesktop, "web")
 	if err != nil {
 		logger.Error("ws session create failed", "user_id", userID, "error", err)
-		writeWSError(conn, model.ErrInternal, "创建会话失败")
+		writeWSError(conn, model.ErrInternal, i18n.T(r.Context(), "err.create_session_failed"))
 		return
 	}
 

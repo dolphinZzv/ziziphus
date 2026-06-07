@@ -17,6 +17,7 @@ const (
 
 type User struct {
 	ID        string     `json:"user_id"`
+	Account   string     `json:"account"`
 	Type      UserType   `json:"type"`
 	Name      string     `json:"name"`
 	Avatar    string     `json:"avatar"`

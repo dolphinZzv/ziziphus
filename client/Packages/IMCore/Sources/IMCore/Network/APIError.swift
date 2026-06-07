@@ -15,11 +15,11 @@ public enum APIError: Error, LocalizedError {
         case .server(_, let message):
             return message
         case .unauthorized:
-            return "登录已过期，请重新登录"
+            return loc("error.unauthorized")
         case .decoding:
-            return "数据解析失败"
+            return loc("error.decoding_failed")
         case .timeout:
-            return "请求超时"
+            return loc("error.timeout")
         case .wsError(_, let message):
             return message
         }

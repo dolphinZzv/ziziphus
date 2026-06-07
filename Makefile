@@ -1,10 +1,10 @@
-.PHONY: server server-stop macos macos-stop
+.PHONY: server server-stop macos macos-stop ios-deploy xcodegen
 
 # 后端服务
 server: server-stop
 	cd server && go build -o /tmp/im-server ./cmd/im-server/
-	/tmp/im-server --config server/config/config.yaml &
-	@echo "Server started (PID: $$!)"
+	cd server && /tmp/im-server --config config/config.yaml &
+	@echo "Server started"
 
 server-stop:
 	@pkill -f "/tmp/im-server" 2>/dev/null || true
@@ -29,3 +29,33 @@ macos: macos-stop
 macos-stop:
 	pkill -f "IMApp-macOS" 2>/dev/null || true
 	@echo "App closed"
+
+IOS_DEVICE ?= 荼靡花开
+
+# iOS 客户端 — 一键编译部署到真机
+ios-deploy: xcodegen
+	cd client && xcodebuild build \
+		-project IMApp.xcodeproj \
+		-scheme IMApp-iOS \
+		-destination 'platform=iOS,name=$(IOS_DEVICE)' \
+		-allowProvisioningUpdates \
+		CODE_SIGN_STYLE=Automatic
+	@echo "Build succeeded for $(IOS_DEVICE)"
+	# 查找编译产物并安装到设备
+	DERIVED=$$(xcodebuild -project client/IMApp.xcodeproj -showBuildSettings -scheme IMApp-iOS 2>/dev/null | grep BUILD_DIR | head -1 | awk '{print $$NF}'); \
+	APP="$${DERIVED}/Debug-iphoneos/IMApp-iOS.app"; \
+	if [ -d "$$APP" ]; then \
+		if command -v ios-deploy >/dev/null 2>&1; then \
+			ios-deploy -b "$$APP"; \
+		elif xcrun devicectl list devices 2>/dev/null | grep -q "$(IOS_DEVICE)"; then \
+			xcrun devicectl install app --device "$(IOS_DEVICE)" "$$APP"; \
+		else \
+			echo "App built at: $$APP"; \
+			echo "Install manually via Xcode Devices window (Cmd+Shift+2)"; \
+		fi \
+	else \
+		echo "App not found at expected path, checking DerivedData..."; \
+	fi
+
+xcodegen:
+	cd client && xcodegen generate

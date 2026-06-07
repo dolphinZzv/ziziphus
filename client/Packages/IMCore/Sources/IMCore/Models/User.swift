@@ -13,6 +13,7 @@ public enum UserStatus: Int, Codable, Sendable {
 
 public struct User: Codable, Sendable, Identifiable, Hashable {
     public let userID: String
+    public let account: String
     public var name: String
     public var avatar: String
     public var type: UserType
@@ -23,14 +24,16 @@ public struct User: Codable, Sendable, Identifiable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"
+        case account
         case name, avatar, type, status
         case createdAt = "created_at"
     }
 
-    public init(userID: String, name: String, avatar: String = "",
+    public init(userID: String, account: String = "", name: String, avatar: String = "",
                 type: UserType = .human, status: UserStatus = .offline,
                 createdAt: Int64? = nil) {
         self.userID = userID
+        self.account = account
         self.name = name
         self.avatar = avatar
         self.type = type

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/dolphinz/im-server/pkg/i18n"
 	"github.com/dolphinz/im-server/pkg/model"
 )
 
@@ -26,7 +27,11 @@ func JSON(w http.ResponseWriter, data interface{}) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func Error(w http.ResponseWriter, httpStatus int, appErr *model.AppError) {
+func Error(w http.ResponseWriter, r *http.Request, httpStatus int, appErr *model.AppError) {
+	if appErr.Key != "" {
+		translated := i18n.T(r.Context(), appErr.Key)
+		appErr = &model.AppError{Code: appErr.Code, Message: translated, Key: appErr.Key}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
 	resp := APIResponse{Code: appErr.Code, Msg: appErr.Message, Data: nil}
@@ -42,14 +47,14 @@ func Paginated(w http.ResponseWriter, items interface{}, total, page, size int) 
 	})
 }
 
-func BadRequest(w http.ResponseWriter, msg string) {
-	Error(w, http.StatusBadRequest, model.NewAppError(model.ErrBadMessage, msg))
+func BadRequest(w http.ResponseWriter, r *http.Request, msg string) {
+	Error(w, r, http.StatusBadRequest, model.NewAppError(model.ErrBadMessage, msg))
 }
 
-func NotFound(w http.ResponseWriter) {
-	Error(w, http.StatusNotFound, &model.AppError{Code: model.ErrNotFound, Message: "资源不存在"})
+func NotFound(w http.ResponseWriter, r *http.Request) {
+	Error(w, r, http.StatusNotFound, &model.AppError{Code: model.ErrNotFound, Message: "资源不存在", Key: "err.resource_not_found"})
 }
 
-func Unauthorized(w http.ResponseWriter) {
-	Error(w, http.StatusUnauthorized, &model.AppError{Code: model.ErrNoPermission, Message: "未授权"})
+func Unauthorized(w http.ResponseWriter, r *http.Request) {
+	Error(w, r, http.StatusUnauthorized, &model.AppError{Code: model.ErrNoPermission, Message: "未授权", Key: "err.unauthorized"})
 }

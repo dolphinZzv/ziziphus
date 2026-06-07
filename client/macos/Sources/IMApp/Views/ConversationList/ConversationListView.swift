@@ -3,8 +3,10 @@ import IMCore
 
 struct ConversationListView: View {
     @StateObject private var vm = ConversationListViewModel()
-    @State private var showCreateGroup = false
+    @State private var showNewChat = false
+    @State private var showProfile = false
     @Binding var selectedConvID: String?
+    @EnvironmentObject private var localizationManager: LocalizationManager
     let onSelectConv: ((ConvListItem) -> Void)?
 
     init(selectedConvID: Binding<String?>, onSelectConv: ((ConvListItem) -> Void)? = nil) {
@@ -20,7 +22,7 @@ struct ConversationListView: View {
                     Circle()
                         .fill(vm.connectionStatus == .connecting ? Color.orange : Color.red)
                         .frame(width: 8, height: 8)
-                    Text(vm.connectionStatus == .connecting ? "连接中..." : "连接已断开")
+                    Text(vm.connectionStatus == .connecting ? loc("common.loading") : loc("conv.disconnected"))
                         .font(.caption)
                 }
                 .padding(.vertical, 4)
@@ -42,22 +44,50 @@ struct ConversationListView: View {
         }
         .toolbar {
             ToolbarItemGroup {
-                Button(action: { showCreateGroup = true }) {
-                    Label("创建群聊", systemImage: "person.3.fill")
+                Button(action: { showNewChat = true }) {
+                    Label(loc("conv.new_chat"), systemImage: "plus.bubble")
+                }
+            }
+            ToolbarItemGroup(placement: .automatic) {
+                Button(action: { showProfile = true }) {
+                    Label(loc("profile.title"), systemImage: "person.circle")
                 }
             }
         }
-        .sheet(isPresented: $showCreateGroup) {
-            CreateGroupView { conv in
-                showCreateGroup = false
-                vm.refresh()
+        .sheet(isPresented: $showProfile) {
+            ProfileView()
+                .frame(width: 320, height: 280)
+        }
+        .sheet(isPresented: $showNewChat) {
+            NewConversationView { convID, name, convType in
+                showNewChat = false
+                if convType == .p2p {
+                    vm.selectConversation(convID: convID, name: name, onSelectConv: onSelectConv)
+                } else {
+                    vm.refresh()
+                }
             } onCancel: {
-                showCreateGroup = false
+                showNewChat = false
             }
         }
         .onAppear {
             vm.loadConversations()
             vm.connectWebSocket()
+        }
+    }
+}
+
+// MARK: - ViewModel Helper
+extension ConversationListViewModel {
+    func selectConversation(convID: String, name: String, onSelectConv: ((ConvListItem) -> Void)?) {
+        // Refresh list then select
+        refresh()
+        // Create a temporary ConvListItem for navigation
+        let item = ConvListItem(convID: convID, type: .p2p, name: name)
+        onSelectConv?(item)
+        // Re-select by setting the convID (the list may have the real item after refresh)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.refresh()
         }
     }
 }

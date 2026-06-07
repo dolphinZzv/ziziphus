@@ -27,7 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_expired_at ON sessions(expired_at);
 
 CREATE TABLE IF NOT EXISTS conversations (
-    conv_id     VARCHAR(32) PRIMARY KEY,
+    conv_id     VARCHAR(64) PRIMARY KEY,
     type        SMALLINT NOT NULL DEFAULT 1,
     name        VARCHAR(256) NOT NULL DEFAULT '',
     owner_id    VARCHAR(32) NOT NULL DEFAULT '',
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE INDEX IF NOT EXISTS idx_conversations_last_msg ON conversations(last_msg_at DESC);
 
 CREATE TABLE IF NOT EXISTS conv_members (
-    conv_id   VARCHAR(32) NOT NULL REFERENCES conversations(conv_id) ON DELETE CASCADE,
+    conv_id   VARCHAR(64) NOT NULL REFERENCES conversations(conv_id) ON DELETE CASCADE,
     user_id   VARCHAR(32) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role      SMALLINT NOT NULL DEFAULT 0,
     nickname  VARCHAR(128) NOT NULL DEFAULT '',
@@ -52,7 +52,7 @@ CREATE INDEX IF NOT EXISTS idx_conv_members_user_id ON conv_members(user_id);
 
 CREATE TABLE IF NOT EXISTS messages (
     msg_id            BIGINT PRIMARY KEY,
-    conv_id           VARCHAR(32) NOT NULL REFERENCES conversations(conv_id),
+    conv_id           VARCHAR(64) NOT NULL REFERENCES conversations(conv_id),
     sender_id         VARCHAR(32) NOT NULL,
     sender_session_id VARCHAR(32) NOT NULL DEFAULT '',
     content_type      SMALLINT NOT NULL DEFAULT 0,

@@ -3,7 +3,6 @@ import IMCore
 
 struct MessageBubble: View {
     let message: Message
-    @EnvironmentObject private var loginVM: LoginViewModel
 
     private var isMine: Bool {
         message.senderID == AuthManager.shared.currentUser?.userID
@@ -28,7 +27,7 @@ struct MessageBubble: View {
                     Text(message.body)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(isMine ? Color.blue : Color(.windowBackgroundColor))
+                        .background(isMine ? Color.blue : Color(.displayP3, red: 0.9, green: 0.9, blue: 0.92))
                         .foregroundColor(isMine ? .white : .primary)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }

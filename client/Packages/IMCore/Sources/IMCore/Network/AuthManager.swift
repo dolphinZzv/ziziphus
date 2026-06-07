@@ -1,5 +1,4 @@
 import Foundation
-import Security
 import Combine
 
 public class AuthManager: ObservableObject, @unchecked Sendable {
@@ -18,40 +17,17 @@ public class AuthManager: ObservableObject, @unchecked Sendable {
         }
     }
 
-    // MARK: - Token
+    // MARK: - Token (stored in UserDefaults to avoid Keychain prompts without code signing)
     public func saveToken(_ token: String) {
-        let data = Data(token.utf8)
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: tokenKey,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-        ]
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
+        UserDefaults.standard.set(token, forKey: tokenKey)
     }
 
     public func readToken() -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: tokenKey,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess, let data = result as? Data else {
-            return nil
-        }
-        return String(data: data, encoding: .utf8)
+        UserDefaults.standard.string(forKey: tokenKey)
     }
 
     public func clearToken() {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: tokenKey,
-        ]
-        SecItemDelete(query as CFDictionary)
+        UserDefaults.standard.removeObject(forKey: tokenKey)
     }
 
     // MARK: - Session ID
@@ -79,6 +55,8 @@ public class AuthManager: ObservableObject, @unchecked Sendable {
         currentUser = nil
         isLoggedIn = false
         sessionID = nil
+        ConversationCache.shared.deleteAll()
+        MessageCache.shared.deleteAll()
     }
 
     // MARK: - Helpers

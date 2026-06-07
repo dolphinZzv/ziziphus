@@ -4,6 +4,15 @@ import IMCore
 struct ContactListView: View {
     @StateObject private var vm = ContactListViewModel()
     @State private var showAddContact = false
+    @State private var confirmDelete: Contact?
+    @State private var isNavigating = false
+    @EnvironmentObject private var localizationManager: LocalizationManager
+
+    private func avatarColor(for userID: String) -> Color {
+        let colors: [Color] = [.blue, .green, .orange, .purple, .pink, .teal, .indigo, .mint]
+        let hash = abs(userID.hashValue)
+        return colors[hash % colors.count]
+    }
 
     var body: some View {
         List {
@@ -12,30 +21,44 @@ struct ContactListView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
             } else if vm.contacts.isEmpty {
-                Text("暂无联系人")
+                Text(loc("contact.no_contacts"))
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity)
                     .padding()
             } else {
                 ForEach(vm.contacts) { contact in
-                    HStack(spacing: 10) {
-                        AvatarView(name: contact.name, url: contact.avatar, size: 36)
-                        VStack(alignment: .leading) {
-                            HStack {
-                                Text(contact.nickname.isEmpty ? contact.name : contact.nickname)
-                                    .fontWeight(.medium)
-                                OnlineStatusDot(status: contact.status)
+                    Button(action: { startChat(contact: contact) }) {
+                        HStack(spacing: 10) {
+                            let color = avatarColor(for: contact.userID)
+                            Circle()
+                                .fill(color.opacity(0.2))
+                                .frame(width: 40, height: 40)
+                                .overlay {
+                                    Text(String((contact.nickname.isEmpty ? contact.name : contact.nickname).prefix(1)))
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(color)
+                                }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(contact.nickname.isEmpty ? contact.name : contact.nickname)
+                                        .fontWeight(.medium)
+                                    OnlineStatusDot(status: contact.status)
+                                }
+                                Text(contact.userID)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
-                            Text(contact.userID)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+
+                            Spacer()
                         }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 2)
+                    .buttonStyle(.plain)
                 }
                 .onDelete { indexSet in
-                    for idx in indexSet {
-                        Task { try? await vm.removeContact(userID: vm.contacts[idx].userID) }
+                    if let idx = indexSet.first {
+                        confirmDelete = vm.contacts[idx]
                     }
                 }
             }
@@ -48,11 +71,44 @@ struct ContactListView: View {
             }
         }
         .sheet(isPresented: $showAddContact) {
-            AddContactView { userID, nickname in
-                Task { try? await vm.addContact(userID: userID, nickname: nickname) }
+            AddContactView { _, _ in
                 showAddContact = false
+                vm.refresh()
             }
         }
+        .alert(loc("contact.delete_title"), isPresented: .init(
+            get: { confirmDelete != nil },
+            set: { if !$0 { confirmDelete = nil } }
+        )) {
+            Button(loc("common.cancel"), role: .cancel) { confirmDelete = nil }
+            Button(loc("contact.delete_button"), role: .destructive) {
+                if let contact = confirmDelete {
+                    Task { try? await vm.removeContact(userID: contact.userID) }
+                }
+                confirmDelete = nil
+            }
+        } message: {
+            Text(confirmDelete.map { String(format: loc("contact.delete_confirm_message"), $0.nickname.isEmpty ? $0.name : $0.nickname) } ?? "")
+        }
         .onAppear { vm.loadContacts() }
+    }
+
+    private func startChat(contact: Contact) {
+        guard !isNavigating else { return }
+        isNavigating = true
+        Task {
+            do {
+                let (convID, name) = try await ConversationService.shared.createP2P(userID: contact.userID)
+                isNavigating = false
+                // Navigate via sidebar selection - post notification or set convID
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("OpenConversation"),
+                    object: nil,
+                    userInfo: ["convID": convID, "name": name.isEmpty ? contact.name : name]
+                )
+            } catch {
+                isNavigating = false
+            }
+        }
     }
 }

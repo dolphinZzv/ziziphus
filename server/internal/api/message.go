@@ -1,20 +1,24 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/dolphinz/im-server/internal/storage/db"
 	"github.com/dolphinz/im-server/pkg/logger"
 	"github.com/dolphinz/im-server/pkg/model"
 )
 
-type MsgHandler struct {
-	msgRepo *db.MessageRepo
+type msgStorage interface {
+	GetHistory(ctx context.Context, convID string, beforeMsgID int64, limit int) ([]*model.Message, error)
 }
 
-func NewMsgHandler(msgRepo *db.MessageRepo) *MsgHandler {
+type MsgHandler struct {
+	msgRepo msgStorage
+}
+
+func NewMsgHandler(msgRepo msgStorage) *MsgHandler {
 	return &MsgHandler{msgRepo: msgRepo}
 }
 
@@ -29,7 +33,7 @@ func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	messages, err := h.msgRepo.GetHistory(r.Context(), convID, before, limit)
 	if err != nil {
 		logger.Error("get history failed", "conv_id", convID, "error", err)
-		Error(w, http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 

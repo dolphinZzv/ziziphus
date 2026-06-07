@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -124,6 +125,21 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 		}
 		items = append(items, item)
 	}
+
+	// For P2P conversations with empty names, resolve the partner's display name
+	for _, item := range items {
+		if item.Type == model.ConvP2P && item.Name == "" {
+			parts := strings.Split(item.ConvID, ":")
+			if len(parts) == 2 {
+				partnerID := parts[0]
+				if partnerID == userID {
+					partnerID = parts[1]
+				}
+				r.pool.QueryRow(ctx, `SELECT name FROM users WHERE id = $1`, partnerID).Scan(&item.Name)
+			}
+		}
+	}
+
 	return items, total, nil
 }
 
