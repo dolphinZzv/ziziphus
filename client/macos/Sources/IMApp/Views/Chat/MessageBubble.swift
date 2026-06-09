@@ -3,62 +3,71 @@ import IMCore
 
 struct MessageBubble: View {
     let message: Message
+    let convType: ConvType
+    let senderInfo: [String: User]
 
     private var isMine: Bool {
         message.senderID == AuthManager.shared.currentUser?.userID
+    }
+
+    private var senderDisplayName: String {
+        if message.senderID == AuthManager.shared.currentUser?.userID {
+            return AuthManager.shared.currentUser?.name ?? message.senderID
+        }
+        return senderInfo[message.senderID]?.name ?? message.senderID
     }
 
     var body: some View {
         HStack {
             if isMine { Spacer(minLength: 60) }
 
-            VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
-                if !isMine, message.contentType == .text {
-                    Text(message.senderID)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+            VStack(alignment: isMine ? .trailing : .leading, spacing: 3) {
+                if convType == .group {
+                    Text(senderDisplayName)
+                        .font(.system(size: AppleDesign.Typography.finePrintSize))
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
                 }
 
-                HStack(alignment: .bottom, spacing: 6) {
-                    if isMine {
-                        statusIcon
-                    }
-
+                VStack(alignment: isMine ? .leading : .trailing, spacing: 3) {
                     Text(message.body)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(isMine ? Color.blue : Color(.displayP3, red: 0.9, green: 0.9, blue: 0.92))
-                        .foregroundColor(isMine ? .white : .primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
+                        .font(.system(size: AppleDesign.Typography.bodySize))
+                        .foregroundColor(isMine ? .white : AppleDesign.Colors.ink)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(isMine ? AppleDesign.Colors.actionBlue : AppleDesign.Colors.chatGray)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .textSelection(.enabled)
+                        .contextMenu {
+                            Button(loc("common.copy")) {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(message.body, forType: .string)
+                            }
+                        }
 
-                if message.timestamp > 0 {
-                    Text(formatTime(message.timestamp))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    if message.timestamp > 0 {
+                        HStack(spacing: 3) {
+                            if isMine {
+                                Image(systemName: statusIconName)
+                                    .font(.system(size: 9))
+                            }
+                            Text(formatTime(message.timestamp))
+                                .font(.system(size: 11))
+                        }
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
+                    }
                 }
             }
 
             if !isMine { Spacer(minLength: 60) }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 2)
     }
 
-    @ViewBuilder
-    private var statusIcon: some View {
+    private var statusIconName: String {
         switch message.status {
-        case .sending:
-            Image(systemName: "clock")
-                .font(.caption2)
-                .foregroundColor(.gray)
-        case .sent, .delivered:
-            Image(systemName: "checkmark")
-                .font(.caption2)
-                .foregroundColor(.gray)
-        case .read:
-            Image(systemName: "checkmark.circle.fill")
-                .font(.caption2)
-                .foregroundColor(.blue)
+        case .sending: return "clock"
+        case .sent, .delivered: return "checkmark"
+        case .read: return "checkmark.circle.fill"
         }
     }
 

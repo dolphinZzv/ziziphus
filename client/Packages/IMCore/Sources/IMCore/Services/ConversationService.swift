@@ -89,6 +89,44 @@ public class ConversationService {
         )
     }
 
+    // MARK: - Group Search
+    public func searchGroups(query: String, page: Int = 1, size: Int = 20) async throws -> [GroupSearchItem] {
+        let result: PaginatedData<GroupSearchItem> = try await api.request(
+            "/api/v1/groups/search",
+            query: ["q": query, "page": "\(page)", "size": "\(size)"]
+        )
+        return result.items
+    }
+
+    // MARK: - Join Requests
+    public func requestJoin(convID: String) async throws {
+        let _: [String: String] = try await api.request(
+            "/api/v1/conversations/\(convID)/join-requests",
+            method: .post
+        )
+    }
+
+    public func listJoinRequests(convID: String) async throws -> [JoinRequest] {
+        let requests: [JoinRequest] = try await api.request(
+            "/api/v1/conversations/\(convID)/join-requests"
+        )
+        return requests
+    }
+
+    public func approveJoinRequest(convID: String, userID: String) async throws {
+        let _: [String: String] = try await api.request(
+            "/api/v1/conversations/\(convID)/join-requests/\(userID)/approve",
+            method: .post
+        )
+    }
+
+    public func rejectJoinRequest(convID: String, userID: String) async throws {
+        let _: [String: String] = try await api.request(
+            "/api/v1/conversations/\(convID)/join-requests/\(userID)/reject",
+            method: .post
+        )
+    }
+
     // MARK: - Requests
     private struct CreateGroupReq: Codable, Sendable {
         let name: String

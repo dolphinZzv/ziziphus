@@ -13,7 +13,7 @@ struct AddContactView: View {
             // Header
             HStack {
                 Text(loc("contact.add"))
-                    .font(.headline)
+                    .font(.appleBodySemibold)
                 Spacer()
                 Button(loc("common.cancel")) { onAdd("", nil) }
             }
@@ -40,7 +40,7 @@ struct AddContactView: View {
             if let error = errorMessage {
                 Text(error)
                     .foregroundColor(.red)
-                    .font(.callout)
+                    .font(.appleCaption)
                     .padding(.horizontal)
             }
 
@@ -55,9 +55,9 @@ struct AddContactView: View {
                                 AvatarView(name: user.name, url: user.avatar, size: 32)
                                 VStack(alignment: .leading) {
                                     Text(user.name)
-                                        .fontWeight(.medium)
+                                        .font(.appleBodySemibold)
                                     Text(user.userID)
-                                        .font(.caption)
+                                        .font(.appleCaption)
                                         .foregroundColor(.secondary)
                                 }
                                 Spacer()

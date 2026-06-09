@@ -24,7 +24,7 @@ func NewMsgHandler(msgRepo msgStorage) *MsgHandler {
 
 func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
-	before, _ := strconv.ParseInt(r.URL.Query().Get("before"), 10, 64)
+	before, _ := strconv.ParseInt(r.URL.Query().Get("before_msg_id"), 10, 64)
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	if limit < 1 || limit > 100 {
 		limit = 50

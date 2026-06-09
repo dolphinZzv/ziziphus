@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/dolphinz/im-server/pkg/logger"
 	"github.com/dolphinz/im-server/pkg/protocol"
 )
 
@@ -35,6 +36,13 @@ func NewConnection(connID, userID, sessionID string, device int, conn *websocket
 }
 
 func (c *Connection) SendJSON(v interface{}) error {
+	if c == nil {
+		return nil
+	}
+	if v == nil {
+		logger.Warn("SendJSON called with nil payload", "conn_id", c.ConnID, "user_id", c.UserID)
+		return nil
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed {

@@ -112,7 +112,6 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger.Info("ws disconnected", "user_id", userID, "session_id", sess.SessionID, "conn_id", connID)
 	h.broadcastSessionEvent(context.Background(), userID, sess.SessionID, int(model.DeviceDesktop), protocol.SessionOffline)
 	h.connMgr.Remove(context.Background(), connID)
-	h.sessMgr.Delete(context.Background(), sess.SessionID)
 }
 
 func (h *WSHandler) readLoop(ctx context.Context, gwConn *gateway.Connection, userID, sessionID string) {
@@ -190,9 +189,12 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 		if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 			return err
 		}
-		h.sessMgr.BindConnection(context.Background(), payload.SessionID, conn.ConnID)
+		recoveredID := payload.SessionID
+		if err := h.sessMgr.BindConnection(context.Background(), payload.SessionID, conn.ConnID); err != nil {
+			recoveredID = sessionID
+		}
 		ack := protocol.SessionRecoverAckPayload{
-			SessionID: payload.SessionID,
+			SessionID: recoveredID,
 			UserID:    userID,
 			Timestamp: time.Now().UnixMilli(),
 		}

@@ -22,6 +22,7 @@ type userGetter interface {
 type convDataRepo interface {
 	GetUserConvs(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
 	UpdateNameAvatar(ctx context.Context, convID, name, avatar string) error
+	SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
 }
 
 type ConvHandler struct {
@@ -51,7 +52,11 @@ type convManager interface {
 	Leave(ctx context.Context, convID, userID string) error
 	GetMembers(ctx context.Context, convID string) ([]*model.ConvMember, error)
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
-}
+	RequestJoin(ctx context.Context, convID, userID string) error
+	ListJoinRequests(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error)
+	ApproveJoinRequest(ctx context.Context, convID, userID, operatorID string) error
+	RejectJoinRequest(ctx context.Context, convID, userID, operatorID string) error
+	}
 
 type convSeqCache interface {
 	GetUnreadCount(ctx context.Context, userID, convID string) (int64, error)
@@ -172,6 +177,18 @@ func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := auth.UserFromCtx(r.Context())
+	// Deduplicate and filter empty member_ids
+	seen := map[string]struct{}{userID: {}}
+	var uniqueIDs []string
+	for _, mid := range req.MemberIDs {
+		if mid != "" && mid != userID {
+			if _, ok := seen[mid]; !ok {
+				seen[mid] = struct{}{}
+				uniqueIDs = append(uniqueIDs, mid)
+			}
+		}
+	}
+	req.MemberIDs = uniqueIDs
 	conv, err := h.convMgr.CreateGroup(r.Context(), req.Name, userID, req.MemberIDs, h.idGen)
 	if err != nil {
 		logger.Error("create group failed", "error", err)
@@ -238,6 +255,21 @@ func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
+	if len(req.UserIDs) == 0 {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+	// Deduplicate user_ids
+	seen := make(map[string]struct{}, len(req.UserIDs))
+	unique := make([]string, 0, len(req.UserIDs))
+	for _, uid := range req.UserIDs {
+		if _, ok := seen[uid]; !ok {
+			seen[uid] = struct{}{}
+			unique = append(unique, uid)
+		}
+	}
+	req.UserIDs = unique
+
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
 
@@ -260,6 +292,72 @@ func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	JSON(w, map[string]interface{}{"conv_id": convID})
+}
+
+func (h *ConvHandler) RequestJoin(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	userID := auth.UserFromCtx(r.Context())
+
+	if err := h.convMgr.RequestJoin(r.Context(), convID, userID); err != nil {
+		if appErr, ok := err.(*model.AppError); ok {
+			Error(w, r, http.StatusForbidden, appErr)
+			return
+		}
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]interface{}{"conv_id": convID})
+}
+
+func (h *ConvHandler) ListJoinRequests(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	userID := auth.UserFromCtx(r.Context())
+
+	requests, err := h.convMgr.ListJoinRequests(r.Context(), convID, userID)
+	if err != nil {
+		if appErr, ok := err.(*model.AppError); ok {
+			Error(w, r, http.StatusForbidden, appErr)
+			return
+		}
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	if requests == nil {
+		requests = []*model.JoinRequest{}
+	}
+	JSON(w, requests)
+}
+
+func (h *ConvHandler) ApproveJoinRequest(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	userID := chi.URLParam(r, "user_id")
+	operatorID := auth.UserFromCtx(r.Context())
+
+	if err := h.convMgr.ApproveJoinRequest(r.Context(), convID, userID, operatorID); err != nil {
+		if appErr, ok := err.(*model.AppError); ok {
+			Error(w, r, http.StatusForbidden, appErr)
+			return
+		}
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]interface{}{"conv_id": convID, "user_id": userID})
+}
+
+func (h *ConvHandler) RejectJoinRequest(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	userID := chi.URLParam(r, "user_id")
+	operatorID := auth.UserFromCtx(r.Context())
+
+	if err := h.convMgr.RejectJoinRequest(r.Context(), convID, userID, operatorID); err != nil {
+		if appErr, ok := err.(*model.AppError); ok {
+			Error(w, r, http.StatusForbidden, appErr)
+			return
+		}
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]interface{}{"conv_id": convID, "user_id": userID})
 }
 
 func (h *ConvHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
@@ -313,6 +411,28 @@ func (h *ConvHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	JSON(w, map[string]interface{}{"conv_id": convID, "msg_id": req.MsgID})
+}
+
+func (h *ConvHandler) SearchGroups(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 100 {
+		size = 20
+	}
+	items, total, err := h.convRepo.SearchByName(r.Context(), q, page, size)
+	if err != nil {
+		logger.Error("search groups failed", "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	if items == nil {
+		items = []*db.GroupSearchItem{}
+	}
+	Paginated(w, items, total, page, size)
 }
 
 func (h *ConvHandler) UnreadTotal(w http.ResponseWriter, r *http.Request) {

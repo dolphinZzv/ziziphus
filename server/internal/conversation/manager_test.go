@@ -124,6 +124,47 @@ func (r *mockConvRepo) GetMemberRole(_ context.Context, convID, userID string) (
 }
 
 // ---------------------------------------------------------------------------
+// Mock userRepo
+// ---------------------------------------------------------------------------
+
+type mockUserRepo struct {
+	mu    sync.Mutex
+	users map[string]*model.User
+}
+
+func newMockUserRepo() *mockUserRepo {
+	return &mockUserRepo{users: make(map[string]*model.User)}
+}
+
+func (r *mockUserRepo) addUser(id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.users[id] = &model.User{ID: id, Name: id, Account: id}
+}
+
+func (r *mockUserRepo) GetByID(_ context.Context, id string) (*model.User, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, ok := r.users[id]
+	if !ok {
+		return nil, fmt.Errorf("user not found: %s", id)
+	}
+	return u, nil
+}
+
+func (r *mockUserRepo) GetByIDs(_ context.Context, ids []string) (map[string]*model.User, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	result := make(map[string]*model.User, len(ids))
+	for _, id := range ids {
+		if u, ok := r.users[id]; ok {
+			result[id] = u
+		}
+	}
+	return result, nil
+}
+
+// ---------------------------------------------------------------------------
 // Mock msgRepo
 // ---------------------------------------------------------------------------
 
@@ -157,11 +198,12 @@ func (s *mockSeqCache) InitConvSeq(_ context.Context, convID string, seq int64) 
 // Helper
 // ---------------------------------------------------------------------------
 
-func newManager() (*Manager, *mockConvRepo, *mockSeqCache) {
+func newManager() (*Manager, *mockConvRepo, *mockUserRepo, *mockSeqCache) {
 	convRepo := newMockConvRepo()
 	msgRepo := &mockMsgRepo{}
+	userRepo := newMockUserRepo()
 	seqCache := newMockSeqCache()
-	return NewManager(convRepo, msgRepo, seqCache), convRepo, seqCache
+	return NewManager(convRepo, msgRepo, seqCache, userRepo, nil), convRepo, userRepo, seqCache
 }
 
 func counterIDGen() func() int64 {
@@ -177,7 +219,7 @@ func counterIDGen() func() int64 {
 // ---------------------------------------------------------------------------
 
 func TestGetOrCreateP2P_ReturnsExisting(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, _, _ := newManager()
 	ctx := context.Background()
 
 	// Pre-seed a conversation via the repo
@@ -195,7 +237,7 @@ func TestGetOrCreateP2P_ReturnsExisting(t *testing.T) {
 }
 
 func TestGetOrCreateP2P_CreatesNewWithMembers(t *testing.T) {
-	mgr, _, seqCache := newManager()
+	mgr, _, _, seqCache := newManager()
 	ctx := context.Background()
 
 	userA, userB := "user_a", "user_b"
@@ -261,13 +303,16 @@ func TestGetOrCreateP2P_CreatesNewWithMembers(t *testing.T) {
 }
 
 func TestCreateGroup_CreatesGroupWithOwnerAndMembers(t *testing.T) {
-	mgr, _, seqCache := newManager()
+	mgr, _, userRepo, seqCache := newManager()
 	ctx := context.Background()
 
 	ownerID := "owner"
 	memberIDs := []string{"m1", "m2", "m3"}
 	name := "test group"
 	gen := counterIDGen()
+	for _, u := range append(memberIDs, ownerID) {
+		userRepo.addUser(u)
+	}
 
 	got, err := mgr.CreateGroup(ctx, name, ownerID, memberIDs, gen)
 	if err != nil {
@@ -331,12 +376,15 @@ func TestCreateGroup_CreatesGroupWithOwnerAndMembers(t *testing.T) {
 }
 
 func TestCreateGroup_DedupesOwnerFromMemberList(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, userRepo, _ := newManager()
 	ctx := context.Background()
 
 	ownerID := "owner"
 	memberIDs := []string{"m1", "owner", "m2"} // owner appears in member list
 	gen := counterIDGen()
+	for _, u := range []string{ownerID, "m1", "m2"} {
+		userRepo.addUser(u)
+	}
 
 	got, err := mgr.CreateGroup(ctx, "dedup", ownerID, memberIDs, gen)
 	if err != nil {
@@ -374,7 +422,7 @@ func TestCreateGroup_DedupesOwnerFromMemberList(t *testing.T) {
 }
 
 func TestGet_ReturnsConversation(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, _, _ := newManager()
 	ctx := context.Background()
 
 	conv := &model.Conversation{
@@ -396,7 +444,7 @@ func TestGet_ReturnsConversation(t *testing.T) {
 }
 
 func TestGet_NonExistent(t *testing.T) {
-	mgr, _, _ := newManager()
+	mgr, _, _, _ := newManager()
 	ctx := context.Background()
 
 	_, err := mgr.Get(ctx, "nonexistent")
@@ -413,9 +461,13 @@ func TestGet_NonExistent(t *testing.T) {
 }
 
 func TestAddMember_AdminSucceeds(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, userRepo, _ := newManager()
 	ctx := context.Background()
 
+	// Register users
+	for _, u := range []string{"admin", "existing", "new_user"} {
+		userRepo.addUser(u)
+	}
 	// Set up a conversation with an admin
 	convID := "conv_admin_add"
 	_ = convRepo.Create(ctx, &model.Conversation{ConvID: convID, Type: model.ConvGroup})
@@ -446,9 +498,11 @@ func TestAddMember_AdminSucceeds(t *testing.T) {
 }
 
 func TestAddMember_MemberNoPermission(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, userRepo, _ := newManager()
 	ctx := context.Background()
 
+	userRepo.addUser("regular")
+	userRepo.addUser("victim")
 	convID := "conv_no_perm"
 	_ = convRepo.Create(ctx, &model.Conversation{ConvID: convID, Type: model.ConvGroup})
 	_ = convRepo.AddMember(ctx, convID, "regular", model.ConvRoleMember)
@@ -467,7 +521,7 @@ func TestAddMember_MemberNoPermission(t *testing.T) {
 }
 
 func TestAddMember_NonExistentConv(t *testing.T) {
-	mgr, _, _ := newManager()
+	mgr, _, _, _ := newManager()
 	ctx := context.Background()
 
 	err := mgr.AddMember(ctx, "ghost_conv", "someone", "anyone")
@@ -483,8 +537,81 @@ func TestAddMember_NonExistentConv(t *testing.T) {
 	}
 }
 
+func TestAddMember_UserNotFound(t *testing.T) {
+	mgr, convRepo, userRepo, _ := newManager()
+	ctx := context.Background()
+
+	convID := "conv_user_not_found"
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: convID, Type: model.ConvGroup})
+	userRepo.addUser("admin")
+	_ = convRepo.AddMember(ctx, convID, "admin", model.ConvRoleAdmin)
+
+	err := mgr.AddMember(ctx, convID, "nonexistent_user", "admin")
+	if err == nil {
+		t.Fatal("expected error when target user does not exist")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok {
+		t.Fatalf("expected *model.AppError, got %T", err)
+	}
+	if appErr.Code != model.ErrNotFound {
+		t.Errorf("expected ErrNotFound code, got %d", appErr.Code)
+	}
+}
+
+func TestAddMember_NotGroupConv(t *testing.T) {
+	mgr, convRepo, userRepo, _ := newManager()
+	ctx := context.Background()
+
+	// Create a P2P conversation
+	convID := "user_a:user_b"
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: convID, Type: model.ConvP2P})
+	userRepo.addUser("user_a")
+	userRepo.addUser("user_b")
+	_ = convRepo.AddMember(ctx, convID, "user_a", model.ConvRoleOwner)
+	_ = convRepo.AddMember(ctx, convID, "user_b", model.ConvRoleMember)
+
+	err := mgr.AddMember(ctx, convID, "user_c", "user_a")
+	if err == nil {
+		t.Fatal("expected error when adding member to P2P conversation")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok {
+		t.Fatalf("expected *model.AppError, got %T", err)
+	}
+	if appErr.Code != model.ErrBadMessage {
+		t.Errorf("expected ErrBadMessage code, got %d", appErr.Code)
+	}
+}
+
+func TestAddMember_GroupFull(t *testing.T) {
+	mgr, convRepo, userRepo, _ := newManager()
+	ctx := context.Background()
+
+	convID := "conv_full"
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: convID, Type: model.ConvGroup, MaxMembers: 2})
+	userRepo.addUser("owner")
+	userRepo.addUser("existing")
+	userRepo.addUser("new_user")
+	_ = convRepo.AddMember(ctx, convID, "owner", model.ConvRoleOwner)
+	_ = convRepo.AddMember(ctx, convID, "existing", model.ConvRoleMember)
+
+	// group already has 2 members, max is 2
+	err := mgr.AddMember(ctx, convID, "new_user", "owner")
+	if err == nil {
+		t.Fatal("expected error when group is full")
+	}
+	appErr, ok := err.(*model.AppError)
+	if !ok {
+		t.Fatalf("expected *model.AppError, got %T", err)
+	}
+	if appErr.Code != model.ErrTooLarge {
+		t.Errorf("expected ErrTooLarge code, got %d", appErr.Code)
+	}
+}
+
 func TestRemoveMember_ByAdminSucceeds(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, _, _ := newManager()
 	ctx := context.Background()
 
 	convID := "conv_admin_remove"
@@ -507,7 +634,7 @@ func TestRemoveMember_ByAdminSucceeds(t *testing.T) {
 }
 
 func TestRemoveMember_SelfAlwaysWorks(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, _, _ := newManager()
 	ctx := context.Background()
 
 	convID := "conv_self_leave"
@@ -529,7 +656,7 @@ func TestRemoveMember_SelfAlwaysWorks(t *testing.T) {
 }
 
 func TestRemoveMember_NonAdminNoPermission(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, _, _ := newManager()
 	ctx := context.Background()
 
 	convID := "conv_nonadmin_no_perm"
@@ -551,7 +678,7 @@ func TestRemoveMember_NonAdminNoPermission(t *testing.T) {
 }
 
 func TestRemoveMember_NonExistentConv(t *testing.T) {
-	mgr, _, _ := newManager()
+	mgr, _, _, _ := newManager()
 	ctx := context.Background()
 
 	err := mgr.RemoveMember(ctx, "ghost", "someone", "anyone")
@@ -568,7 +695,7 @@ func TestRemoveMember_NonExistentConv(t *testing.T) {
 }
 
 func TestLeave_DelegatesToRemoveMember(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, _, _ := newManager()
 	ctx := context.Background()
 
 	convID := "conv_leave"
@@ -590,7 +717,7 @@ func TestLeave_DelegatesToRemoveMember(t *testing.T) {
 }
 
 func TestIsMember_DelegatesToRepo(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, _, _ := newManager()
 	ctx := context.Background()
 
 	convID := "conv_ismember"
@@ -615,7 +742,7 @@ func TestIsMember_DelegatesToRepo(t *testing.T) {
 }
 
 func TestGetMembers_DelegatesToRepo(t *testing.T) {
-	mgr, convRepo, _ := newManager()
+	mgr, convRepo, _, _ := newManager()
 	ctx := context.Background()
 
 	convID := "conv_get_members"
@@ -635,10 +762,354 @@ func TestGetMembers_DelegatesToRepo(t *testing.T) {
 func TestNewManager(t *testing.T) {
 	convRepo := newMockConvRepo()
 	msgRepo := &mockMsgRepo{}
+	userRepo := newMockUserRepo()
 	seqCache := newMockSeqCache()
 
-	mgr := NewManager(convRepo, msgRepo, seqCache)
+	mgr := NewManager(convRepo, msgRepo, seqCache, userRepo, nil)
 	if mgr == nil {
 		t.Fatal("NewManager returned nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Mock joinRequestRepo
+// ---------------------------------------------------------------------------
+
+type mockJoinRequestRepo struct {
+	mu       sync.Mutex
+	requests map[string]*model.JoinRequest // key: convID + ":" + userID
+}
+
+func newMockJoinRequestRepo() *mockJoinRequestRepo {
+	return &mockJoinRequestRepo{requests: make(map[string]*model.JoinRequest)}
+}
+
+func (r *mockJoinRequestRepo) key(convID, userID string) string {
+	return convID + ":" + userID
+}
+
+func (r *mockJoinRequestRepo) Create(_ context.Context, convID, userID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	k := r.key(convID, userID)
+	r.requests[k] = &model.JoinRequest{ConvID: convID, UserID: userID, Status: model.JoinRequestPending}
+	return nil
+}
+
+func (r *mockJoinRequestRepo) Get(_ context.Context, convID, userID string) (*model.JoinRequest, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	k := r.key(convID, userID)
+	jr, ok := r.requests[k]
+	if !ok {
+		return nil, nil
+	}
+	cp := *jr
+	return &cp, nil
+}
+
+func (r *mockJoinRequestRepo) ListByConv(_ context.Context, convID string, status model.JoinRequestStatus) ([]*model.JoinRequest, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var result []*model.JoinRequest
+	for _, jr := range r.requests {
+		if jr.ConvID == convID && jr.Status == status {
+			cp := *jr
+			result = append(result, &cp)
+		}
+	}
+	return result, nil
+}
+
+func (r *mockJoinRequestRepo) UpdateStatus(_ context.Context, convID, userID string, status model.JoinRequestStatus) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	k := r.key(convID, userID)
+	jr, ok := r.requests[k]
+	if !ok {
+		return fmt.Errorf("join request not found")
+	}
+	jr.Status = status
+	return nil
+}
+
+func (r *mockJoinRequestRepo) ExistsPending(_ context.Context, convID, userID string) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	k := r.key(convID, userID)
+	jr, ok := r.requests[k]
+	return ok && jr.Status == model.JoinRequestPending, nil
+}
+
+// ---------------------------------------------------------------------------
+// Join Request tests
+// ---------------------------------------------------------------------------
+
+func newManagerWithJR() (*Manager, *mockConvRepo, *mockUserRepo, *mockJoinRequestRepo) {
+	convRepo := newMockConvRepo()
+	msgRepo := &mockMsgRepo{}
+	userRepo := newMockUserRepo()
+	seqCache := newMockSeqCache()
+	jrRepo := newMockJoinRequestRepo()
+	return NewManager(convRepo, msgRepo, seqCache, userRepo, jrRepo), convRepo, userRepo, jrRepo
+}
+
+func TestRequestJoin_Success(t *testing.T) {
+	mgr, convRepo, userRepo, jrRepo := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice")
+	userRepo.addUser("bob")
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleOwner)
+
+	err := mgr.RequestJoin(ctx, "g1", "bob")
+	if err != nil {
+		t.Fatalf("RequestJoin failed: %v", err)
+	}
+	// verify the join request was created (pending)
+	jr, _ := jrRepo.Get(ctx, "g1", "bob")
+	if jr == nil || jr.Status != model.JoinRequestPending {
+		t.Error("join request should be pending")
+	}
+}
+
+func TestRequestJoin_ConvNotFound(t *testing.T) {
+	mgr, _, userRepo, _ := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice")
+
+	err := mgr.RequestJoin(ctx, "nonexistent", "alice")
+	if err == nil {
+		t.Fatal("expected error for nonexistent conversation")
+	}
+	if appErr, ok := err.(*model.AppError); ok && appErr.Key != "err.conv_not_found_mgr" {
+		t.Errorf("expected conv_not_found_mgr key, got %s", appErr.Key)
+	}
+}
+
+func TestRequestJoin_NotGroup(t *testing.T) {
+	mgr, convRepo, userRepo, _ := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice")
+	userRepo.addUser("bob")
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "p1", Type: model.ConvP2P})
+	_ = convRepo.AddMember(ctx, "p1", "alice", model.ConvRoleOwner)
+
+	err := mgr.RequestJoin(ctx, "p1", "bob")
+	if err == nil {
+		t.Fatal("expected error for P2P conversation")
+	}
+	if appErr, ok := err.(*model.AppError); ok && appErr.Key != "err.group_only" {
+		t.Errorf("expected group_only key, got %s", appErr.Key)
+	}
+}
+
+func TestRequestJoin_UserNotFound(t *testing.T) {
+	mgr, convRepo, _, _ := newManagerWithJR()
+	ctx := context.Background()
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+
+	err := mgr.RequestJoin(ctx, "g1", "nonexistent")
+	if err == nil {
+		t.Fatal("expected error for nonexistent user")
+	}
+	if appErr, ok := err.(*model.AppError); ok && appErr.Key != "err.user_not_found" {
+		t.Errorf("expected user_not_found key, got %s", appErr.Key)
+	}
+}
+
+func TestRequestJoin_AlreadyMember(t *testing.T) {
+	mgr, convRepo, userRepo, _ := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice")
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleOwner)
+
+	err := mgr.RequestJoin(ctx, "g1", "alice")
+	if err != model.ErrAlreadyMember {
+		t.Errorf("expected ErrAlreadyMember, got %v", err)
+	}
+}
+
+func TestRequestJoin_DuplicateRequest(t *testing.T) {
+	mgr, convRepo, userRepo, _ := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice")
+	userRepo.addUser("bob")
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleOwner)
+
+	// first request should succeed
+	if err := mgr.RequestJoin(ctx, "g1", "bob"); err != nil {
+		t.Fatalf("first request failed: %v", err)
+	}
+	// duplicate should fail
+	err := mgr.RequestJoin(ctx, "g1", "bob")
+	if err != model.ErrDuplicateRequest {
+		t.Errorf("expected ErrDuplicateRequest, got %v", err)
+	}
+}
+
+func TestListJoinRequests_Success(t *testing.T) {
+	mgr, convRepo, userRepo, jrRepo := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice")
+	userRepo.addUser("bob")
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleAdmin)
+
+	_ = jrRepo.Create(ctx, "g1", "bob")
+
+	requests, err := mgr.ListJoinRequests(ctx, "g1", "alice")
+	if err != nil {
+		t.Fatalf("ListJoinRequests failed: %v", err)
+	}
+	if len(requests) != 1 {
+		t.Errorf("expected 1 request, got %d", len(requests))
+	}
+}
+
+func TestListJoinRequests_PermissionDenied(t *testing.T) {
+	mgr, convRepo, userRepo, _ := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice")   // member
+	userRepo.addUser("admin")   // admin
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "admin", model.ConvRoleAdmin)
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleMember)
+
+	_, err := mgr.ListJoinRequests(ctx, "g1", "alice")
+	if err == nil {
+		t.Fatal("expected error for non-admin")
+	}
+	if appErr, ok := err.(*model.AppError); ok && appErr.Key != "err.permission_denied" {
+		t.Errorf("expected permission_denied key, got %s", appErr.Key)
+	}
+}
+
+func TestApproveJoinRequest_Success(t *testing.T) {
+	mgr, convRepo, userRepo, jrRepo := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice") // admin
+	userRepo.addUser("bob")   // requester
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleAdmin)
+	_ = jrRepo.Create(ctx, "g1", "bob")
+
+	err := mgr.ApproveJoinRequest(ctx, "g1", "bob", "alice")
+	if err != nil {
+		t.Fatalf("ApproveJoinRequest failed: %v", err)
+	}
+	// verify bob is now a member
+	isMember, _ := convRepo.IsMember(ctx, "g1", "bob")
+	if !isMember {
+		t.Error("bob should be a member after approval")
+	}
+	// verify request status updated
+	jr, _ := jrRepo.Get(ctx, "g1", "bob")
+	if jr == nil || jr.Status != model.JoinRequestApproved {
+		t.Error("request should be approved")
+	}
+}
+
+func TestApproveJoinRequest_NoPendingRequest(t *testing.T) {
+	mgr, convRepo, userRepo, _ := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice")
+	userRepo.addUser("bob")
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleAdmin)
+
+	err := mgr.ApproveJoinRequest(ctx, "g1", "bob", "alice")
+	if err != model.ErrNoPendingRequest {
+		t.Errorf("expected ErrNoPendingRequest, got %v", err)
+	}
+}
+
+func TestApproveJoinRequest_PermissionDenied(t *testing.T) {
+	mgr, convRepo, userRepo, jrRepo := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice") // member
+	userRepo.addUser("bob")   // requester
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleMember)
+	_ = jrRepo.Create(ctx, "g1", "bob")
+
+	err := mgr.ApproveJoinRequest(ctx, "g1", "bob", "alice")
+	if err == nil {
+		t.Fatal("expected error for non-admin")
+	}
+	if appErr, ok := err.(*model.AppError); ok && appErr.Key != "err.permission_denied" {
+		t.Errorf("expected permission_denied key, got %s", appErr.Key)
+	}
+}
+
+func TestApproveJoinRequest_GroupFull(t *testing.T) {
+	mgr, convRepo, userRepo, jrRepo := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice") // admin
+	userRepo.addUser("bob")   // requester
+	// Create a group with max 1 member (admin already takes one slot)
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup, MaxMembers: 1})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleAdmin)
+	_ = jrRepo.Create(ctx, "g1", "bob")
+
+	err := mgr.ApproveJoinRequest(ctx, "g1", "bob", "alice")
+	if err == nil {
+		t.Fatal("expected error for full group")
+	}
+	if appErr, ok := err.(*model.AppError); ok && appErr.Key != "err.group_full" {
+		t.Errorf("expected group_full key, got %s", appErr.Key)
+	}
+}
+
+func TestRejectJoinRequest_Success(t *testing.T) {
+	mgr, convRepo, userRepo, jrRepo := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice") // admin
+	userRepo.addUser("bob")   // requester
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleAdmin)
+	_ = jrRepo.Create(ctx, "g1", "bob")
+
+	err := mgr.RejectJoinRequest(ctx, "g1", "bob", "alice")
+	if err != nil {
+		t.Fatalf("RejectJoinRequest failed: %v", err)
+	}
+	jr, _ := jrRepo.Get(ctx, "g1", "bob")
+	if jr == nil || jr.Status != model.JoinRequestRejected {
+		t.Error("request should be rejected")
+	}
+}
+
+func TestRejectJoinRequest_NoPendingRequest(t *testing.T) {
+	mgr, convRepo, userRepo, _ := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice")
+	userRepo.addUser("bob")
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleAdmin)
+
+	err := mgr.RejectJoinRequest(ctx, "g1", "bob", "alice")
+	if err != model.ErrNoPendingRequest {
+		t.Errorf("expected ErrNoPendingRequest, got %v", err)
+	}
+}
+
+func TestRejectJoinRequest_PermissionDenied(t *testing.T) {
+	mgr, convRepo, userRepo, jrRepo := newManagerWithJR()
+	ctx := context.Background()
+	userRepo.addUser("alice") // member
+	userRepo.addUser("bob")   // requester
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleMember)
+	_ = jrRepo.Create(ctx, "g1", "bob")
+
+	err := mgr.RejectJoinRequest(ctx, "g1", "bob", "alice")
+	if err == nil {
+		t.Fatal("expected error for non-admin")
+	}
+	if appErr, ok := err.(*model.AppError); ok && appErr.Key != "err.permission_denied" {
+		t.Errorf("expected permission_denied key, got %s", appErr.Key)
 	}
 }

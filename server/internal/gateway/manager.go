@@ -64,7 +64,11 @@ func (m *Manager) Get(_ context.Context, connID string) *Connection {
 func (m *Manager) GetBySessionID(_ context.Context, sessionID string) any {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.sessConns[sessionID]
+	conn := m.sessConns[sessionID]
+	if conn == nil {
+		return nil
+	}
+	return conn
 }
 
 func (m *Manager) GetByUserID(_ context.Context, userID string) []any {

@@ -53,19 +53,24 @@ func (r *Router) Route(ctx context.Context, msg *model.Message) []RouteTarget {
 	return r.routeGroup(ctx, msg, conv)
 }
 
-func (r *Router) routeP2P(ctx context.Context, msg *model.Message, conv *model.Conversation) []RouteTarget {
-	members, err := r.convManager.GetMembers(ctx, conv.ConvID)
-	if err != nil {
-		logger.Error("routeP2P: get members failed", "conv_id", conv.ConvID, "error", err)
-		return nil
-	}
-
+func (r *Router) route(ctx context.Context, msg *model.Message, members []*model.ConvMember) []RouteTarget {
 	var targets []RouteTarget
 	for _, m := range members {
-		if m.UserID == msg.SenderID {
+		sessionIDs := r.sessManager.GetUserSessionIDs(ctx, m.UserID)
+		if len(sessionIDs) == 0 {
 			continue
 		}
-		sessionIDs := r.sessManager.GetUserSessionIDs(ctx, m.UserID)
+		if m.UserID == msg.SenderID {
+			// Same user on other devices should still receive the push.
+			// Only filter out the sending session to avoid echoing back.
+			filtered := make([]string, 0, len(sessionIDs))
+			for _, sid := range sessionIDs {
+				if sid != msg.SenderSessionID {
+					filtered = append(filtered, sid)
+				}
+			}
+			sessionIDs = filtered
+		}
 		if len(sessionIDs) > 0 {
 			targets = append(targets, RouteTarget{
 				UserID:     m.UserID,
@@ -76,25 +81,20 @@ func (r *Router) routeP2P(ctx context.Context, msg *model.Message, conv *model.C
 	return targets
 }
 
+func (r *Router) routeP2P(ctx context.Context, msg *model.Message, conv *model.Conversation) []RouteTarget {
+	members, err := r.convManager.GetMembers(ctx, conv.ConvID)
+	if err != nil {
+		logger.Error("routeP2P: get members failed", "conv_id", conv.ConvID, "error", err)
+		return nil
+	}
+	return r.route(ctx, msg, members)
+}
+
 func (r *Router) routeGroup(ctx context.Context, msg *model.Message, conv *model.Conversation) []RouteTarget {
 	members, err := r.convManager.GetMembers(ctx, conv.ConvID)
 	if err != nil {
 		logger.Error("routeGroup: get members failed", "conv_id", conv.ConvID, "error", err)
 		return nil
 	}
-
-	var targets []RouteTarget
-	for _, m := range members {
-		if m.UserID == msg.SenderID {
-			continue
-		}
-		sessionIDs := r.sessManager.GetUserSessionIDs(ctx, m.UserID)
-		if len(sessionIDs) > 0 {
-			targets = append(targets, RouteTarget{
-				UserID:     m.UserID,
-				SessionIDs: sessionIDs,
-			})
-		}
-	}
-	return targets
+	return r.route(ctx, msg, members)
 }

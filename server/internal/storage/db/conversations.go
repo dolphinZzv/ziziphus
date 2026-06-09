@@ -63,6 +63,7 @@ type ConvListItem struct {
 type LastMessageInfo struct {
 	MsgID       int64  `json:"msg_id"`
 	SenderID    string `json:"sender_id"`
+		SenderName  string `json:"sender_name"`
 	Body        string `json:"body"`
 	ContentType int    `json:"content_type"`
 	Timestamp   int64  `json:"timestamp"`
@@ -79,12 +80,13 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 	offset := (page - 1) * size
 	rows, err := r.pool.Query(ctx,
 		`SELECT c.conv_id, c.type, c.name, c.avatar,
-		        COALESCE(m.msg_id, 0), COALESCE(m.sender_id, ''), COALESCE(m.body, ''), COALESCE(m.content_type, 0), COALESCE(m.timestamp, 0), COALESCE(m.status, 0),
+		        COALESCE(m.msg_id, 0), COALESCE(m.sender_id, ''), COALESCE(u.name, ''), COALESCE(m.body, ''), COALESCE(m.content_type, 0), COALESCE(m.timestamp, 0), COALESCE(m.status, 0),
 		        c.last_msg_at,
 		        cm.role, cm.mute
 		 FROM conv_members cm
 		 JOIN conversations c ON c.conv_id = cm.conv_id
-		 LEFT JOIN messages m ON m.msg_id = c.last_msg_id
+			 LEFT JOIN messages m ON m.msg_id = c.last_msg_id
+			 LEFT JOIN users u ON u.id = m.sender_id
 		 WHERE cm.user_id = $1
 		 ORDER BY c.last_msg_at DESC NULLS LAST
 		 LIMIT $2 OFFSET $3`, userID, size, offset)
@@ -98,6 +100,7 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 		item := &ConvListItem{}
 		var lastMsgID int64
 		var lastMsgSenderID string
+		var lastMsgSenderName string
 		var lastMsgBody string
 		var lastMsgContentType int
 		var lastMsgTimestamp int64
@@ -106,7 +109,7 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 		var role model.ConvRole
 		var mute bool
 		if err := rows.Scan(&item.ConvID, &item.Type, &item.Name, &item.Avatar,
-			&lastMsgID, &lastMsgSenderID, &lastMsgBody, &lastMsgContentType, &lastMsgTimestamp, &lastMsgStatus,
+			&lastMsgID, &lastMsgSenderID, &lastMsgSenderName, &lastMsgBody, &lastMsgContentType, &lastMsgTimestamp, &lastMsgStatus,
 			&lastMsgAt, &role, &mute); err != nil {
 			return nil, 0, err
 		}
@@ -114,6 +117,7 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 			item.LastMessage = &LastMessageInfo{
 				MsgID:       lastMsgID,
 				SenderID:    lastMsgSenderID,
+				SenderName:  lastMsgSenderName,
 				Body:        lastMsgBody,
 				ContentType: lastMsgContentType,
 				Timestamp:   lastMsgTimestamp,
@@ -190,6 +194,49 @@ func (r *ConvRepo) GetMemberRole(ctx context.Context, convID, userID string) (mo
 	err := r.pool.QueryRow(ctx,
 		`SELECT role FROM conv_members WHERE conv_id = $1 AND user_id = $2`, convID, userID).Scan(&role)
 	return role, err
+}
+
+type GroupSearchItem struct {
+	ConvID      string `json:"conv_id"`
+	Name        string `json:"name"`
+	Avatar      string `json:"avatar"`
+	OwnerID     string `json:"owner_id"`
+	MemberCount int    `json:"member_count"`
+	CreatedAt   int64  `json:"created_at"`
+}
+
+func (r *ConvRepo) SearchByName(ctx context.Context, q string, page, size int) ([]*GroupSearchItem, int, error) {
+	var total int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM conversations WHERE type = $1 AND name ILIKE $2`,
+		model.ConvGroup, "%"+q+"%").Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+	offset := (page - 1) * size
+	rows, err := r.pool.Query(ctx,
+		`SELECT c.conv_id, c.name, c.avatar, c.owner_id, COALESCE(mc.count, 0), c.created_at
+		 FROM conversations c
+		 LEFT JOIN (SELECT conv_id, COUNT(*) AS count FROM conv_members GROUP BY conv_id) mc ON mc.conv_id = c.conv_id
+		 WHERE c.type = $1 AND c.name ILIKE $2
+		 ORDER BY c.created_at DESC
+		 LIMIT $3 OFFSET $4`,
+		model.ConvGroup, "%"+q+"%", size, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var items []*GroupSearchItem
+	for rows.Next() {
+		item := &GroupSearchItem{}
+		var createdAt time.Time
+		if err := rows.Scan(&item.ConvID, &item.Name, &item.Avatar, &item.OwnerID, &item.MemberCount, &createdAt); err != nil {
+			return nil, 0, err
+		}
+		item.CreatedAt = createdAt.UnixMilli()
+		items = append(items, item)
+	}
+	return items, total, nil
 }
 
 func (r *ConvRepo) UpdateNameAvatar(ctx context.Context, convID, name, avatar string) error {

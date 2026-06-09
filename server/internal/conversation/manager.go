@@ -2,6 +2,7 @@ package conversation
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/dolphinz/im-server/pkg/logger"
@@ -9,9 +10,16 @@ import (
 )
 
 type Manager struct {
-	convRepo convRepo
-	msgRepo  msgRepo
-	seqCache seqCache
+	convRepo        convRepo
+	msgRepo         msgRepo
+	seqCache        seqCache
+	userRepo        userRepo
+	joinRequestRepo joinRequestRepo
+}
+
+type userRepo interface {
+	GetByID(ctx context.Context, id string) (*model.User, error)
+	GetByIDs(ctx context.Context, ids []string) (map[string]*model.User, error)
 }
 
 type convRepo interface {
@@ -33,11 +41,21 @@ type seqCache interface {
 	InitConvSeq(ctx context.Context, convID string, seq int64) error
 }
 
-func NewManager(convRepo convRepo, msgRepo msgRepo, seqCache seqCache) *Manager {
+type joinRequestRepo interface {
+	Create(ctx context.Context, convID, userID string) error
+	Get(ctx context.Context, convID, userID string) (*model.JoinRequest, error)
+	ListByConv(ctx context.Context, convID string, status model.JoinRequestStatus) ([]*model.JoinRequest, error)
+	UpdateStatus(ctx context.Context, convID, userID string, status model.JoinRequestStatus) error
+	ExistsPending(ctx context.Context, convID, userID string) (bool, error)
+}
+
+func NewManager(convRepo convRepo, msgRepo msgRepo, seqCache seqCache, userRepo userRepo, joinRequestRepo joinRequestRepo) *Manager {
 	return &Manager{
-		convRepo: convRepo,
-		msgRepo:  msgRepo,
-		seqCache: seqCache,
+		convRepo:        convRepo,
+		msgRepo:         msgRepo,
+		seqCache:        seqCache,
+		userRepo:        userRepo,
+		joinRequestRepo: joinRequestRepo,
 	}
 }
 
@@ -70,15 +88,39 @@ func (m *Manager) GetOrCreateP2P(ctx context.Context, userA, userB string) (*mod
 }
 
 func (m *Manager) CreateGroup(ctx context.Context, name, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error) {
+	// deduplicate and remove owner from member list
+	seen := map[string]struct{}{ownerID: {}}
+	var uniqueMembers []string
+	for _, mid := range memberIDs {
+		if _, ok := seen[mid]; !ok {
+			seen[mid] = struct{}{}
+			uniqueMembers = append(uniqueMembers, mid)
+		}
+	}
+	// 1. Check all members exist
+	users, err := m.userRepo.GetByIDs(ctx, uniqueMembers)
+	if err != nil {
+		return nil, err
+	}
+	for _, mid := range uniqueMembers {
+		if _, ok := users[mid]; !ok {
+			return nil, &model.AppError{Code: model.ErrNotFound, Message: fmt.Sprintf("用户 %s 不存在", mid), Key: "err.user_not_found"}
+		}
+	}
+
 	convID := model.GenerateGroupConvID(idGen)
 	now := time.Now().UnixMilli()
+	maxMembers := 200
+	if len(uniqueMembers)+1 > maxMembers {
+		return nil, &model.AppError{Code: model.ErrTooLarge, Message: "群组人数已达上限", Key: "err.group_full"}
+	}
 	conv := &model.Conversation{
-		ConvID:    convID,
-		Type:      model.ConvGroup,
-		Name:      name,
-		OwnerID:   ownerID,
-		MaxMembers: 200,
-		CreatedAt: now,
+		ConvID:     convID,
+		Type:       model.ConvGroup,
+		Name:       name,
+		OwnerID:    ownerID,
+		MaxMembers: maxMembers,
+		CreatedAt:  now,
 	}
 	if err := m.convRepo.Create(ctx, conv); err != nil {
 		return nil, err
@@ -87,10 +129,8 @@ func (m *Manager) CreateGroup(ctx context.Context, name, ownerID string, memberI
 	// add owner
 	m.convRepo.AddMember(ctx, convID, ownerID, model.ConvRoleOwner)
 	// add members
-	for _, mid := range memberIDs {
-		if mid != ownerID {
-			m.convRepo.AddMember(ctx, convID, mid, model.ConvRoleMember)
-		}
+	for _, mid := range uniqueMembers {
+		m.convRepo.AddMember(ctx, convID, mid, model.ConvRoleMember)
 	}
 	// init conv seq
 	m.seqCache.InitConvSeq(ctx, convID, 0)
@@ -103,13 +143,33 @@ func (m *Manager) Get(ctx context.Context, convID string) (*model.Conversation, 
 }
 
 func (m *Manager) AddMember(ctx context.Context, convID, userID string, operatorID string) error {
-	// verify operator is member
+	// 2. Check conversation exists and is a group
+	conv, err := m.convRepo.Get(ctx, convID)
+	if err != nil {
+		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+	}
+	if conv.Type != model.ConvGroup {
+		return &model.AppError{Code: model.ErrBadMessage, Message: "仅支持群组操作", Key: "err.group_only"}
+	}
+	// 1. Check target user exists
+	if _, err := m.userRepo.GetByID(ctx, userID); err != nil {
+		return &model.AppError{Code: model.ErrNotFound, Message: "用户不存在", Key: "err.user_not_found"}
+	}
+	// Verify operator is member and has admin/owner role
 	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
 	if err != nil {
 		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
 	}
 	if role < model.ConvRoleAdmin {
 		return &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
+	}
+	// 3. Check max members limit
+	members, err := m.convRepo.GetMembers(ctx, convID)
+	if err != nil {
+		return err
+	}
+	if conv.MaxMembers > 0 && len(members) >= conv.MaxMembers {
+		return &model.AppError{Code: model.ErrTooLarge, Message: "群组人数已达上限", Key: "err.group_full"}
 	}
 	return m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleMember)
 }
@@ -139,4 +199,93 @@ func (m *Manager) GetMembers(ctx context.Context, convID string) ([]*model.ConvM
 
 func (m *Manager) IsMember(ctx context.Context, convID, userID string) (bool, error) {
 	return m.convRepo.IsMember(ctx, convID, userID)
+}
+
+func (m *Manager) RequestJoin(ctx context.Context, convID, userID string) error {
+	conv, err := m.convRepo.Get(ctx, convID)
+	if err != nil {
+		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+	}
+	if conv.Type != model.ConvGroup {
+		return &model.AppError{Code: model.ErrBadMessage, Message: "仅支持群组", Key: "err.group_only"}
+	}
+	if _, err := m.userRepo.GetByID(ctx, userID); err != nil {
+		return &model.AppError{Code: model.ErrNotFound, Message: "用户不存在", Key: "err.user_not_found"}
+	}
+	isMember, err := m.convRepo.IsMember(ctx, convID, userID)
+	if err != nil {
+		return err
+	}
+	if isMember {
+		return model.ErrAlreadyMember
+	}
+	exists, err := m.joinRequestRepo.ExistsPending(ctx, convID, userID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return model.ErrDuplicateRequest
+	}
+	return m.joinRequestRepo.Create(ctx, convID, userID)
+}
+
+func (m *Manager) ListJoinRequests(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error) {
+	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
+	if err != nil {
+		return nil, &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+	}
+	if role < model.ConvRoleAdmin {
+		return nil, &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
+	}
+	return m.joinRequestRepo.ListByConv(ctx, convID, model.JoinRequestPending)
+}
+
+func (m *Manager) ApproveJoinRequest(ctx context.Context, convID, userID, operatorID string) error {
+	jr, err := m.joinRequestRepo.Get(ctx, convID, userID)
+	if err != nil {
+		return err
+	}
+	if jr == nil || jr.Status != model.JoinRequestPending {
+		return model.ErrNoPendingRequest
+	}
+	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
+	if err != nil {
+		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+	}
+	if role < model.ConvRoleAdmin {
+		return &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
+	}
+	conv, err := m.convRepo.Get(ctx, convID)
+	if err != nil {
+		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+	}
+	members, err := m.convRepo.GetMembers(ctx, convID)
+	if err != nil {
+		return err
+	}
+	if conv.MaxMembers > 0 && len(members) >= conv.MaxMembers {
+		return &model.AppError{Code: model.ErrTooLarge, Message: "群组人数已达上限", Key: "err.group_full"}
+	}
+	if err := m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleMember); err != nil {
+		return err
+	}
+	return m.joinRequestRepo.UpdateStatus(ctx, convID, userID, model.JoinRequestApproved)
+}
+
+func (m *Manager) RejectJoinRequest(ctx context.Context, convID, userID, operatorID string) error {
+	jr, err := m.joinRequestRepo.Get(ctx, convID, userID)
+	if err != nil {
+		return err
+	}
+	if jr == nil || jr.Status != model.JoinRequestPending {
+		return model.ErrNoPendingRequest
+	}
+	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
+	if err != nil {
+		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+	}
+	if role < model.ConvRoleAdmin {
+		return &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
+	}
+	return m.joinRequestRepo.UpdateStatus(ctx, convID, userID, model.JoinRequestRejected)
 }

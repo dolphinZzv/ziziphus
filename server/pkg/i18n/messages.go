@@ -34,6 +34,11 @@ var Messages = map[string]map[Lang]string{
 	// ===== Conversation manager =====
 	"err.conv_not_found_mgr": {LangZH: "会话不存在", LangEN: "Conversation not found"},
 	"err.permission_denied":  {LangZH: "权限不足", LangEN: "Permission denied"},
+	"err.user_not_found":     {LangZH: "用户不存在", LangEN: "User not found"},
+	"err.group_full":         {LangZH: "群组人数已达上限", LangEN: "Group member limit reached"},
+	"err.duplicate_join_request": {LangZH: "已存在待处理的入群申请", LangEN: "A pending join request already exists"},
+	"err.already_member":         {LangZH: "已经是群成员", LangEN: "Already a group member"},
+	"err.no_pending_request":     {LangZH: "没有待处理的申请", LangEN: "No pending join request"},
 
 	// ===== WS handler =====
 	"err.create_session_failed": {LangZH: "创建会话失败", LangEN: "Failed to create session"},

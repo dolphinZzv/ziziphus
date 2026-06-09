@@ -25,6 +25,7 @@
 		59376C0F7D795B1CF22DD26C /* OnlineStatusDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B8B688F683BB00B72353D77 /* OnlineStatusDot.swift */; };
 		5B8C6D4EA51B5D5AC0E6D8AA /* P2PDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D86A877E0FF83C1A8F5A5119 /* P2PDetailView.swift */; };
 		6144B85375A6A228F5BD63B9 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D686864D6005743A92E0BC /* ChatView.swift */; };
+		65C7470CBA7E0FDB44F23E1D /* AppleDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = A094406AB73220CD37924B7E /* AppleDesign.swift */; };
 		6A18C0B783D8260B04EDB9A3 /* AddContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723A706823C64C0ABA0FD5DF /* AddContactView.swift */; };
 		7414C812F1344070693BD942 /* ConversationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 632DE733F4E67E162BEAF72D /* ConversationListView.swift */; };
 		77B49EFA11D059E846BDE11F /* SearchResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA36676EAB35C5574AD39AE9 /* SearchResultsView.swift */; };
@@ -37,6 +38,7 @@
 		B4F9B95D09D2914D6B706686 /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7E21FBEA361DC0F4FB7E788 /* InputBarView.swift */; };
 		B7EAF74021CD008F6A6B80EC /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 970673DA799B81B6C062DE76 /* LoginView.swift */; };
 		B904FE73AC81E7B7630EEE0B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14CB1DDBFA71D1AE693855A0 /* ContentView.swift */; };
+		B9E49853D0607ABC6B2D406F /* ChatTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E812CCD58B77AE349A7A84B3 /* ChatTextView.swift */; };
 		BA9326F6F36140A7F900F220 /* DateSeparator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D460EC1465DE2891276450D5 /* DateSeparator.swift */; };
 		BB499F0AC7021A364A711753 /* SearchBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 251479C97179683011E19E25 /* SearchBarView.swift */; };
 		BB9907D67E2D044DAB9111B9 /* OnlineStatusDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7E8658A87B72D6CB0C3E813 /* OnlineStatusDot.swift */; };
@@ -47,6 +49,7 @@
 		D694D1C9F5A284888347C784 /* IMApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8651BD06CF64412A795BE61F /* IMApp.swift */; };
 		D8D8E90451EDCC271C9AA962 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C622AD2676EF9831C8437C7D /* ProfileView.swift */; };
 		D986D7F088C6328565D9C904 /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7B035751FE2414C13E3B92 /* GroupDetailView.swift */; };
+		DD2C7E2C052C9C7A7309F1CC /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFA849877CF5AB3DEC085FC /* VisualEffectView.swift */; };
 		E260A06BF6E5B21C37C53F29 /* ContactListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D0351E6BAA70D53CB8E94D /* ContactListView.swift */; };
 		E4F43B04248D902F687A71B9 /* NewConversationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A497CFD56050B76BE44BD853 /* NewConversationView.swift */; };
 		E9E5DD6DE3C5786A33106B81 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAE7B59CB1DB91B2920D6FAE /* AvatarView.swift */; };
@@ -95,7 +98,9 @@
 		8B8B688F683BB00B72353D77 /* OnlineStatusDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineStatusDot.swift; sourceTree = "<group>"; };
 		8E96A7FA62FD4EC9826CDFA9 /* LoginUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginUITests.swift; sourceTree = "<group>"; };
 		970673DA799B81B6C062DE76 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		9BFA849877CF5AB3DEC085FC /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
 		9F79474D85D9797FED86F716 /* ConversationRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationRowView.swift; sourceTree = "<group>"; };
+		A094406AB73220CD37924B7E /* AppleDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleDesign.swift; sourceTree = "<group>"; };
 		A497CFD56050B76BE44BD853 /* NewConversationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewConversationView.swift; sourceTree = "<group>"; };
 		BBAB4085A925A9021683A95C /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		C622AD2676EF9831C8437C7D /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -110,6 +115,7 @@
 		D7E8658A87B72D6CB0C3E813 /* OnlineStatusDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineStatusDot.swift; sourceTree = "<group>"; };
 		D86A877E0FF83C1A8F5A5119 /* P2PDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = P2PDetailView.swift; sourceTree = "<group>"; };
 		DCCE697A42351D25A23C1255 /* AddContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContactView.swift; sourceTree = "<group>"; };
+		E812CCD58B77AE349A7A84B3 /* ChatTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTextView.swift; sourceTree = "<group>"; };
 		E8D0351E6BAA70D53CB8E94D /* ContactListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactListView.swift; sourceTree = "<group>"; };
 		EAE7B59CB1DB91B2920D6FAE /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		EF062AE7EDE521498CEC20AF /* ConversationRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationRowView.swift; sourceTree = "<group>"; };
@@ -193,6 +199,7 @@
 		2185DC084D57B4BD84A9AFE3 /* Chat */ = {
 			isa = PBXGroup;
 			children = (
+				E812CCD58B77AE349A7A84B3 /* ChatTextView.swift */,
 				58D686864D6005743A92E0BC /* ChatView.swift */,
 				D6503086C9E20CB2EF49234A /* DateSeparator.swift */,
 				C7E21FBEA361DC0F4FB7E788 /* InputBarView.swift */,
@@ -305,8 +312,10 @@
 		8DEFA085F802104CFDF5496D /* Common */ = {
 			isa = PBXGroup;
 			children = (
+				A094406AB73220CD37924B7E /* AppleDesign.swift */,
 				EAE7B59CB1DB91B2920D6FAE /* AvatarView.swift */,
 				8B8B688F683BB00B72353D77 /* OnlineStatusDot.swift */,
+				9BFA849877CF5AB3DEC085FC /* VisualEffectView.swift */,
 			);
 			path = Common;
 			sourceTree = "<group>";
@@ -505,7 +514,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				28E021F49652BD86CDAE3219 /* AddContactView.swift in Sources */,
+				65C7470CBA7E0FDB44F23E1D /* AppleDesign.swift in Sources */,
 				E9E5DD6DE3C5786A33106B81 /* AvatarView.swift in Sources */,
+				B9E49853D0607ABC6B2D406F /* ChatTextView.swift in Sources */,
 				6144B85375A6A228F5BD63B9 /* ChatView.swift in Sources */,
 				E260A06BF6E5B21C37C53F29 /* ContactListView.swift in Sources */,
 				EB9695FA50D7110D18464C2D /* ContentView.swift in Sources */,
@@ -525,6 +536,7 @@
 				BB499F0AC7021A364A711753 /* SearchBarView.swift in Sources */,
 				77B49EFA11D059E846BDE11F /* SearchResultsView.swift in Sources */,
 				4CF3A4E20D06DDE2169959F0 /* TypingIndicator.swift in Sources */,
+				DD2C7E2C052C9C7A7309F1CC /* VisualEffectView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

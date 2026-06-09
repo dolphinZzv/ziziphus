@@ -153,8 +153,11 @@ type mockConvManager struct {
 	leaveFunc         func(ctx context.Context, convID, userID string) error
 	getMembersFunc    func(ctx context.Context, convID string) ([]*model.ConvMember, error)
 	isMemberFunc      func(ctx context.Context, convID, userID string) (bool, error)
-}
-
+	requestJoinFunc       func(ctx context.Context, convID, userID string) error
+	listJoinRequestsFunc  func(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error)
+	approveJoinRequestFunc func(ctx context.Context, convID, userID, operatorID string) error
+	rejectJoinRequestFunc  func(ctx context.Context, convID, userID, operatorID string) error
+	}
 func (m *mockConvManager) Get(ctx context.Context, convID string) (*model.Conversation, error) {
 	if m.getFunc != nil {
 		return m.getFunc(ctx, convID)
@@ -211,6 +214,34 @@ func (m *mockConvManager) IsMember(ctx context.Context, convID, userID string) (
 	return false, nil
 }
 
+func (m *mockConvManager) RequestJoin(ctx context.Context, convID, userID string) error {
+	if m.requestJoinFunc != nil {
+		return m.requestJoinFunc(ctx, convID, userID)
+	}
+	return nil
+}
+
+func (m *mockConvManager) ListJoinRequests(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error) {
+	if m.listJoinRequestsFunc != nil {
+		return m.listJoinRequestsFunc(ctx, convID, operatorID)
+	}
+	return nil, nil
+}
+
+func (m *mockConvManager) ApproveJoinRequest(ctx context.Context, convID, userID, operatorID string) error {
+	if m.approveJoinRequestFunc != nil {
+		return m.approveJoinRequestFunc(ctx, convID, userID, operatorID)
+	}
+	return nil
+}
+
+func (m *mockConvManager) RejectJoinRequest(ctx context.Context, convID, userID, operatorID string) error {
+	if m.rejectJoinRequestFunc != nil {
+		return m.rejectJoinRequestFunc(ctx, convID, userID, operatorID)
+	}
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // Mock: convSeqCache
 // ---------------------------------------------------------------------------
@@ -263,6 +294,7 @@ func (m *mockSysMsgSender) SendSystemMessage(ctx context.Context, convID, body s
 type mockConvDataRepo struct {
 	getUserConvsFunc     func(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
 	updateNameAvatarFunc func(ctx context.Context, convID, name, avatar string) error
+	searchByNameFunc     func(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
 }
 
 func (m *mockConvDataRepo) GetUserConvs(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error) {
@@ -277,6 +309,13 @@ func (m *mockConvDataRepo) UpdateNameAvatar(ctx context.Context, convID, name, a
 		return m.updateNameAvatarFunc(ctx, convID, name, avatar)
 	}
 	return nil
+}
+
+func (m *mockConvDataRepo) SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error) {
+	if m.searchByNameFunc != nil {
+		return m.searchByNameFunc(ctx, q, page, size)
+	}
+	return nil, 0, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -1151,6 +1190,58 @@ func TestConvHandler_AddMembers(t *testing.T) {
 	}
 }
 
+
+func TestConvHandler_AddMembers_EmptyUserIDs(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{},
+	}
+
+	body := `{"user_ids":[]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/members", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setChiURLParam(req, "conv_id", "conv_1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.AddMembers(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestConvHandler_AddMembers_DuplicateUserIDs(t *testing.T) {
+	var addMemberCalls []string
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			addMemberFunc: func(_ context.Context, convID, userID, operatorID string) error {
+				addMemberCalls = append(addMemberCalls, userID)
+				return nil
+			},
+		},
+		sysMsg: &mockSysMsgSender{
+			sendSystemMessageFunc: func(_ context.Context, convID, body string) (*model.Message, error) {
+				return nil, nil
+			},
+		},
+	}
+
+	// user_2 appears twice, should only trigger AddMember once
+	body := `{"user_ids":["user_2","user_3","user_2"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/members", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setChiURLParam(req, "conv_id", "conv_1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.AddMembers(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	if len(addMemberCalls) != 2 {
+		t.Errorf("expected 2 AddMember calls (deduped), got %d", len(addMemberCalls))
+	}
+}
 func TestConvHandler_RemoveMember(t *testing.T) {
 	var sysMsgConvID, sysMsgBody string
 	handler := &ConvHandler{
@@ -1640,5 +1731,164 @@ func TestContactHandler_UpdateNickname(t *testing.T) {
 	}
 	if capturedNickname != "New Nickname" {
 		t.Errorf("capturedNickname = %q, want %q", capturedNickname, "New Nickname")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Join request handler tests
+// ---------------------------------------------------------------------------
+
+func TestConvHandler_RequestJoin(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			requestJoinFunc: func(_ context.Context, convID, userID string) error {
+				return nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/join-requests", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.RequestJoin(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["conv_id"] != "g1" {
+		t.Errorf("conv_id = %v, want %q", data["conv_id"], "g1")
+	}
+}
+
+func TestConvHandler_RequestJoin_Error(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			requestJoinFunc: func(_ context.Context, convID, userID string) error {
+				return &model.AppError{Code: model.ErrBadMessage, Message: "join error", Key: "err.already_member"}
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/join-requests", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.RequestJoin(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrBadMessage {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrBadMessage)
+	}
+}
+
+func TestConvHandler_ListJoinRequests(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			listJoinRequestsFunc: func(_ context.Context, convID, operatorID string) ([]*model.JoinRequest, error) {
+				return []*model.JoinRequest{
+					{ConvID: "g1", UserID: "bob", Status: model.JoinRequestPending},
+				}, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/join-requests", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setAuthCtx(req, "admin")
+	w := httptest.NewRecorder()
+	handler.ListJoinRequests(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+func TestConvHandler_ListJoinRequests_Empty(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			listJoinRequestsFunc: func(_ context.Context, convID, operatorID string) ([]*model.JoinRequest, error) {
+				return []*model.JoinRequest{}, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/join-requests", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setAuthCtx(req, "admin")
+	w := httptest.NewRecorder()
+	handler.ListJoinRequests(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	list, ok := resp.Data.([]interface{})
+	if !ok {
+		t.Fatal("expected array in data")
+	}
+	if len(list) != 0 {
+		t.Errorf("expected empty list, got %d items", len(list))
+	}
+}
+
+func TestConvHandler_ApproveJoinRequest(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			approveJoinRequestFunc: func(_ context.Context, convID, userID, operatorID string) error {
+				return nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/join-requests/{user_id}/approve", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setChiURLParam(req, "user_id", "bob")
+	req = setAuthCtx(req, "admin")
+	w := httptest.NewRecorder()
+	handler.ApproveJoinRequest(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["conv_id"] != "g1" {
+		t.Errorf("conv_id = %v, want %q", data["conv_id"], "g1")
+	}
+	if data["user_id"] != "bob" {
+		t.Errorf("user_id = %v, want %q", data["user_id"], "bob")
+	}
+}
+
+func TestConvHandler_RejectJoinRequest(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			rejectJoinRequestFunc: func(_ context.Context, convID, userID, operatorID string) error {
+				return nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/join-requests/{user_id}/reject", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setChiURLParam(req, "user_id", "bob")
+	req = setAuthCtx(req, "admin")
+	w := httptest.NewRecorder()
+	handler.RejectJoinRequest(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["conv_id"] != "g1" {
+		t.Errorf("conv_id = %v, want %q", data["conv_id"], "g1")
+	}
+	if data["user_id"] != "bob" {
+		t.Errorf("user_id = %v, want %q", data["user_id"], "bob")
 	}
 }

@@ -1,6 +1,25 @@
 import Foundation
 import Combine
 
+/// Append a timestamped line to /tmp/imcore.log for debugging.
+nonisolated func logToFile(_ msg: String) {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let ts = formatter.string(from: Date())
+    let line = "\(ts) \(msg)\n"
+    guard let data = line.data(using: .utf8) else { return }
+    let url = URL(fileURLWithPath: "/tmp/imcore.log")
+    if FileManager.default.fileExists(atPath: url.path) {
+        if let handle = try? FileHandle(forWritingTo: url) {
+            try? handle.seekToEnd()
+            try? handle.write(contentsOf: data)
+            try? handle.close()
+        }
+    } else {
+        try? data.write(to: url, options: .atomic)
+    }
+}
+
 @MainActor
 public class ChatViewModel: ObservableObject {
     @Published public var messages: [Message] = []
@@ -10,12 +29,18 @@ public class ChatViewModel: ObservableObject {
     @Published public var isSending = false
     @Published public var isTyping = false
     @Published public var peerOnline = false
+    @Published public var sendErrorMessage: String?
+
+    private let maxBodyBytes = 10_240
 
     public let convID: String
     private let msgService = MessageService.shared
     private let ws = WebSocketClient.shared
     private let cache = MessageCache.shared
     private let convService = ConversationService.shared
+    private let contactService = ContactService.shared
+
+    @Published public var senderInfo: [String: User] = [:]
 
     private var typingTimer: Timer?
     private var lastTypingSend: TimeInterval = 0
@@ -30,13 +55,19 @@ public class ChatViewModel: ObservableObject {
         // Handle incoming pushes
         ws.on(.msgPush) { [weak self] frame in
             guard let self else { return }
-            if let msg = MessageService.shared.handlePush(frame: frame), msg.convID == self.convID {
+            let msg = MessageService.shared.handlePush(frame: frame)
+            if let msg, msg.convID == self.convID {
                 Task { @MainActor in
-                    self.messages.append(msg)
-                    self.sortMessages()
+                    logToFile("[ChatVM] push msg arrived: msgID=\(msg.msgID) body=\(msg.body.prefix(20))")
+                    self.insertMessageInOrder(msg)
                     self.cache.insertMessage(msg)
                     self.markAsReadIfActive()
+                    self.loadSenderInfo()
                 }
+            } else if msg != nil {
+                logToFile("[ChatVM] push for different conv: \(msg!.convID) != \(self.convID)")
+            } else {
+                logToFile("[ChatVM] push decode failed")
             }
         }
 
@@ -88,8 +119,9 @@ public class ChatViewModel: ObservableObject {
                     allHistoryLoaded = true
                 }
             } catch {
-                // cache data already loaded
+                logToFile("[ChatVM] load history error: \(error)")
             }
+            loadSenderInfo()
         }
     }
 
@@ -108,9 +140,23 @@ public class ChatViewModel: ObservableObject {
                     allHistoryLoaded = true
                 }
             } catch {
-                // silently fail
+                print("[ChatVM] load more history error: \(error)")
             }
+            loadSenderInfo()
             isLoadingHistory = false
+        }
+    }
+
+    public func loadSenderInfo() {
+        let ids = Set(messages.map(\.senderID))
+            .subtracting([AuthManager.shared.currentUser?.userID ?? ""])
+            .subtracting(senderInfo.keys)
+        guard !ids.isEmpty else { return }
+        Task {
+            do {
+                let info = try await contactService.batchGetUsers(userIDs: Array(ids))
+                senderInfo.merge(info) { _, new in new }
+            } catch {}
         }
     }
 
@@ -118,7 +164,12 @@ public class ChatViewModel: ObservableObject {
     public func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        guard text.utf8.count <= maxBodyBytes else {
+            sendErrorMessage = loc("chat.message_too_long")
+            return
+        }
 
+        sendErrorMessage = nil
         inputText = ""
         isSending = true
 
@@ -144,8 +195,12 @@ public class ChatViewModel: ObservableObject {
                     cache.insertMessage(messages[idx])
                 }
             } catch {
+                logToFile("[ChatVM] sendMessage error: \(error)")
                 if let idx = messages.firstIndex(where: { $0.clientSeq == clientSeq }) {
+                    logToFile("[ChatVM] removing local msg clientSeq=\(clientSeq) at idx=\(idx)")
                     messages.remove(at: idx)
+                } else {
+                    logToFile("[ChatVM] local msg clientSeq=\(clientSeq) not found in messages array")
                 }
             }
             isSending = false
@@ -157,6 +212,7 @@ public class ChatViewModel: ObservableObject {
         guard let last = messages.last(where: { $0.senderID != AuthManager.shared.currentUser?.userID }) else { return }
         Task {
             try? await convService.markRead(convID: convID, msgID: last.msgID)
+            NotificationCenter.default.post(name: .init("didMarkRead"), object: nil)
         }
     }
 
@@ -173,6 +229,22 @@ public class ChatViewModel: ObservableObject {
     }
 
     // MARK: - Helpers
+    private func insertMessageInOrder(_ msg: Message) {
+        // Binary search to find the correct insertion index, keeping messages sorted by timestamp then convSeq.
+        // All pushed messages have msgID != 0, so no need to handle the "unsent local" edge case here.
+        var lo = 0, hi = messages.count
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            let existing = messages[mid]
+            if existing.timestamp < msg.timestamp || (existing.timestamp == msg.timestamp && existing.convSeq < msg.convSeq) {
+                lo = mid + 1
+            } else {
+                hi = mid
+            }
+        }
+        messages.insert(msg, at: lo)
+    }
+
     private func sortMessages() {
         messages.sort { a, b in
             // Unsent local messages (msgID == 0) go to the end

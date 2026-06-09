@@ -12,9 +12,9 @@ struct SearchResultsView: View {
                     AvatarView(name: user.name, url: user.avatar, size: 32)
                     VStack(alignment: .leading) {
                         Text(user.name)
-                            .fontWeight(.medium)
+                            .font(.appleBodySemibold)
                         Text(user.userID)
-                            .font(.caption)
+                            .font(.appleCaption)
                             .foregroundColor(.secondary)
                     }
                 }

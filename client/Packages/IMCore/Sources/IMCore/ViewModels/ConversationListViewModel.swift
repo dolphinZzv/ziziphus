@@ -11,6 +11,7 @@ public class ConversationListViewModel: ObservableObject {
     private let convService = ConversationService.shared
     private let wsClient = WebSocketClient.shared
     private let cache = ConversationCache.shared
+    private var cancellables: Set<AnyCancellable> = []
 
     public init() {
         setupSubscriptions()
@@ -24,6 +25,11 @@ public class ConversationListViewModel: ObservableObject {
                 self?.connectionStatus = status
             }
         }
+
+        // Refresh when messages are marked as read
+        NotificationCenter.default.publisher(for: .init("didMarkRead"))
+            .sink { [weak self] _ in self?.refresh() }
+            .store(in: &cancellables)
 
         // Register WS handlers
         wsClient.on(.msgPush) { [weak self] frame in

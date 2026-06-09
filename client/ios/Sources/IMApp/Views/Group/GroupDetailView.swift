@@ -93,6 +93,62 @@ struct GroupDetailView: View {
                     Label(loc("group.leave"), systemImage: "arrow.right.square")
                 }
             }
+
+            // Join Requests (admin only)
+            if vm.isAdmin {
+                Section {
+                    if vm.isLoadingRequests {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    } else if vm.joinRequests.isEmpty {
+                        Text(loc("group.no_join_requests"))
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach(vm.joinRequests) { request in
+                            HStack {
+                                let user = vm.membersInfo[request.userID]
+                                AvatarView(name: user?.name ?? request.userID, url: user?.avatar ?? "", size: 36)
+                                VStack(alignment: .leading) {
+                                    Text(user?.name ?? request.userID)
+                                        .fontWeight(.medium)
+                                    Text(request.userID)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Button(loc("group.approve")) {
+                                    Task {
+                                        do {
+                                            try await vm.approveJoinRequest(convID: convID, userID: request.userID)
+                                        } catch {
+                                            errorMessage = error.localizedDescription
+                                            showError = true
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.green)
+
+                                Button(loc("group.reject")) {
+                                    Task {
+                                        do {
+                                            try await vm.rejectJoinRequest(convID: convID, userID: request.userID)
+                                        } catch {
+                                            errorMessage = error.localizedDescription
+                                            showError = true
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.red)
+                            }
+                        }
+                    }
+                } header: {
+                    Text(loc("group.join_requests_title"))
+                }
+            }
         }
         .listStyle(.insetGrouped)
         .navigationTitle(loc("group.info"))
@@ -158,8 +214,12 @@ struct GroupDetailView: View {
         } message: {
             Text(errorMessage)
         }
-        .onAppear { vm.loadDetail(convID: convID) }
+        .onAppear {
+            vm.loadDetail(convID: convID)
+            vm.loadJoinRequests(convID: convID)
+        }
     }
+
 
     private func roleName(_ role: ConvRole) -> String {
         switch role {

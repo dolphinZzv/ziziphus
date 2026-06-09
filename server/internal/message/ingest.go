@@ -123,10 +123,10 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 	// 6. cache recent
 	in.seqCache.SetRecentMsg(ctx, payload.ConvID, msgID, float64(msgID))
 
-	// 7. route + push
+	// 7. route + push (async — ack must arrive before push to prevent client timeout)
 	targets := in.router.Route(ctx, msg)
 	if len(targets) > 0 {
-		in.pusher.Push(ctx, msg, targets)
+		go in.pusher.Push(context.Background(), msg, targets)
 	}
 
 	return &protocol.MsgSendAckPayload{

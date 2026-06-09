@@ -7,6 +7,7 @@ public class MessageCache: @unchecked Sendable {
     private var cache: [String: [Message]] = [:] // convID -> messages
     private let queue = DispatchQueue(label: "com.im.msgcache")
     private let fileURL: URL
+    private let maxPerConv = 500
 
     private init() {
         let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
@@ -41,6 +42,9 @@ public class MessageCache: @unchecked Sendable {
             var messages = self.cache[message.convID] ?? []
             if !messages.contains(where: { $0.msgID == message.msgID && $0.msgID > 0 }) {
                 messages.append(message)
+                if messages.count > self.maxPerConv {
+                    messages = Array(messages.suffix(self.maxPerConv))
+                }
                 self.cache[message.convID] = messages
                 self.saveToDisk()
             }
@@ -54,6 +58,9 @@ public class MessageCache: @unchecked Sendable {
                 var existing = self.cache[msg.convID] ?? []
                 if !existing.contains(where: { $0.msgID == msg.msgID && $0.msgID > 0 }) {
                     existing.append(msg)
+                    if existing.count > self.maxPerConv {
+                        existing = Array(existing.suffix(self.maxPerConv))
+                    }
                     self.cache[msg.convID] = existing
                 }
             }

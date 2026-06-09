@@ -13,16 +13,20 @@ struct ProfileView: View {
             // Header
             HStack {
                 Text(loc("profile.title"))
-                    .font(.headline)
+                    .font(.appleBodySemibold)
+                    .foregroundColor(AppleDesign.Colors.ink)
                 Spacer()
                 Button(loc("common.done")) { dismiss() }
+                    .font(.appleBody)
+                    .foregroundColor(AppleDesign.Colors.actionBlue)
             }
-            .padding()
+            .padding(AppleDesign.Spacing.lg)
 
             Divider()
+                .foregroundColor(AppleDesign.Colors.hairline)
 
-            // User info
-            VStack(spacing: 12) {
+            // User info card
+            VStack(spacing: AppleDesign.Spacing.sm) {
                 AvatarView(
                     name: AuthManager.shared.currentUser?.name ?? "",
                     url: AuthManager.shared.currentUser?.avatar ?? "",
@@ -30,29 +34,32 @@ struct ProfileView: View {
                 )
 
                 Text(AuthManager.shared.currentUser?.name ?? "")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .font(.appleTitle)
+                    .foregroundColor(AppleDesign.Colors.ink)
 
                 HStack(spacing: 4) {
                     Text(loc("profile.account_label"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.appleCaption)
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
                     Text(AuthManager.shared.currentUser?.account ?? "")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.appleCaption)
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
                         .textSelection(.enabled)
                 }
                 HStack(spacing: 4) {
                     Text("ID:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.appleCaption)
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
                     Text(AuthManager.shared.currentUser?.userID ?? "")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.appleCaption)
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
                         .textSelection(.enabled)
                 }
             }
             .padding(.vertical, 24)
+
+            Divider()
+                .foregroundColor(AppleDesign.Colors.hairline)
 
             // Settings section
             VStack(spacing: 8) {
@@ -71,22 +78,25 @@ struct ProfileView: View {
                 .pickerStyle(.segmented)
             }
             .padding(.horizontal)
-            .padding(.bottom, 16)
+            .padding(.vertical, AppleDesign.Spacing.md)
 
             Spacer()
 
             Divider()
+                .foregroundColor(AppleDesign.Colors.hairline)
 
-            // Logout button
-            Button(role: .destructive, action: { showLogoutAlert = true }) {
+            // Logout
+            Button(action: { showLogoutAlert = true }) {
                 Label(loc("login.logout"), systemImage: "rectangle.portrait.and.arrow.right")
+                    .font(.appleBody)
                     .frame(maxWidth: .infinity)
+                    .foregroundColor(.red)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.red)
-            .controlSize(.large)
-            .padding()
+            .buttonStyle(.plain)
+            .padding(AppleDesign.Spacing.lg)
         }
+        .background(Color(nsColor: .windowBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
         .alert(loc("login.logout"), isPresented: $showLogoutAlert) {
             Button(loc("common.cancel"), role: .cancel) {}
             Button(loc("login.logout"), role: .destructive) {

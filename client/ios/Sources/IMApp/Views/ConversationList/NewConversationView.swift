@@ -5,11 +5,13 @@ struct NewConversationView: View {
     enum Tab: String, CaseIterable {
         case p2p
         case group
+        case joinGroup
 
         var label: String {
             switch self {
             case .p2p: return loc("conv.new_chat")
             case .group: return loc("conv.new_group")
+            case .joinGroup: return loc("group.join_request")
             }
         }
     }
@@ -21,10 +23,16 @@ struct NewConversationView: View {
     // P2P
     @StateObject private var searchVM = SearchViewModel()
 
-    // Group
+    // Group create
     @StateObject private var groupSearchVM = SearchViewModel()
     @State private var groupName = ""
     @State private var selectedUsers: [User] = []
+
+    // Group search / join
+    @State private var joinGroupQuery = ""
+    @State private var joinGroupResults: [GroupSearchItem] = []
+    @State private var isSearchingGroups = false
+    @State private var joiningGroupID: String?
 
     @Environment(\.dismiss) private var dismiss
     let onCreated: (String, String, ConvType) -> Void
@@ -41,10 +49,10 @@ struct NewConversationView: View {
                 .pickerStyle(.segmented)
                 .padding()
 
-                if selectedTab == .p2p {
-                    p2pContent
-                } else {
-                    groupContent
+                switch selectedTab {
+                case .p2p: p2pContent
+                case .group: groupContent
+                case .joinGroup: joinGroupContent
                 }
             }
             .navigationTitle(loc("conv.new_chat"))
@@ -218,6 +226,73 @@ struct NewConversationView: View {
         .listStyle(.plain)
     }
 
+    // MARK: - Join Group Content
+
+    @ViewBuilder
+    private var joinGroupContent: some View {
+        // Search
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+            TextField(loc("search.group_placeholder"), text: $joinGroupQuery)
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
+            if isSearchingGroups {
+                ProgressView()
+                    .scaleEffect(0.5)
+            }
+        }
+        .padding(10)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal)
+        .padding(.bottom, 8)
+        .onChange(of: joinGroupQuery) { _, newValue in
+            searchGroups(query: newValue)
+        }
+
+        // Error
+        if let error = errorMessage {
+            Text(error)
+                .foregroundColor(.red)
+                .font(.callout)
+                .padding(.horizontal)
+        }
+
+        // Results
+        List {
+            if joinGroupResults.isEmpty && !joinGroupQuery.isEmpty && !isSearchingGroups {
+                Text(loc("search.no_results"))
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(joinGroupResults) { group in
+                    HStack {
+                        AvatarView(name: group.name, url: group.avatar, size: 36)
+                        VStack(alignment: .leading) {
+                            Text(group.name)
+                                .fontWeight(.medium)
+                            Text(String(format: loc("group.member_count"), group.memberCount))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        if joiningGroupID == group.convID {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        } else {
+                            Button(loc("group.join_request")) {
+                                requestJoinGroup(convID: group.convID, name: group.name)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+
     // MARK: - Actions
 
     private func startP2PChat(user: User) {
@@ -251,6 +326,42 @@ struct NewConversationView: View {
                 showError = true
             }
             isCreating = false
+        }
+    }
+
+    private func searchGroups(query: String) {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
+            joinGroupResults = []
+            return
+        }
+        isSearchingGroups = true
+        errorMessage = nil
+        Task {
+            do {
+                let results = try await ConversationService.shared.searchGroups(query: query)
+                joinGroupResults = results
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+            isSearchingGroups = false
+        }
+    }
+
+    private func requestJoinGroup(convID: String, name: String) {
+        joiningGroupID = convID
+        errorMessage = nil
+        Task {
+            do {
+                try await ConversationService.shared.requestJoin(convID: convID)
+                joiningGroupID = nil
+                onCreated(convID, name, .group)
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+                joiningGroupID = nil
+            }
         }
     }
 }

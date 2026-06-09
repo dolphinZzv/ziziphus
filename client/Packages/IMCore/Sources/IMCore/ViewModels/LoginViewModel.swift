@@ -10,9 +10,38 @@ public class LoginViewModel: ObservableObject {
     @Published public var isLoading = false
     @Published public var errorMessage: String?
     @Published public var isLoggedIn = false
+    @Published public var rememberAccount = false
+    @Published public var showAccountPicker = false
 
     private let authService = AuthService.shared
     private let wsClient = WebSocketClient.shared
+
+    private let rememberedAccountsKey = "com.im.remembered_accounts"
+
+    public var rememberedAccounts: [String] {
+        UserDefaults.standard.stringArray(forKey: rememberedAccountsKey) ?? []
+    }
+
+    public func saveRememberedAccount() {
+        guard !account.isEmpty else { return }
+        var accounts = rememberedAccounts
+        if !accounts.contains(account) {
+            accounts.append(account)
+        }
+        UserDefaults.standard.set(accounts, forKey: rememberedAccountsKey)
+    }
+
+    public func removeRememberedAccount(_ account: String) {
+        var accounts = rememberedAccounts
+        accounts.removeAll { $0 == account }
+        UserDefaults.standard.set(accounts, forKey: rememberedAccountsKey)
+    }
+
+    public func selectAccount(_ account: String) {
+        self.account = account
+        self.password = ""
+        showAccountPicker = false
+    }
 
     public init() {}
 
@@ -30,6 +59,13 @@ public class LoginViewModel: ObservableObject {
                 _ = try await authService.login(account: account, password: password)
                 isLoggedIn = true
                 wsClient.connect()
+                if rememberAccount {
+                    saveRememberedAccount()
+                    password = ""
+                } else {
+                    account = ""
+                    password = ""
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }

@@ -18,7 +18,6 @@ const (
 	ErrTooLarge      = 4005
 	ErrInternal      = 5001
 )
-
 func NewAppError(code int, msg string) *AppError {
 	return &AppError{Code: code, Message: msg}
 }
@@ -30,4 +29,7 @@ var (
 	ErrNotInConv      = &AppError{Code: ErrNoPermission, Message: "发送者不在会话中", Key: "err.not_in_conv"}
 	ErrMsgTooLarge    = &AppError{Code: ErrTooLarge, Message: "消息体过大", Key: "err.msg_too_large"}
 	ErrInternalServer = &AppError{Code: ErrInternal, Message: "服务端内部错误", Key: "err.internal_server"}
+	ErrDuplicateRequest = &AppError{Code: ErrBadMessage, Message: "已存在待处理的入群申请", Key: "err.duplicate_join_request"}
+	ErrAlreadyMember    = &AppError{Code: ErrBadMessage, Message: "已经是群成员", Key: "err.already_member"}
+	ErrNoPendingRequest = &AppError{Code: ErrNotFound, Message: "没有待处理的申请", Key: "err.no_pending_request"}
 )

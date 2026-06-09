@@ -51,6 +51,7 @@ public struct Conversation: Codable, Sendable, Identifiable, Hashable {
 public struct LastMessage: Codable, Sendable, Hashable {
     public var msgID: Int64
     public var senderID: String
+    public var senderName: String
     public var body: String
     public var contentType: Int
     public var timestamp: Int64
@@ -58,6 +59,7 @@ public struct LastMessage: Codable, Sendable, Hashable {
     enum CodingKeys: String, CodingKey {
         case msgID = "msg_id"
         case senderID = "sender_id"
+        case senderName = "sender_name"
         case body
         case contentType = "content_type"
         case timestamp
@@ -135,4 +137,47 @@ public struct ConversationDetail: Codable, Sendable {
         case members
         case unreadCount = "unread_count"
     }
+}
+
+public struct JoinRequest: Codable, Sendable, Identifiable, Hashable {
+    public let convID: String
+    public let userID: String
+    public var status: JoinRequestStatus
+    public var createdAt: Int64
+    public var updatedAt: Int64
+
+    public var id: String { "\(convID):\(userID)" }
+
+    enum CodingKeys: String, CodingKey {
+        case convID = "conv_id"
+        case userID = "user_id"
+        case status
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+public struct GroupSearchItem: Codable, Sendable, Identifiable, Hashable {
+    public let convID: String
+    public let name: String
+    public let avatar: String
+    public let ownerID: String
+    public let memberCount: Int
+    public let createdAt: Int64
+
+    public var id: String { convID }
+
+    enum CodingKeys: String, CodingKey {
+        case convID = "conv_id"
+        case name, avatar
+        case ownerID = "owner_id"
+        case memberCount = "member_count"
+        case createdAt = "created_at"
+    }
+}
+
+public enum JoinRequestStatus: Int, Codable, Sendable {
+    case pending = 0
+    case approved = 1
+    case rejected = 2
 }

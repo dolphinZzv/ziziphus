@@ -16,16 +16,18 @@ struct P2PDetailView: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 0) {
             // Header
             HStack {
+                Text(loc("profile.title"))
+                    .font(.appleBodySemibold)
+                    .foregroundColor(AppleDesign.Colors.ink)
+                Spacer()
                 Button(loc("common.close")) { onCancel() }
-                Spacer()
-                Text(loc("chat.p2p_detail"))
-                    .fontWeight(.semibold)
-                Spacer()
+                    .font(.appleBody)
+                    .foregroundColor(AppleDesign.Colors.actionBlue)
             }
-            .padding()
+            .padding(AppleDesign.Spacing.lg)
 
             Divider()
 
@@ -41,33 +43,34 @@ struct P2PDetailView: View {
                 )
 
                 Text(otherUser?.name ?? convName)
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .font(.appleBodySemibold)
+                    .padding(.top, AppleDesign.Spacing.sm)
 
                 HStack(spacing: 4) {
                     Text(loc("profile.account_label"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.appleCaption)
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
                     Text(otherUserID)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.appleCaption)
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
                         .textSelection(.enabled)
                 }
+                .padding(.top, 8)
 
                 HStack(spacing: 4) {
                     Text(loc("profile.id_label"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.appleCaption)
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
                     Text(convID)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.appleCaption)
+                        .foregroundColor(AppleDesign.Colors.inkMuted)
                         .textSelection(.enabled)
                 }
             }
 
             Spacer()
         }
-        .frame(width: 320, height: 300)
+        .frame(width: 400, height: 500)
         .task {
             await loadUser()
         }

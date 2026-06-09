@@ -29,7 +29,7 @@ struct ChatView: View {
                         }
 
                         ForEach(vm.messages) { msg in
-                            MessageBubble(message: msg)
+                            MessageBubble(message: msg, convType: convType, senderInfo: vm.senderInfo)
                                 .id(msg.id)
                         }
 
@@ -52,6 +52,16 @@ struct ChatView: View {
                 }
             }
 
+            // Error banner
+            if let err = vm.sendErrorMessage {
+                Text(err)
+                    .font(.system(size: AppleDesign.Typography.finePrintSize))
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             // Input bar
             InputBarView(text: $vm.inputText, onSend: {
                 vm.sendMessage()
@@ -59,19 +69,35 @@ struct ChatView: View {
                 vm.userDidStartTyping()
             })
         }
-        .background(Color.white)
-        .navigationTitle(convName)
+        .background(Color(nsColor: .windowBackgroundColor))
         .toolbar {
-            Button(action: {
-                if convType == .group {
-                    showGroupDetail = true
-                } else {
-                    showP2PDetail = true
+            ToolbarItem(placement: .principal) {
+                Button(action: {
+                    if convType == .group {
+                        showGroupDetail = true
+                    } else {
+                        showP2PDetail = true
+                    }
+                }) {
+                    Text(String(format: loc("chat.session_title"), convName))
+                        .font(.appleBodySemibold)
                 }
-            }) {
-                Image(systemName: "info.circle")
+                .buttonStyle(.plain)
+                .help(loc("chat.detail"))
             }
-            .accessibilityLabel(loc("chat.detail"))
+
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: {
+                    if convType == .group {
+                        showGroupDetail = true
+                    } else {
+                        showP2PDetail = true
+                    }
+                }) {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel(loc("chat.detail"))
+            }
         }
         .sheet(isPresented: $showGroupDetail) {
             GroupDetailView(convID: convID, convName: convName)

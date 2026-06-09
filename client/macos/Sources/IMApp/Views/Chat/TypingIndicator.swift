@@ -7,7 +7,7 @@ struct TypingIndicator: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(loc("chat.typing"))
-                .font(.caption)
+                .font(.appleCaption)
                 .foregroundColor(.secondary)
         }
         .padding(.vertical, 4)

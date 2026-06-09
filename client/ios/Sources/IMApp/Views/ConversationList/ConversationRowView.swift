@@ -60,7 +60,7 @@ struct ConversationRowView: View {
                 HStack(spacing: 4) {
                     if let last = conv.lastMessage {
                         if conv.type == .group {
-                            Text(last.senderID)
+                            Text(last.senderName.isEmpty ? last.senderID : last.senderName)
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)

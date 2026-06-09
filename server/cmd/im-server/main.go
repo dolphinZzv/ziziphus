@@ -65,6 +65,7 @@ func main() {
 	msgRepo := db.NewMessageRepo(pool)
 	contactRepo := db.NewContactRepo(pool)
 	receiptRepo := db.NewReceiptRepo(pool)
+	joinRequestRepo := db.NewJoinRequestRepo(pool)
 
 	// Caches
 	sessCache := cache.NewSessionCache(rdb)
@@ -103,7 +104,7 @@ func main() {
 	sessMgr := session.NewManager(sessCache, sessRepo)
 
 	// Conversation manager
-	convMgr := conversation.NewManager(convRepo, msgRepo, seqCache)
+	convMgr := conversation.NewManager(convRepo, msgRepo, seqCache, userRepo, joinRequestRepo)
 
 	// Gateway
 	gwMgr := gateway.NewManager()

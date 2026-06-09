@@ -16,91 +16,168 @@ struct GroupDetailView: View {
     private let currentUserID = AuthManager.shared.currentUser?.userID ?? ""
 
     var body: some View {
-        List {
-            // Info section
-            Section {
-                HStack {
-                    Circle()
-                        .fill(Color.blue.opacity(0.2))
-                        .frame(width: 50, height: 50)
-                        .overlay {
-                            Text(String(convName.prefix(1)))
-                                .font(.title)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.blue)
-                        }
-
-                    VStack(alignment: .leading) {
-                        Text(convName)
-                            .fontWeight(.medium)
-                        Text(String(format: loc("group.member_count"), vm.members.count))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("\(loc("profile.id_label")) \(convID)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .textSelection(.enabled)
-                    }
-                }
-                .padding(.vertical, 4)
-            } header: {
-                Text(loc("group.info"))
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text(loc("profile.title"))
+                    .font(.appleBodySemibold)
+                    .foregroundColor(AppleDesign.Colors.ink)
+                Spacer()
+                Button(loc("common.close")) { dismiss() }
+                    .font(.appleBody)
+                    .foregroundColor(AppleDesign.Colors.actionBlue)
             }
+            .padding(AppleDesign.Spacing.lg)
 
-            // Members
-            Section {
-                if vm.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                } else {
-                    ForEach(vm.members) { member in
-                        HStack(spacing: 10) {
-                            let user = vm.membersInfo[member.userID]
-                            AvatarView(name: user?.name ?? member.userID, url: user?.avatar ?? "", size: 36)
-                            VStack(alignment: .leading) {
-                                Text(user?.name ?? member.userID)
-                                    .fontWeight(.medium)
-                                if let nickname = member.nickname, !nickname.isEmpty {
-                                    Text(nickname)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                Text(roleName(member.role))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
+            Divider()
+
+            List {
+                // Info section
+                Section {
+                    HStack {
+                        Circle()
+                            .fill(Color.blue.opacity(0.2))
+                            .frame(width: 50, height: 50)
+                            .overlay {
+                                Text(String(convName.prefix(1)))
+                                    .font(.appleBodySemibold)
+                                    .foregroundColor(.blue)
                             }
-                            Spacer()
-                            if canRemove(member) {
-                                Button(action: {
-                                    confirmRemoveMember = member
-                                }) {
-                                    Image(systemName: "xmark.circle")
-                                        .foregroundColor(.red)
-                                }
-                                .buttonStyle(.plain)
-                            }
+
+                        VStack(alignment: .leading) {
+                            Text(convName)
+                                .font(.appleBodySemibold)
+                            Text(String(format: loc("group.member_count"), vm.members.count))
+                                .font(.appleCaption)
+                                .foregroundColor(AppleDesign.Colors.inkMuted)
+                            Text("\(loc("profile.id_label")) \(convID)")
+                                .font(.appleFinePrint)
+                                .foregroundColor(AppleDesign.Colors.inkMuted)
+                                .textSelection(.enabled)
                         }
                     }
-                }
-            } header: {
-                Text(loc("group.members_title"))
-            }
-
-            // Actions
-            Section {
-                Button(action: { showAddMember = true }) {
-                    Label(loc("group.add_member"), systemImage: "person.badge.plus")
+                    .padding(.vertical, 4)
+                } header: {
+                    Text(loc("group.info"))
+                        .font(.appleCaption)
                 }
 
-                Button(action: { showLeaveAlert = true }) {
-                    Label(loc("group.leave"), systemImage: "arrow.right.square")
-                        .foregroundColor(.red)
+                // Members
+                Section {
+                    if vm.isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    } else {
+                        ForEach(vm.members) { member in
+                            HStack(spacing: 10) {
+                                let user = vm.membersInfo[member.userID]
+                                AvatarView(name: user?.name ?? member.userID, url: user?.avatar ?? "", size: 36)
+                                VStack(alignment: .leading) {
+                                    Text(user?.name ?? member.userID)
+                                        .font(.appleBodySemibold)
+                                    if let nickname = member.nickname, !nickname.isEmpty {
+                                        Text(nickname)
+                                            .font(.appleCaption)
+                                            .foregroundColor(AppleDesign.Colors.inkMuted)
+                                    }
+                                    Text(roleName(member.role))
+                                        .font(.appleFinePrint)
+                                        .foregroundColor(AppleDesign.Colors.inkMuted)
+                                }
+                                Spacer()
+                                if canRemove(member) {
+                                    Button(action: {
+                                        confirmRemoveMember = member
+                                    }) {
+                                        Image(systemName: "xmark.circle")
+                                            .foregroundColor(.red)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text(loc("group.members_title"))
+                        .font(.appleCaption)
+                }
+
+                // Actions
+                Section {
+                    Button(action: { showAddMember = true }) {
+                        Label(loc("group.add_member"), systemImage: "person.badge.plus")
+                            .font(.appleBody)
+                    }
+
+                    Button(action: { showLeaveAlert = true }) {
+                        Label(loc("group.leave"), systemImage: "arrow.right.square")
+                            .font(.appleBody)
+                            .foregroundColor(.red)
+                    }
+                }
+
+                // Join Requests (admin only)
+                if vm.isAdmin {
+                    Section {
+                        if vm.isLoadingRequests {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                        } else if vm.joinRequests.isEmpty {
+                            Text(loc("group.no_join_requests"))
+                                .foregroundColor(.secondary)
+                                .font(.appleCaption)
+                        } else {
+                            ForEach(vm.joinRequests) { request in
+                                HStack {
+                                    let user = vm.membersInfo[request.userID]
+                                    AvatarView(name: user?.name ?? request.userID, url: user?.avatar ?? "", size: 32)
+                                    VStack(alignment: .leading) {
+                                        Text(user?.name ?? request.userID)
+                                            .font(.appleBodySemibold)
+                                        Text(request.userID)
+                                            .font(.appleFinePrint)
+                                            .foregroundColor(AppleDesign.Colors.inkMuted)
+                                    }
+                                    Spacer()
+                                    Button(loc("group.approve")) {
+                                        Task {
+                                            do {
+                                                try await vm.approveJoinRequest(convID: convID, userID: request.userID)
+                                            } catch {
+                                                errorMessage = error.localizedDescription
+                                                showError = true
+                                            }
+                                        }
+                                    }
+                                    .controlSize(.small)
+                                    .tint(.green)
+
+                                    Button(loc("group.reject")) {
+                                        Task {
+                                            do {
+                                                try await vm.rejectJoinRequest(convID: convID, userID: request.userID)
+                                            } catch {
+                                                errorMessage = error.localizedDescription
+                                                showError = true
+                                            }
+                                        }
+                                    }
+                                    .controlSize(.small)
+                                    .tint(.red)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text(loc("group.join_requests_title"))
+                            .font(.appleCaption)
+                    }
                 }
             }
+            .listStyle(.inset)
         }
-        .listStyle(.inset)
-        .frame(width: 360, height: 450)
+        .frame(width: 400, height: 580)
         .sheet(isPresented: $showAddMember) {
             AddMemberView(convID: convID, onAdd: { userID in
                 Task {
@@ -156,8 +233,12 @@ struct GroupDetailView: View {
         } message: {
             Text(errorMessage)
         }
-        .onAppear { vm.loadDetail(convID: convID) }
+        .onAppear {
+            vm.loadDetail(convID: convID)
+            vm.loadJoinRequests(convID: convID)
+        }
     }
+
 
     private func roleName(_ role: ConvRole) -> String {
         switch role {

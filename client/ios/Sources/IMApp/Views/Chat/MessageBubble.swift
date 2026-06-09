@@ -3,9 +3,18 @@ import IMCore
 
 struct MessageBubble: View {
     let message: Message
+    let convType: ConvType
+    let senderInfo: [String: User]
 
     private var isMine: Bool {
         message.senderID == AuthManager.shared.currentUser?.userID
+    }
+
+    private var senderDisplayName: String {
+        if message.senderID == AuthManager.shared.currentUser?.userID {
+            return AuthManager.shared.currentUser?.name ?? message.senderID
+        }
+        return senderInfo[message.senderID]?.name ?? message.senderID
     }
 
     var body: some View {
@@ -13,29 +22,37 @@ struct MessageBubble: View {
             if isMine { Spacer(minLength: 60) }
 
             VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
-                if !isMine, message.contentType == .text {
-                    Text(message.senderID)
+                if convType == .group {
+                    Text(senderDisplayName)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
 
-                HStack(alignment: .bottom, spacing: 6) {
-                    if isMine {
-                        statusIcon
-                    }
-
+                VStack(alignment: isMine ? .leading : .trailing, spacing: 2) {
                     Text(message.body)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(isMine ? Color.blue : Color(.systemGray6))
+                        .background(isMine ? Color.blue : Color(.systemGray5))
                         .foregroundColor(isMine ? .white : .primary)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
+                        .textSelection(.enabled)
+                        .contextMenu {
+                            Button(loc("common.copy")) {
+                                UIPasteboard.general.string = message.body
+                            }
+                        }
 
-                if message.timestamp > 0 {
-                    Text(formatTime(message.timestamp))
-                        .font(.caption2)
+                    if message.timestamp > 0 {
+                        HStack(spacing: 3) {
+                            if isMine {
+                                Image(systemName: statusIconName)
+                                    .font(.system(size: 9))
+                            }
+                            Text(formatTime(message.timestamp))
+                                .font(.caption2)
+                        }
                         .foregroundColor(.secondary)
+                    }
                 }
             }
 
@@ -44,21 +61,11 @@ struct MessageBubble: View {
         .padding(.vertical, 3)
     }
 
-    @ViewBuilder
-    private var statusIcon: some View {
+    private var statusIconName: String {
         switch message.status {
-        case .sending:
-            Image(systemName: "clock")
-                .font(.caption2)
-                .foregroundColor(.gray)
-        case .sent, .delivered:
-            Image(systemName: "checkmark")
-                .font(.caption2)
-                .foregroundColor(.gray)
-        case .read:
-            Image(systemName: "checkmark.circle.fill")
-                .font(.caption2)
-                .foregroundColor(.blue)
+        case .sending: return "clock"
+        case .sent, .delivered: return "checkmark"
+        case .read: return "checkmark.circle.fill"
         }
     }
 

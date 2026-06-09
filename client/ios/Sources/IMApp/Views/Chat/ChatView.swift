@@ -27,7 +27,7 @@ struct ChatView: View {
                         }
 
                         ForEach(vm.messages) { msg in
-                            MessageBubble(message: msg)
+                            MessageBubble(message: msg, convType: convType, senderInfo: vm.senderInfo)
                                 .id(msg.id)
                         }
 

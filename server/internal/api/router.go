@@ -38,6 +38,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/users/batch", h.User.BatchGet)
 		r.Put("/api/v1/users/me", h.User.UpdateMe)
 		r.Get("/api/v1/users/search", h.User.Search)
+		r.Get("/api/v1/groups/search", h.Conversation.SearchGroups)
 
 		r.Get("/api/v1/conversations", h.Conversation.List)
 		r.Get("/api/v1/conversations/{conv_id}", h.Conversation.GetDetail)
@@ -48,6 +49,10 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Delete("/api/v1/conversations/{conv_id}/members/{user_id}", h.Conversation.RemoveMember)
 		r.Post("/api/v1/conversations/{conv_id}/leave", h.Conversation.Leave)
 		r.Post("/api/v1/conversations/{conv_id}/read", h.Conversation.MarkRead)
+		r.Post("/api/v1/conversations/{conv_id}/join-requests", h.Conversation.RequestJoin)
+		r.Get("/api/v1/conversations/{conv_id}/join-requests", h.Conversation.ListJoinRequests)
+		r.Post("/api/v1/conversations/{conv_id}/join-requests/{user_id}/approve", h.Conversation.ApproveJoinRequest)
+		r.Post("/api/v1/conversations/{conv_id}/join-requests/{user_id}/reject", h.Conversation.RejectJoinRequest)
 		r.Get("/api/v1/conversations/unread/total", h.Conversation.UnreadTotal)
 
 		r.Get("/api/v1/conversations/{conv_id}/messages", h.Message.GetHistory)

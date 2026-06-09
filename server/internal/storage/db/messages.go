@@ -17,12 +17,29 @@ func NewMessageRepo(pool *pgxpool.Pool) *MessageRepo {
 }
 
 func (r *MessageRepo) Insert(ctx context.Context, msg *model.Message) error {
-	_, err := r.pool.Exec(ctx,
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx,
 		`INSERT INTO messages (msg_id, conv_id, sender_id, sender_session_id, content_type, body, mention, reply_to, timestamp, client_seq, conv_seq, status)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		msg.MsgID, msg.ConvID, msg.SenderID, msg.SenderSessionID, msg.ContentType, msg.Body,
 		msg.Mention, msg.ReplyTo, msg.Timestamp, msg.ClientSeq, msg.ConvSeq, msg.Status)
-	return err
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx,
+		`UPDATE conversations SET last_msg_id = $1, last_msg_at = to_timestamp($2::numeric / 1000.0) WHERE conv_id = $3`,
+		msg.MsgID, msg.Timestamp, msg.ConvID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *MessageRepo) GetByClientSeq(ctx context.Context, senderID, sessionID string, clientSeq int64) (*model.Message, error) {

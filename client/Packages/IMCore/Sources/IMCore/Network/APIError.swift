@@ -6,6 +6,7 @@ public enum APIError: Error, LocalizedError {
     case unauthorized
     case decoding(Error)
     case timeout
+    case disconnected
     case wsError(code: Int, message: String)
 
     public var errorDescription: String? {
@@ -20,6 +21,8 @@ public enum APIError: Error, LocalizedError {
             return loc("error.decoding_failed")
         case .timeout:
             return loc("error.timeout")
+        case .disconnected:
+            return loc("error.disconnected")
         case .wsError(_, let message):
             return message
         }

@@ -9,6 +9,8 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "login.register_button": [.zhHans: "注册", .en: "Register"],
     "login.switch_to_register": [.zhHans: "没有账户？注册", .en: "No account? Register"],
     "login.switch_to_login": [.zhHans: "已有账户？登录", .en: "Have an account? Login"],
+    "login.remember_account": [.zhHans: "记住账号", .en: "Remember Account"],
+    "login.switch_account": [.zhHans: "切换账号", .en: "Switch Account"],
     "login.account_password_required": [.zhHans: "请输入账户和密码", .en: "Please enter account and password"],
     "login.all_required": [.zhHans: "请填写账户、昵称和密码", .en: "Please enter account, nickname and password"],
     "login.register_success": [.zhHans: "注册成功，请登录", .en: "Registration successful, please login"],
@@ -30,9 +32,11 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "chat.placeholder": [.zhHans: "输入消息...", .en: "Type a message..."],
     "chat.send": [.zhHans: "发送", .en: "Send"],
     "chat.detail": [.zhHans: "聊天详情", .en: "Chat Details"],
+    "chat.session_title": [.zhHans: "和 %@ 会话", .en: "Chat with %@"],
     "chat.p2p_detail": [.zhHans: "聊天信息", .en: "Chat Info"],
     "chat.no_messages": [.zhHans: "暂无消息", .en: "No messages yet"],
     "chat.typing": [.zhHans: "正在输入...", .en: "Typing..."],
+    "chat.message_too_long": [.zhHans: "消息过长（最多10KB）", .en: "Message too long (max 10KB)"],
 
     // MARK: - Contacts
     "contact.title": [.zhHans: "通讯录", .en: "Contacts"],
@@ -85,10 +89,17 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "group.leave": [.zhHans: "退出群组", .en: "Leave Group"],
     "group.leave_confirm": [.zhHans: "确定退出群组？", .en: "Are you sure you want to leave?"],
     "group.dissolve": [.zhHans: "解散群组", .en: "Dissolve Group"],
+    "group.join_request": [.zhHans: "申请加入", .en: "Request to Join"],
+    "group.join_requests_title": [.zhHans: "入群申请", .en: "Join Requests"],
+    "group.join_request_sent": [.zhHans: "已发送加入申请", .en: "Join request sent"],
+    "group.approve": [.zhHans: "批准", .en: "Approve"],
+    "group.reject": [.zhHans: "拒绝", .en: "Reject"],
+    "group.no_join_requests": [.zhHans: "暂无入群申请", .en: "No join requests"],
 
     // MARK: - Search
     "search.title": [.zhHans: "搜索", .en: "Search"],
     "search.placeholder": [.zhHans: "搜索用户...", .en: "Search users..."],
+    "search.group_placeholder": [.zhHans: "搜索会话...", .en: "Search conversations..."],
     "search.no_results": [.zhHans: "未找到用户", .en: "No users found"],
 
     // MARK: - Errors
@@ -97,15 +108,18 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "error.timeout": [.zhHans: "请求超时", .en: "Request timeout"],
     "error.network": [.zhHans: "网络错误", .en: "Network error"],
     "error.unknown": [.zhHans: "未知错误", .en: "Unknown error"],
+    "error.disconnected": [.zhHans: "连接已断开", .en: "Disconnected"],
     "error.load_failed": [.zhHans: "加载失败", .en: "Load failed"],
 
     // MARK: - Common
     "common.confirm": [.zhHans: "确定", .en: "Confirm"],
+    "common.error": [.zhHans: "错误", .en: "Error"],
     "common.cancel": [.zhHans: "取消", .en: "Cancel"],
     "common.save": [.zhHans: "保存", .en: "Save"],
     "common.delete": [.zhHans: "删除", .en: "Delete"],
     "common.done": [.zhHans: "完成", .en: "Done"],
     "common.back": [.zhHans: "返回", .en: "Back"],
+    "common.copy": [.zhHans: "复制", .en: "Copy"],
     "common.close": [.zhHans: "关闭", .en: "Close"],
     "common.loading": [.zhHans: "加载中...", .en: "Loading..."],
     "common.empty": [.zhHans: "暂无内容", .en: "No content"],

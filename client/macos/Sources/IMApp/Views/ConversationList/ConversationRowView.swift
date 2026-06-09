@@ -7,102 +7,100 @@ struct ConversationRowView: View {
     let conv: ConvListItem
 
     private var avatarColor: Color {
-        let colors: [Color] = [.blue, .green, .orange, .purple, .pink, .teal, .indigo, .mint]
+        let colors: [Color] = [AppleDesign.Colors.actionBlue, .green, .orange, .purple, .pink, .teal, .indigo, .mint]
         let hash = abs(conv.convID.hashValue)
         return colors[hash % colors.count]
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: AppleDesign.Spacing.xs) {
             // Avatar
             if conv.type == .group {
                 Circle()
-                    .fill(avatarColor.opacity(0.2))
-                    .frame(width: 48, height: 48)
+                    .fill(avatarColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
                     .overlay {
                         Image(systemName: "person.3.fill")
-                            .font(.caption)
+                            .font(.caption2)
                             .foregroundColor(avatarColor)
                     }
             } else {
                 Circle()
-                    .fill(avatarColor.opacity(0.2))
-                    .frame(width: 48, height: 48)
+                    .fill(avatarColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
                     .overlay {
                         Text(String(conv.name.prefix(1)))
-                            .font(.title3)
-                            .fontWeight(.semibold)
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(avatarColor)
                     }
             }
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    HStack(spacing: 6) {
-                        Text(conv.name)
-                            .fontWeight(.medium)
-                            .lineLimit(1)
+                    Text(conv.name)
+                        .font(.system(size: AppleDesign.Typography.captionSize, weight: .semibold))
+                        .foregroundColor(AppleDesign.Colors.ink)
+                        .lineLimit(1)
 
-                        if conv.mute {
-                            Image(systemName: "bell.slash.fill")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
+                    if conv.mute {
+                        Image(systemName: "bell.slash.fill")
+                            .font(.caption2)
+                            .foregroundColor(AppleDesign.Colors.inkMuted)
                     }
 
                     Spacer()
 
                     if conv.lastMsgAt > 0 {
                         Text(formatTime(conv.lastMsgAt))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: AppleDesign.Typography.finePrintSize))
+                            .foregroundColor(AppleDesign.Colors.inkMuted)
                     }
                 }
 
                 HStack(spacing: 4) {
                     if let last = conv.lastMessage {
                         if conv.type == .group {
-                            Text(last.senderID)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                            Text(last.senderName.isEmpty ? last.senderID : last.senderName)
+                                .font(.system(size: AppleDesign.Typography.captionSize))
+                                .foregroundColor(AppleDesign.Colors.inkMuted)
                                 .lineLimit(1)
                             Text(":")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .font(.system(size: AppleDesign.Typography.captionSize))
+                                .foregroundColor(AppleDesign.Colors.inkMuted)
                         }
                         Text(last.body)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: AppleDesign.Typography.captionSize))
+                            .foregroundColor(AppleDesign.Colors.inkMuted)
                             .lineLimit(1)
                     } else {
                         Text(loc("chat.no_messages"))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: AppleDesign.Typography.captionSize))
+                            .foregroundColor(AppleDesign.Colors.inkMuted)
                     }
 
                     Spacer()
 
                     if conv.mentionMe {
                         Text(loc("conv.mention"))
-                            .font(.caption2)
+                            .font(.system(size: AppleDesign.Typography.finePrintSize, weight: .semibold))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 6)
+                            .padding(.horizontal, 8)
                             .padding(.vertical, 2)
                             .background(Color.orange)
                             .clipShape(Capsule())
                     } else if conv.unreadCount > 0 {
                         Text("\(conv.unreadCount)")
-                            .font(.caption2)
+                            .font(.system(size: AppleDesign.Typography.finePrintSize, weight: .semibold))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 6)
+                            .padding(.horizontal, 8)
                             .padding(.vertical, 2)
-                            .background(Color.red)
+                            .background(AppleDesign.Colors.actionBlue)
                             .clipShape(Capsule())
                     }
                 }
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
     }
 
     private func formatTime(_ timestamp: Int64) -> String {

@@ -35,3 +35,19 @@ type ConvMember struct {
 	Mute     bool     `json:"mute"`
 	JoinedAt int64    `json:"joined_at"`
 }
+
+type JoinRequestStatus int
+
+const (
+	JoinRequestPending  JoinRequestStatus = 0
+	JoinRequestApproved JoinRequestStatus = 1
+	JoinRequestRejected JoinRequestStatus = 2
+)
+
+type JoinRequest struct {
+	ConvID    string            `json:"conv_id"`
+	UserID    string            `json:"user_id"`
+	Status    JoinRequestStatus `json:"status"`
+	CreatedAt int64             `json:"created_at"`
+	UpdatedAt int64             `json:"updated_at"`
+}

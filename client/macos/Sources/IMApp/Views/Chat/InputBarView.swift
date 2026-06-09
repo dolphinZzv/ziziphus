@@ -8,24 +8,28 @@ struct InputBarView: View {
     let onTyping: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            TextField(loc("chat.placeholder"), text: $text)
-                .textFieldStyle(.roundedBorder)
-                .onChange(of: text) { _, _ in
-                    onTyping()
-                }
-                .onSubmit {
-                    onSend()
-                }
+        HStack(alignment: .bottom, spacing: AppleDesign.Spacing.sm) {
+            ChatTextView(
+                text: $text,
+                placeholder: loc("chat.placeholder"),
+                onTyping: onTyping,
+                onSend: onSend
+            )
+            .frame(minHeight: 40, maxHeight: 120)
+            .background(AppleDesign.Colors.pearl)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
 
             Button(action: onSend) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
+                    .foregroundColor(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? AppleDesign.Colors.inkMuted
+                        : AppleDesign.Colors.actionBlue)
             }
             .buttonStyle(.plain)
             .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(12)
-        .background(Color.white)
+        .background(AppleDesign.Colors.parchment)
     }
 }

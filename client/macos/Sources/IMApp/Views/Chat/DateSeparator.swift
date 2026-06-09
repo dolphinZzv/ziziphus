@@ -5,7 +5,7 @@ struct DateSeparator: View {
 
     var body: some View {
         Text(formatDate(date))
-            .font(.caption2)
+            .font(.appleFinePrint)
             .foregroundColor(.secondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 4)

@@ -32,27 +32,5 @@ struct IMApp: App {
                 .preferredColorScheme(themeManager.resolvedColorScheme)
                 .frame(minWidth: 400, minHeight: 600)
         }
-        .commands {
-            CommandMenu(loc("profile.settings")) {
-                Picker(loc("settings.language"), selection: $localizationManager.currentLanguage) {
-                    ForEach(Language.allCases, id: \.self) { lang in
-                        Text(lang.displayName).tag(lang)
-                    }
-                }
-                Divider()
-                Picker(loc("settings.theme"), selection: $themeManager.currentTheme) {
-                    ForEach(AppTheme.allCases, id: \.self) { theme in
-                        Text(theme.displayName).tag(theme)
-                    }
-                }
-                Divider()
-                Button(loc("login.logout")) {
-                    WebSocketClient.shared.disconnect()
-                    AuthManager.shared.logout()
-                    loginVM.isLoggedIn = false
-                }
-                .keyboardShortcut("q", modifiers: [.command, .shift])
-            }
-        }
     }
 }

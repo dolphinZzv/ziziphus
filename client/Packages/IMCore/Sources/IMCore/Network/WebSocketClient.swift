@@ -1,5 +1,10 @@
 import Foundation
 import Combine
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 public enum ConnectionStatus: String, Sendable {
     case disconnected
@@ -23,11 +28,43 @@ public class WebSocketClient: ObservableObject {
     private var handlers: [Int: [(WSFrame) -> Void]] = [:]
     private var ackContinuations: [String: CheckedContinuation<WSFrame, Error>] = [:]
     private let ackLock = NSLock()
+    private var hasConnectedOnce = false
 
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         session = URLSession(configuration: config)
+        observeLifecycle()
+    }
+
+    private func observeLifecycle() {
+        #if os(iOS)
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.retryImmediately()
+            }
+        }
+        #else
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willBecomeActiveNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.retryImmediately()
+            }
+        }
+        #endif
+    }
+
+    private func retryImmediately() {
+        guard connectionStatus != .connected, isActive else { return }
+        reconnectDelay = 1
+        reconnectWork?.cancel()
+        connectionStatus = .connecting
+        connect()
     }
 
     // MARK: - Connection
@@ -52,6 +89,8 @@ public class WebSocketClient: ObservableObject {
         let task = session.webSocketTask(with: url)
         webSocketTask = task
         task.resume()
+        hasConnectedOnce = false
+        connectionStatus = .connected
         startReadLoop()
 
         if let sessionID = AuthManager.shared.sessionID {
@@ -60,10 +99,6 @@ public class WebSocketClient: ObservableObject {
                 send(frame: WSFrame(type: .sessionRecover, id: UUID().uuidString, payload: data))
             }
         }
-
-        connectionStatus = .connected
-        startPing()
-        resetReconnectDelay()
     }
 
     public func disconnect() {
@@ -75,11 +110,23 @@ public class WebSocketClient: ObservableObject {
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
         connectionStatus = .disconnected
+        sendQueue.removeAll()
+        ackLock.lock()
+        for (_, cont) in ackContinuations {
+            cont.resume(throwing: APIError.disconnected)
+        }
+        ackContinuations.removeAll()
+        ackLock.unlock()
     }
+
+    private var sendQueue: [WSFrame] = []
 
     // MARK: - Send
     public func send(frame: WSFrame) {
-        guard let task = webSocketTask else { return }
+        guard let task = webSocketTask else {
+            sendQueue.append(frame)
+            return
+        }
         do {
             let data = try frame.toRawJSONData()
             task.send(.data(data)) { [weak self] error in
@@ -129,6 +176,13 @@ public class WebSocketClient: ObservableObject {
             Task { @MainActor in
                 switch result {
                 case .success(let message):
+                    if !self.hasConnectedOnce {
+                        self.hasConnectedOnce = true
+                        self.connectionStatus = .connected
+                        self.startPing()
+                        self.resetReconnectDelay()
+                        self.flushSendQueue()
+                    }
                     self.handleMessage(message)
                     if self.isActive {
                         self.startReadLoop()
@@ -203,6 +257,14 @@ public class WebSocketClient: ObservableObject {
             connectionStatus = .connecting
             connect()
             reconnectDelay = min(reconnectDelay * 2, 30)
+        }
+    }
+
+    private func flushSendQueue() {
+        let frames = sendQueue
+        sendQueue.removeAll()
+        for frame in frames {
+            send(frame: frame)
         }
     }
 

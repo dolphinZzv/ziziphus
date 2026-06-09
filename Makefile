@@ -14,16 +14,20 @@ APP_BUNDLE = client/.build/debug/IMApp-macOS.app
 
 # macOS 客户端
 macos: macos-stop
-	cd client && swift build --target IMApp-macOS
+	cd client && swift build --product IMApp-macOS
 	mkdir -p "$(APP_BUNDLE)/Contents/MacOS"
 	cp client/.build/debug/IMApp-macOS "$(APP_BUNDLE)/Contents/MacOS/"
-	plutil -replace CFBundleExecutable -string IMApp-macOS "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null; \
-	plutil -replace CFBundleIdentifier -string com.dolphinz.imapp "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null; \
-	plutil -replace CFBundleName -string "DolphinZ IM" "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null; \
-	plutil -replace CFBundleVersion -string 1 "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null; \
-	plutil -replace CFBundlePackageType -string APPL "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null; \
-	plutil -replace LSMinimumSystemVersion -string "15.0" "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null; \
-	true
+	if [ ! -f "$(APP_BUNDLE)/Contents/Info.plist" ]; then \
+		echo '<?xml version="1.0" encoding="UTF-8"?>' > "$(APP_BUNDLE)/Contents/Info.plist"; \
+		echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "$(APP_BUNDLE)/Contents/Info.plist"; \
+		echo '<plist version="1.0"><dict></dict></plist>' >> "$(APP_BUNDLE)/Contents/Info.plist"; \
+	fi
+	plutil -replace CFBundleExecutable -string IMApp-macOS "$(APP_BUNDLE)/Contents/Info.plist" && \
+	plutil -replace CFBundleIdentifier -string com.dolphinz.imapp "$(APP_BUNDLE)/Contents/Info.plist" && \
+	plutil -replace CFBundleName -string "Dolphin" "$(APP_BUNDLE)/Contents/Info.plist" && \
+	plutil -replace CFBundleVersion -string 1 "$(APP_BUNDLE)/Contents/Info.plist" && \
+	plutil -replace CFBundlePackageType -string APPL "$(APP_BUNDLE)/Contents/Info.plist" && \
+	plutil -replace LSMinimumSystemVersion -string "15.0" "$(APP_BUNDLE)/Contents/Info.plist"
 	open "$(APP_BUNDLE)"
 
 macos-stop:
