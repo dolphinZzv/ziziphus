@@ -29,7 +29,9 @@ struct ChatView: View {
                         }
 
                         ForEach(vm.messages) { msg in
-                            MessageBubble(message: msg, convType: convType, senderInfo: vm.senderInfo)
+                            MessageBubble(message: msg, convType: convType, senderInfo: vm.senderInfo, onRetry: {
+                                vm.retryMessage(clientSeq: msg.clientSeq)
+                            })
                                 .id(msg.id)
                         }
 

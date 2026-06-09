@@ -23,6 +23,7 @@ public enum HTTPMethod: String {
 public class APIClient: @unchecked Sendable {
     public static let shared = APIClient()
     public var baseURL = "http://192.168.2.111:8080"
+    // baseURL is overridden by AppSettings.shared on launch
 
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder

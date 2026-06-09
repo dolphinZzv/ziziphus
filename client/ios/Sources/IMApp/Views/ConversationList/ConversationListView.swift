@@ -30,6 +30,23 @@ struct ConversationListView: View {
                 .background(Color(.systemGroupedBackground))
             }
 
+            // Error banner
+            if let err = vm.errorMessage {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                    Text(err)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(.red.opacity(0.08))
+            }
+
             if vm.isLoading && vm.conversations.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -89,7 +106,9 @@ struct ConversationListView: View {
             ChatView(convID: dest.convID, convName: dest.name, convType: dest.type)
         }
         .sheet(isPresented: $showProfile) {
-            ProfileView()
+            NavigationStack {
+                ProfileView()
+            }
         }
         .onAppear {
             vm.loadConversations()

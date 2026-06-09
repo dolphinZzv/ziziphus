@@ -10,6 +10,7 @@ public class LoginViewModel: ObservableObject {
     @Published public var isLoading = false
     @Published public var errorMessage: String?
     @Published public var isLoggedIn = false
+    @Published public var isCheckingSession = true
     @Published public var rememberAccount = false
     @Published public var showAccountPicker = false
 
@@ -102,6 +103,7 @@ public class LoginViewModel: ObservableObject {
     }
 
     public func checkExistingSession() async {
+        defer { isCheckingSession = false }
         if AuthManager.shared.isLoggedIn, AuthManager.shared.readToken() != nil {
             do {
                 _ = try await authService.getMe()

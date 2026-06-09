@@ -3,9 +3,11 @@ import IMCore
 
 struct ProfileView: View {
     @EnvironmentObject private var loginVM: LoginViewModel
+    @EnvironmentObject private var appSettings: AppSettings
     @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     @State private var showLogoutAlert = false
+    @State private var showSettings = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -63,21 +65,14 @@ struct ProfileView: View {
 
             // Settings section
             VStack(spacing: 8) {
-                Picker(loc("settings.theme"), selection: $themeManager.currentTheme) {
-                    ForEach(AppTheme.allCases, id: \.self) { theme in
-                        Text(theme.displayName).tag(theme)
-                    }
+                Button(action: { showSettings = true }) {
+                    Label(loc("settings.title"), systemImage: "gearshape")
+                        .font(.appleBody)
+                        .frame(maxWidth: .infinity)
                 }
-                .pickerStyle(.segmented)
-
-                Picker(loc("settings.language"), selection: $localizationManager.currentLanguage) {
-                    ForEach(Language.allCases, id: \.self) { lang in
-                        Text(lang.displayName).tag(lang)
-                    }
-                }
-                .pickerStyle(.segmented)
+                .buttonStyle(.plain)
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
             .padding(.vertical, AppleDesign.Spacing.md)
 
             Spacer()
@@ -97,6 +92,12 @@ struct ProfileView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 18))
+        .sheet(isPresented: $showSettings) {
+            AppSettingsView()
+                .environmentObject(appSettings)
+                .environmentObject(themeManager)
+                .environmentObject(localizationManager)
+        }
         .alert(loc("login.logout"), isPresented: $showLogoutAlert) {
             Button(loc("common.cancel"), role: .cancel) {}
             Button(loc("login.logout"), role: .destructive) {

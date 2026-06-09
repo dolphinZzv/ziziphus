@@ -7,9 +7,10 @@ struct InputBarView: View {
     let onTyping: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            TextField(loc("chat.placeholder"), text: $text)
+        HStack(alignment: .bottom, spacing: 8) {
+            TextField(loc("chat.placeholder"), text: $text, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
+                .lineLimit(1...5)
                 .onChange(of: text) { _, _ in
                     onTyping()
                 }

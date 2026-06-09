@@ -16,7 +16,7 @@ struct ContactListView: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             if vm.isLoading && vm.contacts.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -80,6 +80,23 @@ struct ContactListView: View {
                 }
                 .listStyle(.plain)
                 .refreshable { vm.refresh() }
+            }
+
+            // Error banner
+            if let err = vm.errorMessage {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                    Text(err)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(.red.opacity(0.08))
             }
         }
         .navigationTitle(loc("contact.title"))

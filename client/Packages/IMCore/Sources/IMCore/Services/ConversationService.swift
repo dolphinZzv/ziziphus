@@ -7,6 +7,34 @@ public class ConversationService {
 
     private init() {}
 
+    // MARK: - Version
+    public struct ServerVersionInfo: Decodable, Sendable {
+        public let version: String
+        public let gitCommit: String
+
+        enum CodingKeys: String, CodingKey {
+            case version
+            case gitCommit = "git_commit"
+        }
+    }
+
+    public func fetchServerVersion() async throws -> ServerVersionInfo {
+        let resp: ServerVersionInfo = try await api.request("/api/v1/version")
+        return resp
+    }
+
+    public var clientVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    public var clientBuild: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
+
+    public var clientGitHash: String {
+        BuildInfo.gitCommit
+    }
+
     // MARK: - List
     public func listConversations(page: Int = 1, size: Int = 20) async throws -> [ConvListItem] {
         let result: PaginatedData<ConvListItem> = try await api.request(

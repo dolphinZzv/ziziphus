@@ -37,6 +37,8 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "chat.no_messages": [.zhHans: "暂无消息", .en: "No messages yet"],
     "chat.typing": [.zhHans: "正在输入...", .en: "Typing..."],
     "chat.message_too_long": [.zhHans: "消息过长（最多10KB）", .en: "Message too long (max 10KB)"],
+    "chat.send_failed": [.zhHans: "发送失败", .en: "Send failed"],
+    "chat.retry": [.zhHans: "重试", .en: "Retry"],
 
     // MARK: - Contacts
     "contact.title": [.zhHans: "通讯录", .en: "Contacts"],
@@ -62,9 +64,18 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "settings.title": [.zhHans: "设置", .en: "Settings"],
     "settings.theme": [.zhHans: "主题", .en: "Theme"],
     "settings.language": [.zhHans: "语言", .en: "Language"],
+    "settings.language.follow_system": [.zhHans: "跟随系统", .en: "Follow System"],
     "settings.theme_system": [.zhHans: "跟随系统", .en: "System"],
     "settings.theme_light": [.zhHans: "浅色", .en: "Light"],
     "settings.theme_dark": [.zhHans: "深色", .en: "Dark"],
+    "settings.server": [.zhHans: "服务器", .en: "Server"],
+    "settings.server_url": [.zhHans: "服务器地址", .en: "Server URL"],
+    "settings.display": [.zhHans: "显示", .en: "Display"],
+    "settings.app_info": [.zhHans: "应用信息", .en: "App Info"],
+    "settings.client_version": [.zhHans: "客户端版本", .en: "Client Version"],
+    "settings.server_version": [.zhHans: "服务端版本", .en: "Server Version"],
+    "settings.build": [.zhHans: "构建版本", .en: "Build"],
+    "settings.server_build": [.zhHans: "服务端构建", .en: "Server Build"],
 
     // MARK: - Group
     "group.create": [.zhHans: "创建群组", .en: "Create Group"],
@@ -125,4 +136,5 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "common.empty": [.zhHans: "暂无内容", .en: "No content"],
     "common.online": [.zhHans: "在线", .en: "Online"],
     "common.offline": [.zhHans: "离线", .en: "Offline"],
+    "common.unknown": [.zhHans: "未知", .en: "Unknown"],
 ]

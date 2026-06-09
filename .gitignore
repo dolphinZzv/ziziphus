@@ -8,8 +8,10 @@
 **/xcuserdata/
 **/.swiftpm/
 build
+client/Packages/IMCore/Sources/IMCore/BuildInfo.swift
 server/im-server
 server/coverage.out
 server/handler_cov.out
 server/config/rsa_key.pem
+server/config/config.yaml
 .venv

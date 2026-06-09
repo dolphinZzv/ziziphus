@@ -6,6 +6,7 @@ public class SearchViewModel: ObservableObject {
     @Published public var query = ""
     @Published public var results: [User] = []
     @Published public var isSearching = false
+    @Published public var errorMessage: String?
 
     private let contactService = ContactService.shared
     private var searchTask: Task<Void, Never>?
@@ -39,6 +40,7 @@ public class SearchViewModel: ObservableObject {
                 results = users
             } catch {
                 results = []
+                errorMessage = error.localizedDescription
             }
             isSearching = false
         }

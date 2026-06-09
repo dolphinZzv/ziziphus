@@ -79,8 +79,14 @@ public class WebSocketClient: ObservableObject {
         isActive = true
         connectionStatus = .connecting
 
-        guard let encodedToken = token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "ws://192.168.2.111:8080/ws?token=\(encodedToken)") else {
+        guard let encodedToken = token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            connectionStatus = .disconnected
+            return
+        }
+        let wsBase = AppSettings.shared.serverURL
+            .replacingOccurrences(of: "http://", with: "ws://")
+            .replacingOccurrences(of: "https://", with: "wss://")
+        guard let url = URL(string: "\(wsBase)/ws?token=\(encodedToken)") else {
             connectionStatus = .disconnected
             return
         }

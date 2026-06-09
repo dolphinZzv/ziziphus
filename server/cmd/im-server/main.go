@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -27,7 +28,9 @@ import (
 )
 
 func main() {
-	cfg, err := config.Load("config/config.yaml")
+	configPath := flag.String("c", "config/config.yaml", "config file path")
+	flag.Parse()
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load config: %v\n", err)
 		os.Exit(1)
@@ -138,6 +141,8 @@ func main() {
 		Conversation: convHandler,
 		Message:      msgHandler,
 		Contact:      contactHandler,
+		DB:           pool,
+		RDB:          rdb,
 	}
 
 	// Auth middleware

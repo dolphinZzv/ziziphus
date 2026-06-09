@@ -30,6 +30,7 @@ public class ChatViewModel: ObservableObject {
     @Published public var isTyping = false
     @Published public var peerOnline = false
     @Published public var sendErrorMessage: String?
+    @Published public var errorMessage: String?
 
     private let maxBodyBytes = 10_240
 
@@ -120,6 +121,7 @@ public class ChatViewModel: ObservableObject {
                 }
             } catch {
                 logToFile("[ChatVM] load history error: \(error)")
+                errorMessage = error.localizedDescription
             }
             loadSenderInfo()
         }
@@ -140,7 +142,8 @@ public class ChatViewModel: ObservableObject {
                     allHistoryLoaded = true
                 }
             } catch {
-                print("[ChatVM] load more history error: \(error)")
+                logToFile("[ChatVM] load more history error: \(error)")
+                errorMessage = error.localizedDescription
             }
             loadSenderInfo()
             isLoadingHistory = false
@@ -156,7 +159,9 @@ public class ChatViewModel: ObservableObject {
             do {
                 let info = try await contactService.batchGetUsers(userIDs: Array(ids))
                 senderInfo.merge(info) { _, new in new }
-            } catch {}
+            } catch {
+                logToFile("[ChatVM] loadSenderInfo error: \(error)")
+            }
         }
     }
 
@@ -197,13 +202,36 @@ public class ChatViewModel: ObservableObject {
             } catch {
                 logToFile("[ChatVM] sendMessage error: \(error)")
                 if let idx = messages.firstIndex(where: { $0.clientSeq == clientSeq }) {
-                    logToFile("[ChatVM] removing local msg clientSeq=\(clientSeq) at idx=\(idx)")
-                    messages.remove(at: idx)
-                } else {
-                    logToFile("[ChatVM] local msg clientSeq=\(clientSeq) not found in messages array")
+                    messages[idx].status = .failed
                 }
+                sendErrorMessage = loc("chat.send_failed")
             }
             isSending = false
+        }
+    }
+
+    public func retryMessage(clientSeq: Int64) {
+        guard let idx = messages.firstIndex(where: { $0.clientSeq == clientSeq && $0.status == .failed }),
+              idx < messages.count else { return }
+        let failedMsg = messages[idx]
+        messages[idx].status = .sending
+
+        Task {
+            do {
+                let ack = try await msgService.sendMessage(convID: convID, body: failedMsg.body, clientSeq: clientSeq)
+                if let updateIdx = messages.firstIndex(where: { $0.clientSeq == ack.clientSeq && $0.msgID == 0 }) {
+                    messages[updateIdx].msgID = ack.msgID
+                    messages[updateIdx].timestamp = ack.timestamp
+                    messages[updateIdx].status = .sent
+                    cache.insertMessage(messages[updateIdx])
+                }
+            } catch {
+                logToFile("[ChatVM] retryMessage error: \(error)")
+                if let updateIdx = messages.firstIndex(where: { $0.clientSeq == clientSeq }) {
+                    messages[updateIdx].status = .failed
+                }
+                sendErrorMessage = loc("chat.send_failed")
+            }
         }
     }
 

@@ -5,6 +5,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-redis/redis/v8"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/dolphinz/im-server/pkg/i18n"
 )
@@ -14,6 +16,8 @@ type Handlers struct {
 	Conversation *ConvHandler
 	Message      *MsgHandler
 	Contact      *ContactHandler
+	DB           *pgxpool.Pool
+	RDB          *redis.Client
 }
 
 func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
@@ -27,7 +31,9 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 	r.Group(func(r chi.Router) {
 		r.Post("/api/v1/users/register", h.User.Register)
 		r.Post("/api/v1/users/login", h.User.Login)
-		r.Get("/metrics", promhttp.Handler().ServeHTTP)
+		r.Get("/api/v1/version", h.GetVersion)
+			r.Get("/health", h.Health)
+			r.Get("/metrics", promhttp.Handler().ServeHTTP)
 	})
 
 	// authenticated routes

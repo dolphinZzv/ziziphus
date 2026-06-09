@@ -904,18 +904,26 @@ func TestRouter_P2P_SkipsSender(t *testing.T) {
 		"user_a": {"sess_a1"},
 	}
 
-	// user_b sends the message; user_a should be the sole target.
+	// user_b sends the message; user_b's non-sending sessions and user_a should be targets.
 	msg := basicMsg()
 	msg.SenderID = "user_b"
 	targets := router.Route(context.Background(), msg)
-	if len(targets) != 1 {
-		t.Fatalf("Route returned %d targets; want 1", len(targets))
+	if len(targets) != 2 {
+		t.Fatalf("Route returned %d targets; want 2", len(targets))
 	}
-	if targets[0].UserID != "user_a" {
-		t.Errorf("target.UserID = %q; want user_a", targets[0].UserID)
+	byUser := make(map[string][]string)
+	for _, tr := range targets {
+		byUser[tr.UserID] = tr.SessionIDs
 	}
-	if len(targets[0].SessionIDs) != 1 || targets[0].SessionIDs[0] != "sess_a1" {
-		t.Errorf("target.SessionIDs = %v; want [sess_a1]", targets[0].SessionIDs)
+	if _, ok := byUser["user_a"]; !ok {
+		t.Errorf("user_a should be a target")
+	}
+	// user_b's other sessions should still receive the push
+	sessions, ok := byUser["user_b"]
+	if !ok {
+		t.Errorf("user_b should be a target (other sessions)")
+	} else if len(sessions) != 2 {
+		t.Errorf("user_b sessions = %v; want [sess_b1, sess_b2]", sessions)
 	}
 	_ = convMgr
 }
@@ -958,7 +966,7 @@ func TestRouter_Group_SkipsSender(t *testing.T) {
 	// Give user_a sessions so the Router includes them as a target.
 	sessGtr.sessions["user_a"] = []string{"sess_a1"}
 
-	// user_b sends; only user_a and user_c should be targets.
+	// user_b sends; user_a, user_c, and user_b's other sessions should be targets.
 	msg := basicMsg()
 	msg.ConvID = "group_1"
 	msg.SenderID = "user_b"
@@ -968,8 +976,8 @@ func TestRouter_Group_SkipsSender(t *testing.T) {
 	for _, tr := range targets {
 		byUser[tr.UserID] = true
 	}
-	if byUser["user_b"] {
-		t.Errorf("sender user_b should not appear in targets")
+	if !byUser["user_b"] {
+		t.Errorf("user_b should be a target (other sessions)")
 	}
 	if !byUser["user_a"] {
 		t.Errorf("user_a should be a target")

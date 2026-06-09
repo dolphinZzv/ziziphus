@@ -3,6 +3,7 @@ import IMCore
 
 struct ProfileView: View {
     @EnvironmentObject private var loginVM: LoginViewModel
+    @EnvironmentObject private var appSettings: AppSettings
     @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject private var localizationManager: LocalizationManager
     @State private var showLogoutAlert = false
@@ -46,20 +47,15 @@ struct ProfileView: View {
             }
 
             // Settings
-            Section(loc("settings.title")) {
-                Picker(loc("settings.theme"), selection: $themeManager.currentTheme) {
-                    ForEach(AppTheme.allCases, id: \.self) { theme in
-                        Text(theme.displayName).tag(theme)
-                    }
+            Section {
+                NavigationLink {
+                    AppSettingsView()
+                        .environmentObject(appSettings)
+                        .environmentObject(themeManager)
+                        .environmentObject(localizationManager)
+                } label: {
+                    Label(loc("settings.title"), systemImage: "gearshape")
                 }
-                .pickerStyle(.menu)
-
-                Picker(loc("settings.language"), selection: $localizationManager.currentLanguage) {
-                    ForEach(Language.allCases, id: \.self) { lang in
-                        Text(lang.displayName).tag(lang)
-                    }
-                }
-                .pickerStyle(.menu)
             }
 
             // Actions

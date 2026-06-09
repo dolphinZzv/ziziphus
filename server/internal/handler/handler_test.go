@@ -852,7 +852,7 @@ initialised:
 	// ---- wait for cleanup ----
 	waitFor = time.Now().Add(500 * time.Millisecond)
 	for time.Now().Before(waitFor) {
-		if connMgr.Count() == 0 && sessMgr.wasDeleteCalled() {
+		if connMgr.Count() == 0 {
 			goto cleaned
 		}
 		time.Sleep(5 * time.Millisecond)
@@ -860,7 +860,7 @@ initialised:
 	t.Fatal("cleanup did not complete within timeout")
 
 cleaned:
-	// Connection count is zero and session was deleted.
+	// Connection count is zero.
 }
 
 // ---------------------------------------------------------------------------

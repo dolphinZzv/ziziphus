@@ -5,6 +5,7 @@ struct MessageBubble: View {
     let message: Message
     let convType: ConvType
     let senderInfo: [String: User]
+    var onRetry: (() -> Void)?
 
     private var isMine: Bool {
         message.senderID == AuthManager.shared.currentUser?.userID
@@ -29,29 +30,57 @@ struct MessageBubble: View {
                 }
 
                 VStack(alignment: isMine ? .leading : .trailing, spacing: 2) {
-                    Text(message.body)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(isMine ? Color.blue : Color(.systemGray5))
-                        .foregroundColor(isMine ? .white : .primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .textSelection(.enabled)
-                        .contextMenu {
-                            Button(loc("common.copy")) {
-                                UIPasteboard.general.string = message.body
+                    if message.status == .failed {
+                        Button {
+                            onRetry?()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                Text(message.body)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.red.opacity(0.08))
+                                    .foregroundColor(.red)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(Color.red.opacity(0.4), lineWidth: 1)
+                                    )
+                                Text(loc("chat.retry"))
+                                    .font(.caption)
+                                    .foregroundColor(.red)
                             }
                         }
+                        .buttonStyle(.plain)
+                    } else {
+                        Text(message.body)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(isMine ? Color.blue : Color(.systemGray5))
+                            .foregroundColor(isMine ? .white : .primary)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .textSelection(.enabled)
+                            .contextMenu {
+                                Button(loc("common.copy")) {
+                                    UIPasteboard.general.string = message.body
+                                }
+                            }
+                    }
 
-                    if message.timestamp > 0 {
+                    if message.timestamp > 0 || message.status == .sending || message.status == .failed {
                         HStack(spacing: 3) {
                             if isMine {
                                 Image(systemName: statusIconName)
                                     .font(.system(size: 9))
                             }
-                            Text(formatTime(message.timestamp))
-                                .font(.caption2)
+                            if message.timestamp > 0 {
+                                Text(formatTime(message.timestamp))
+                                    .font(.caption2)
+                            }
                         }
-                        .foregroundColor(.secondary)
+                        .foregroundColor(message.status == .failed ? .red : .secondary)
                     }
                 }
             }
@@ -66,6 +95,7 @@ struct MessageBubble: View {
         case .sending: return "clock"
         case .sent, .delivered: return "checkmark"
         case .read: return "checkmark.circle.fill"
+        case .failed: return "exclamationmark.circle.fill"
         }
     }
 

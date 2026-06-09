@@ -1499,7 +1499,7 @@ func TestMsgHandler_GetHistory_WithBefore(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/messages?before=100&limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/messages?before_msg_id=100&limit=10", nil)
 	req = setChiURLParam(req, "conv_id", "conv_1")
 	w := httptest.NewRecorder()
 	handler.GetHistory(w, req)

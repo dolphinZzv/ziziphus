@@ -1,3 +1,5 @@
+# IM Server Configuration
+# Copy this file to config.yaml and adjust for your environment.
 server:
   port: 8080
 
@@ -12,7 +14,8 @@ redis:
   db: 0
 
 jwt:
-  secret: "dev-secret-key-change-in-production"
+  # CHANGE THIS in production — generate a random 256-bit key.
+  secret: "change-me-to-a-random-secret"
   expire_hours: 168
   private_key_path: "config/rsa_key.pem"
 

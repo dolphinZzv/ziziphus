@@ -4,6 +4,7 @@ import IMCore
 @main
 struct IMApp: App {
     @StateObject private var loginVM = LoginViewModel()
+    @StateObject private var appSettings = AppSettings.shared
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var localizationManager = LocalizationManager.shared
 
@@ -27,10 +28,12 @@ struct IMApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(loginVM)
+                .environmentObject(appSettings)
                 .environmentObject(themeManager)
                 .environmentObject(localizationManager)
                 .preferredColorScheme(themeManager.resolvedColorScheme)
                 .frame(minWidth: 400, minHeight: 600)
+                .id(localizationManager.refreshVersion)
         }
     }
 }

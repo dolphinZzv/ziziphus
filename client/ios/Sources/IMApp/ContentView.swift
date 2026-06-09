@@ -6,7 +6,10 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if loginVM.isLoggedIn {
+            if loginVM.isCheckingSession {
+                Color(.systemBackground)
+                    .ignoresSafeArea()
+            } else if loginVM.isLoggedIn {
                 MainTabView()
             } else {
                 if loginVM.isRegistering {

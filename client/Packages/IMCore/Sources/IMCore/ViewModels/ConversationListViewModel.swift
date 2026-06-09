@@ -7,6 +7,7 @@ public class ConversationListViewModel: ObservableObject {
     @Published public var isLoading = false
     @Published public var isRefreshing = false
     @Published public var connectionStatus: ConnectionStatus = .disconnected
+    @Published public var errorMessage: String?
 
     private let convService = ConversationService.shared
     private let wsClient = WebSocketClient.shared
@@ -61,7 +62,7 @@ public class ConversationListViewModel: ObservableObject {
                 self.conversations = items
                 self.cache.upsertConversations(items)
             } catch {
-                // cache data already loaded
+                errorMessage = error.localizedDescription
             }
             self.isLoading = false
         }
@@ -74,8 +75,9 @@ public class ConversationListViewModel: ObservableObject {
                 let items = try await convService.listConversations()
                 self.conversations = items
                 self.cache.upsertConversations(items)
+                errorMessage = nil
             } catch {
-                // keep existing data
+                errorMessage = error.localizedDescription
             }
             self.isRefreshing = false
         }
@@ -93,7 +95,7 @@ public class ConversationListViewModel: ObservableObject {
                 self.conversations = items
                 self.cache.upsertConversations(items)
             } catch {
-                // silently fail
+                errorMessage = error.localizedDescription
             }
         }
     }

@@ -3,17 +3,35 @@ import IMCore
 
 struct LoginView: View {
     @EnvironmentObject private var loginVM: LoginViewModel
+    @EnvironmentObject private var appSettings: AppSettings
+    @EnvironmentObject private var themeManager: ThemeManager
+    @EnvironmentObject private var localizationManager: LocalizationManager
     @State private var showErrorAlert = false
     @State private var showPassword = false
+    @State private var showSettings = false
 
     var body: some View {
         VStack(spacing: AppleDesign.Spacing.xl) {
+            HStack {
+                Spacer()
+                Button(action: { showSettings = true }) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal)
+
             Spacer()
 
-            Text(loc("login.title"))
-                .font(.appleDisplay)
-                .foregroundColor(AppleDesign.Colors.ink)
-                .kerning(-0.374)
+            Image(systemName: "message.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.blue)
+
+            Text("DolphinZ")
+                .font(.largeTitle)
+                .fontWeight(.bold)
 
             VStack(spacing: AppleDesign.Spacing.sm) {
                 if !loginVM.rememberedAccounts.isEmpty {
@@ -107,6 +125,12 @@ struct LoginView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { }
         )
+        .sheet(isPresented: $showSettings) {
+            AppSettingsView()
+                .environmentObject(appSettings)
+                .environmentObject(themeManager)
+                .environmentObject(localizationManager)
+        }
     }
 }
 

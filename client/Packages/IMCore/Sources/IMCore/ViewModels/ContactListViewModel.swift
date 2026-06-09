@@ -9,6 +9,7 @@ public class ContactListViewModel: ObservableObject {
     @Published public var searchQuery = ""
     @Published public var searchResults: [User] = []
     @Published public var isSearching = false
+    @Published public var errorMessage: String?
 
     private let contactService = ContactService.shared
     private let ws = WebSocketClient.shared
@@ -47,8 +48,9 @@ public class ContactListViewModel: ObservableObject {
         Task {
             do {
                 contacts = try await contactService.listContacts()
+                errorMessage = nil
             } catch {
-                // keep existing data
+                errorMessage = error.localizedDescription
             }
             isLoading = false
         }
@@ -59,8 +61,9 @@ public class ContactListViewModel: ObservableObject {
         Task {
             do {
                 contacts = try await contactService.listContacts()
+                errorMessage = nil
             } catch {
-                // keep existing data
+                errorMessage = error.localizedDescription
             }
             isRefreshing = false
         }
@@ -87,6 +90,7 @@ public class ContactListViewModel: ObservableObject {
                 searchResults = try await contactService.searchUsers(query: searchQuery)
             } catch {
                 searchResults = []
+                errorMessage = error.localizedDescription
             }
             isSearching = false
         }

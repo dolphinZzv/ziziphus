@@ -17,6 +17,7 @@ public enum MsgStatus: Int, Codable, Sendable {
     case sent = 1
     case delivered = 2
     case read = 3
+    case failed = 4
 }
 
 public struct Message: Codable, Sendable, Identifiable, Hashable {

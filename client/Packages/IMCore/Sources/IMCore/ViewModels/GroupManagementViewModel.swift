@@ -18,6 +18,7 @@ public class GroupManagementViewModel: ObservableObject {
     @Published public var isLoadingRequests = false
     @Published public var joinRequestSent = false
     @Published public var isAdmin = false
+    @Published public var errorMessage: String?
 
     private let convService = ConversationService.shared
     private let contactService = ContactService.shared
@@ -37,7 +38,7 @@ public class GroupManagementViewModel: ObservableObject {
                 let users = try await contactService.batchGetUsers(userIDs: userIDs)
                 membersInfo = users
             } catch {
-                // keep existing data
+                errorMessage = error.localizedDescription
             }
             isLoading = false
         }
@@ -64,6 +65,7 @@ public class GroupManagementViewModel: ObservableObject {
                 joinRequests = try await convService.listJoinRequests(convID: convID)
             } catch {
                 joinRequests = []
+                errorMessage = error.localizedDescription
             }
             isLoadingRequests = false
         }
@@ -105,6 +107,7 @@ public class GroupManagementViewModel: ObservableObject {
                 searchResults = users
             } catch {
                 searchResults = []
+                errorMessage = error.localizedDescription
             }
             isSearching = false
         }
