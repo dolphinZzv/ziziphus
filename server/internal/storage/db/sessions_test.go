@@ -35,13 +35,15 @@ func TestSessionRepo_Create(t *testing.T) {
 		UserID:     "u1",
 		Device:     1,
 		DeviceName: "ios",
+		DeviceID:   "device_1",
+		ClientIP:   "127.0.0.1",
 		Status:     1,
 		LoginAt:    1000,
 		LastActive: 2000,
 	}
 
-	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO sessions (session_id, user_id, device, device_name, status, login_at, last_active) VALUES ($1, $2, $3, $4, $5, $6, $7)`)).
-		WithArgs(s.SessionID, s.UserID, s.Device, s.DeviceName, s.Status, AnyTime{}, AnyTime{}).
+	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO sessions (session_id, user_id, device, device_name, device_id, client_ip, status, login_at, last_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`)).
+		WithArgs(s.SessionID, s.UserID, s.Device, s.DeviceName, s.DeviceID, s.ClientIP, s.Status, AnyTime{}, AnyTime{}).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	err = repo.Create(context.Background(), s)

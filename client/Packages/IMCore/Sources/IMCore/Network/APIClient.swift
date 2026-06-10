@@ -131,6 +131,92 @@ public class APIClient: @unchecked Sendable {
 
         return (data, httpResponse.statusCode)
     }
+
+    // MARK: - File Upload
+
+    /// Upload a file via multipart/form-data.
+    public func uploadFile(fileData: Data, fileName: String, fileType: Int = 1, onProgress: ((Double) -> Void)? = nil) async throws -> FileInfo {
+        guard let url = URL(string: baseURL + "/api/v1/files/upload") else {
+            throw APIError.network(URLError(.badURL))
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+
+        if let token = AuthManager.shared.readToken() {
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file_type\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(fileType)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let delegate = UploadTaskDelegate(onProgress: onProgress)
+            let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+
+            let task = session.uploadTask(with: req, from: body) { data, response, error in
+                defer { session.invalidateAndCancel() }
+
+                if let error {
+                    continuation.resume(throwing: APIError.network(error))
+                    return
+                }
+
+                guard let data, let httpResp = response as? HTTPURLResponse else {
+                    continuation.resume(throwing: APIError.network(URLError(.badServerResponse)))
+                    return
+                }
+
+                if httpResp.statusCode == 401 {
+                    Task { @MainActor in AuthManager.shared.logout() }
+                    continuation.resume(throwing: APIError.unauthorized)
+                    return
+                }
+
+                do {
+                    let wrapper = try JSONDecoder().decode(APIResponse<FileInfo>.self, from: data)
+                    if wrapper.code != 0 {
+                        continuation.resume(throwing: APIError.server(code: wrapper.code, message: wrapper.msg))
+                        return
+                    }
+                    guard let value = wrapper.data else {
+                        continuation.resume(throwing: APIError.decoding(URLError(.cannotParseResponse)))
+                        return
+                    }
+                    continuation.resume(returning: value)
+                } catch {
+                    continuation.resume(throwing: APIError.decoding(error))
+                }
+            }
+            task.resume()
+        }
+    }
+}
+
+// MARK: - Upload Progress Delegate
+
+private final class UploadTaskDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    let onProgress: ((Double) -> Void)?
+
+    init(onProgress: ((Double) -> Void)?) {
+        self.onProgress = onProgress
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+        guard totalBytesExpectedToSend > 0 else { return }
+        onProgress?(Double(totalBytesSent) / Double(totalBytesExpectedToSend))
+    }
 }
 
 // MARK: - Helpers

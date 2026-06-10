@@ -53,14 +53,16 @@ func TestExtractBearerToken_FromHeader(t *testing.T) {
 }
 
 func TestExtractBearerToken_FromQuery(t *testing.T) {
+	// Query param tokens are no longer supported for security reasons.
 	r := httptest.NewRequest("GET", "/?token=querytoken456", nil)
 	token := extractBearerToken(r)
-	if token != "querytoken456" {
-		t.Errorf("extractBearerToken = %q, want querytoken456", token)
+	if token != "" {
+		t.Errorf("extractBearerToken = %q, want empty (query params rejected)", token)
 	}
 }
 
-func TestExtractBearerToken_PreferHeader(t *testing.T) {
+func TestExtractBearerToken_HeaderTakesPrecedence(t *testing.T) {
+	// Even if a token query param is present, only the Authorization header is used.
 	r := httptest.NewRequest("GET", "/?token=querytoken", nil)
 	r.Header.Set("Authorization", "Bearer headertoken")
 	token := extractBearerToken(r)

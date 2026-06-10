@@ -56,7 +56,11 @@ func (r *MessageRepo) GetByClientSeq(ctx context.Context, senderID, sessionID st
 	return msg, nil
 }
 
-func (r *MessageRepo) GetHistory(ctx context.Context, convID string, beforeMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
+func (r *MessageRepo) GetHistory(ctx context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
+	if aroundMsgID > 0 {
+		return r.getHistoryAround(ctx, convID, aroundMsgID, limit, keyword, startDate, endDate)
+	}
+
 	query := `SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status
 		 FROM messages m
 		 LEFT JOIN users u ON u.id = m.sender_id
@@ -94,6 +98,70 @@ func (r *MessageRepo) GetHistory(ctx context.Context, convID string, beforeMsgID
 	}
 	defer rows.Close()
 	return scanHistoryMessages(rows)
+}
+
+func (r *MessageRepo) getHistoryAround(ctx context.Context, convID string, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
+	q := `SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status
+		 FROM messages m
+		 LEFT JOIN users u ON u.id = m.sender_id
+		 WHERE m.conv_id = $1 AND m.deleted = false`
+	args := []interface{}{convID}
+	argIdx := 2
+
+	if keyword != "" {
+		q += fmt.Sprintf(" AND m.body ILIKE $%d", argIdx)
+		args = append(args, "%"+keyword+"%")
+		argIdx++
+	}
+	if startDate > 0 {
+		q += fmt.Sprintf(" AND m.timestamp >= $%d", argIdx)
+		args = append(args, startDate)
+		argIdx++
+	}
+	if endDate > 0 {
+		q += fmt.Sprintf(" AND m.timestamp <= $%d", argIdx)
+		args = append(args, endDate)
+		argIdx++
+	}
+
+	half := limit / 2
+	if half < 1 {
+		half = 1
+	}
+
+	// Messages before the target (ordered DESC, take half)
+	beforeQ := q + fmt.Sprintf(" AND m.msg_id < $%d ORDER BY m.msg_id DESC LIMIT $%d", argIdx, argIdx+1)
+	beforeArgs := append(append([]interface{}{}, args...), aroundMsgID, half)
+	beforeRows, err := r.pool.Query(ctx, beforeQ, beforeArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer beforeRows.Close()
+	before, err := scanHistoryMessages(beforeRows)
+	if err != nil {
+		return nil, err
+	}
+
+	// Messages from the target onward (ordered ASC, take half)
+	afterQ := q + fmt.Sprintf(" AND m.msg_id >= $%d ORDER BY m.msg_id ASC LIMIT $%d", argIdx, argIdx+1)
+	afterArgs := append(append([]interface{}{}, args...), aroundMsgID, half)
+	afterRows, err := r.pool.Query(ctx, afterQ, afterArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer afterRows.Close()
+	after, err := scanHistoryMessages(afterRows)
+	if err != nil {
+		return nil, err
+	}
+
+	// before is DESC, so reverse it, then append after
+	merged := make([]*model.Message, 0, len(before)+len(after))
+	for i := len(before) - 1; i >= 0; i-- {
+		merged = append(merged, before[i])
+	}
+	merged = append(merged, after...)
+	return merged, nil
 }
 
 func (r *MessageRepo) GetMessagesSinceSeq(ctx context.Context, convID string, lastSeq int64, limit int) ([]*model.Message, error) {

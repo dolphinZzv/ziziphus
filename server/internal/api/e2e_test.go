@@ -46,7 +46,7 @@ func e2eRouter(t *testing.T) (http.Handler, *testAuthUserRepo, *mockConvManager,
 		searchFunc: func(_ context.Context, q string, page, size int) ([]*model.User, int, error) {
 			return nil, 0, nil
 		},
-		updateFunc: func(_ context.Context, id, name, avatar string) error {
+		updateFunc: func(_ context.Context, id, name, avatar, primaryColor, secondaryColor string) error {
 			return nil
 		},
 	}
@@ -69,7 +69,7 @@ func e2eRouter(t *testing.T) (http.Handler, *testAuthUserRepo, *mockConvManager,
 	}
 
 	msgRepo := &mockMsgStorage{
-		getHistoryFunc: func(_ context.Context, convID string, beforeMsgID int64, limit int) ([]*model.Message, error) {
+		getHistoryFunc: func(_ context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
 			return nil, nil
 		},
 	}

@@ -1,5 +1,7 @@
 import SwiftUI
 import IMCore
+import PhotosUI
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     let convID: String
@@ -13,6 +15,9 @@ struct ChatView: View {
     @State private var showSearch = false
     @State private var searchText = ""
     @State private var searchResults: [Message] = []
+    @State private var showImagePicker = false
+    @State private var showFilePicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isSearching = false
 
     init(convID: String, convName: String, convType: ConvType = .p2p) {
@@ -43,21 +48,23 @@ struct ChatView: View {
                                     .id(item.id)
 
                             case .message(let msg, let isFirst, let isLast):
+                                let repliedMsg = vm.messages.first(where: { $0.msgID == msg.replyTo })
                                 MessageBubble(
                                     message: msg,
                                     convType: convType,
                                     senderInfo: vm.senderInfo,
                                     onRetry: { vm.retryMessage(clientSeq: msg.clientSeq) },
+                                    onReply: { vm.replyingToMsg = msg },
+                                    repliedMessage: repliedMsg,
                                     isFirstInGroup: isFirst,
-                                    isLastInGroup: isLast
+                                    isLastInGroup: isLast,
+                                    uploadProgress: vm.uploadProgress[msg.clientSeq]
                                 )
                                 .id(msg.stableId)
                                 .onAppear {
-                                    // Scroll-to-top load more
                                     if idx == 0 && !vm.allHistoryLoaded && !vm.isLoadingHistory {
                                         vm.loadMoreHistory()
                                     }
-                                    // Show sender name for group first-in-group messages
                                 }
                             }
                         }
@@ -90,6 +97,16 @@ struct ChatView: View {
                             vm.sendMessage()
                         }, onTyping: {
                             vm.userDidStartTyping()
+                        }, onPickImage: {
+                            showImagePicker = true
+                        }, onPickFile: {
+                            showFilePicker = true
+                        }, replyingToMsg: vm.replyingToMsg, replyingToSender: vm.replyingToMsg.map { msg in
+                            msg.senderID == AuthManager.shared.currentUser?.userID
+                                ? loc("chat.you")
+                                : vm.senderInfo[msg.senderID]?.name ?? msg.senderID
+                        }, onCancelReply: {
+                            vm.replyingToMsg = nil
                         })
                     }
                 }
@@ -155,7 +172,8 @@ struct ChatView: View {
                                         showSearch = false
                                         searchText = ""
                                         searchResults = []
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                        vm.loadContextAround(msgID: msg.msgID)
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                             withAnimation {
                                                 proxy.scrollTo(msg.stableId, anchor: .center)
                                             }
@@ -216,9 +234,28 @@ struct ChatView: View {
         .sheet(isPresented: $showHistory) {
             HistoryView(convID: convID, convName: convName, convType: convType)
         }
+        .photosPicker(isPresented: $showImagePicker, selection: $selectedPhotoItem, matching: .images)
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let item = newItem else { return }
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+                vm.sendImage(fileData: data, fileName: "image.jpg")
+                selectedPhotoItem = nil
+            }
+        }
+        .sheet(isPresented: $showFilePicker) {
+            DocumentPicker { url in
+                guard let data = try? Data(contentsOf: url) else { return }
+                vm.sendFile(fileData: data, fileName: url.lastPathComponent)
+            }
+        }
         .onAppear {
             vm.loadInitialMessages()
             vm.markAsReadIfActive()
+            vm.inputText = UserDefaults.standard.string(forKey: "draft_\(convID)") ?? ""
+        }
+        .onChange(of: vm.inputText) { _, newText in
+            UserDefaults.standard.set(newText, forKey: "draft_\(convID)")
         }
     }
 
@@ -251,6 +288,37 @@ struct ChatView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy/MM/dd HH:mm"
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Document Picker
+struct DocumentPicker: UIViewControllerRepresentable {
+    let onPick: (URL) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.data])
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (URL) -> Void
+        init(onPick: @escaping (URL) -> Void) { self.onPick = onPick }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            let didAccess = url.startAccessingSecurityScopedResource()
+            onPick(url)
+            if didAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
     }
 }
 

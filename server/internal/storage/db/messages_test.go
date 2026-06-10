@@ -156,7 +156,7 @@ func TestMessageRepo_GetHistory(t *testing.T) {
 		WithArgs("conv_1", int64(200), 20).
 		WillReturnRows(rows)
 
-	msgs, err := repo.GetHistory(context.Background(), "conv_1", 200, 20, "", 0, 0)
+	msgs, err := repo.GetHistory(context.Background(), "conv_1", 200, 0, 20, "", 0, 0)
 	if err != nil {
 		t.Fatalf("GetHistory: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestMessageRepo_GetHistory_NoBefore(t *testing.T) {
 		WithArgs("conv_1", 20).
 		WillReturnRows(rows)
 
-	msgs, err := repo.GetHistory(context.Background(), "conv_1", 0, 20, "", 0, 0)
+	msgs, err := repo.GetHistory(context.Background(), "conv_1", 0, 0, 20, "", 0, 0)
 	if err != nil {
 		t.Fatalf("GetHistory: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestMessageRepo_GetHistory_Empty(t *testing.T) {
 		WithArgs("conv_empty", 20).
 		WillReturnRows(rows)
 
-	msgs, err := repo.GetHistory(context.Background(), "conv_empty", 0, 20, "", 0, 0)
+	msgs, err := repo.GetHistory(context.Background(), "conv_empty", 0, 0, 20, "", 0, 0)
 	if err != nil {
 		t.Fatalf("GetHistory: %v", err)
 	}

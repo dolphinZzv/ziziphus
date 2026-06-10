@@ -11,6 +11,8 @@ struct ChatDestination: Identifiable, Hashable {
 struct ConversationListView: View {
     @StateObject private var vm = ConversationListViewModel()
     @State private var showNewChat = false
+    @State private var showCreateGroup = false
+    @State private var showJoinGroup = false
     @State private var showProfile = false
     @State private var navigateToChat: ChatDestination?
 
@@ -90,15 +92,38 @@ struct ConversationListView: View {
                 }
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Button(action: { showNewChat = true }) {
+                Menu {
+                    Button(action: { showNewChat = true }) {
+                        Label(loc("conv.new_chat"), systemImage: "plus.message")
+                    }
+                    Button(action: { showCreateGroup = true }) {
+                        Label(loc("conv.new_group"), systemImage: "person.3")
+                    }
+                    Button(action: { showJoinGroup = true }) {
+                        Label(loc("group.join_request"), systemImage: "person.badge.plus")
+                    }
+                } label: {
                     Image(systemName: "plus")
                         .font(.body)
                 }
             }
         }
         .sheet(isPresented: $showNewChat) {
-            NewConversationView { convID, name, convType in
+            NewChatView { convID, name, convType in
                 showNewChat = false
+                navigateToChat = ChatDestination(convID: convID, name: name, type: convType)
+            }
+        }
+        .sheet(isPresented: $showCreateGroup) {
+            CreateGroupView { convID, name, convType in
+                showCreateGroup = false
+                vm.refresh()
+                navigateToChat = ChatDestination(convID: convID, name: name, type: convType)
+            }
+        }
+        .sheet(isPresented: $showJoinGroup) {
+            JoinGroupView { convID, name, convType in
+                showJoinGroup = false
                 navigateToChat = ChatDestination(convID: convID, name: name, type: convType)
             }
         }

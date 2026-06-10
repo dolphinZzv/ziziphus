@@ -16,7 +16,7 @@ type convMemberChecker interface {
 }
 
 type msgStorage interface {
-	GetHistory(ctx context.Context, convID string, beforeMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error)
+	GetHistory(ctx context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error)
 }
 
 type MsgHandler struct {
@@ -40,6 +40,7 @@ func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	before, _ := strconv.ParseInt(r.URL.Query().Get("before_msg_id"), 10, 64)
+	around, _ := strconv.ParseInt(r.URL.Query().Get("around_msg_id"), 10, 64)
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	if limit < 1 || limit > 100 {
 		limit = 50
@@ -48,7 +49,7 @@ func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	startDate, _ := strconv.ParseInt(r.URL.Query().Get("start_date"), 10, 64)
 	endDate, _ := strconv.ParseInt(r.URL.Query().Get("end_date"), 10, 64)
 
-	messages, err := h.msgRepo.GetHistory(r.Context(), convID, before, limit, keyword, startDate, endDate)
+	messages, err := h.msgRepo.GetHistory(r.Context(), convID, before, around, limit, keyword, startDate, endDate)
 	if err != nil {
 		logger.Error("get history failed", "conv_id", convID, "error", err)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)

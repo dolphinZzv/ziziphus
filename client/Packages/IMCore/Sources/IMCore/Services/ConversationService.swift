@@ -85,11 +85,27 @@ public class ConversationService {
         return detail
     }
 
+    // MARK: - Update Group
+    public func updateGroup(convID: String, name: String? = nil, avatar: String? = nil) async throws {
+        struct UpdateGroupReq: Codable, Sendable {
+            let name: String?
+            let avatar: String?
+        }
+        let _: [String: String] = try await api.request(
+            "/api/v1/conversations/\(convID)",
+            method: .put,
+            body: UpdateGroupReq(name: name, avatar: avatar)
+        )
+    }
+
     // MARK: - History
-    public func getHistory(convID: String, beforeMsgID: Int64 = 0, limit: Int = 50, keyword: String = "", startDate: Int64 = 0, endDate: Int64 = 0) async throws -> [Message] {
+    public func getHistory(convID: String, beforeMsgID: Int64 = 0, aroundMsgID: Int64 = 0, limit: Int = 50, keyword: String = "", startDate: Int64 = 0, endDate: Int64 = 0) async throws -> [Message] {
         var query: [String: String] = ["limit": "\(limit)"]
         if beforeMsgID > 0 {
             query["before_msg_id"] = "\(beforeMsgID)"
+        }
+        if aroundMsgID > 0 {
+            query["around_msg_id"] = "\(aroundMsgID)"
         }
         if !keyword.isEmpty {
             query["keyword"] = keyword

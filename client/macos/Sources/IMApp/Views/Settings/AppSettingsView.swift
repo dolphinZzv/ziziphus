@@ -57,6 +57,14 @@ struct AppSettingsView: View {
                     .padding(.horizontal)
                     .padding(.top, AppleDesign.Spacing.md)
 
+                    // Bubble color
+                    GroupBox("聊天气泡") {
+                        BubbleColorPicker(selectedHex: $appSettings.bubbleColorHex)
+                            .padding(.vertical, 4)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, AppleDesign.Spacing.md)
+
                     // Device
                     GroupBox(loc("settings.device")) {
                         VStack(spacing: 8) {

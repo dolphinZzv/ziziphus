@@ -61,7 +61,7 @@ func extractBearerToken(r *http.Request) string {
 	if strings.HasPrefix(auth, "Bearer ") {
 		return strings.TrimPrefix(auth, "Bearer ")
 	}
-	return r.URL.Query().Get("token")
+	return ""
 }
 
 func writeAuthError(w http.ResponseWriter, r *http.Request) {

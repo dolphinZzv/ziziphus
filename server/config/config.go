@@ -13,6 +13,12 @@ type Config struct {
 	JWT       JWTConfig       `yaml:"jwt"`
 	Snowflake SnowflakeConfig `yaml:"snowflake"`
 	RateLimit RateLimitConfig `yaml:"ratelimit"`
+	Storage   StorageConfig   `yaml:"storage"`
+}
+
+type StorageConfig struct {
+	LocalPath string `yaml:"local_path"`
+	BaseURL   string `yaml:"base_url"`
 }
 
 type ServerConfig struct {
@@ -64,6 +70,12 @@ func Load(path string) (*Config, error) {
 func setDefaults(cfg *Config) {
 	if cfg.Server.Port == 0 {
 		cfg.Server.Port = 8080
+	}
+	if cfg.Storage.LocalPath == "" {
+		cfg.Storage.LocalPath = "data/files"
+	}
+	if cfg.Storage.BaseURL == "" {
+		cfg.Storage.BaseURL = "/files"
 	}
 	if cfg.Postgres.MaxConns == 0 {
 		cfg.Postgres.MaxConns = 20

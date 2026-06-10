@@ -4,6 +4,10 @@ type ContentType int
 
 const (
 	ContentText   ContentType = 0
+	ContentImage  ContentType = 1
+	ContentFile   ContentType = 2
+	ContentAudio  ContentType = 3
+	ContentVideo  ContentType = 4
 	ContentSystem ContentType = 5
 )
 

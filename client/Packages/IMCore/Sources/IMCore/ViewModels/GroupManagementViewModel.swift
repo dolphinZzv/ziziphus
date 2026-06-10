@@ -18,6 +18,7 @@ public class GroupManagementViewModel: ObservableObject {
     @Published public var isLoadingRequests = false
     @Published public var joinRequestSent = false
     @Published public var isAdmin = false
+    @Published public var conversationAvatar = ""
     @Published public var errorMessage: String?
 
     private let convService = ConversationService.shared
@@ -33,6 +34,7 @@ public class GroupManagementViewModel: ObservableObject {
             do {
                 let detail = try await convService.getConversationDetail(convID: convID)
                 members = detail.members
+                conversationAvatar = detail.avatar
                 isAdmin = members.first(where: { $0.userID == AuthManager.shared.currentUser?.userID })?.role.rawValue ?? 0 >= ConvRole.admin.rawValue
                 let userIDs = members.map(\.userID)
                 let users = try await contactService.batchGetUsers(userIDs: userIDs)

@@ -61,6 +61,10 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "profile.id_label": [.zhHans: "ID:", .en: "ID:"],
     "profile.user_info": [.zhHans: "个人信息", .en: "User Info"],
     "profile.settings": [.zhHans: "设置", .en: "Settings"],
+    "profile.primary_color": [.zhHans: "主颜色", .en: "Primary Color"],
+    "profile.secondary_color": [.zhHans: "次颜色", .en: "Secondary Color"],
+    "profile.change_avatar": [.zhHans: "更换头像", .en: "Change Avatar"],
+    "profile.name_placeholder": [.zhHans: "昵称", .en: "Name"],
 
     // MARK: - Settings
     "settings.title": [.zhHans: "应用设置", .en: "App Settings"],
@@ -139,6 +143,7 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "common.error": [.zhHans: "错误", .en: "Error"],
     "common.cancel": [.zhHans: "取消", .en: "Cancel"],
     "common.save": [.zhHans: "保存", .en: "Save"],
+    "common.edit": [.zhHans: "编辑", .en: "Edit"],
     "common.delete": [.zhHans: "删除", .en: "Delete"],
     "common.done": [.zhHans: "完成", .en: "Done"],
     "common.back": [.zhHans: "返回", .en: "Back"],
@@ -160,4 +165,9 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "history.filter_month": [.zhHans: "月", .en: "Month"],
     "history.filter_day": [.zhHans: "日", .en: "Day"],
     "history.filter_clear": [.zhHans: "清除筛选", .en: "Clear Filters"],
+
+    // MARK: - Reply
+    "chat.reply": [.zhHans: "回复", .en: "Reply"],
+    "chat.replying": [.zhHans: "回复 %@", .en: "Replying to %@"],
+    "chat.you": [.zhHans: "你", .en: "You"],
 ]

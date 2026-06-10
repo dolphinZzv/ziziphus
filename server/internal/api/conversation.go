@@ -132,8 +132,8 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateGroupReq struct {
-	Name   string `json:"name"`
-	Avatar string `json:"avatar"`
+	Name   *string `json:"name"`
+	Avatar *string `json:"avatar"`
 }
 
 func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +166,16 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.convRepo.UpdateNameAvatar(r.Context(), convID, req.Name, req.Avatar); err != nil {
+	name := conv.Name
+	if req.Name != nil {
+		name = *req.Name
+	}
+	avatar := conv.Avatar
+	if req.Avatar != nil {
+		avatar = *req.Avatar
+	}
+
+	if err := h.convRepo.UpdateNameAvatar(r.Context(), convID, name, avatar); err != nil {
 		logger.Error("update group failed", "conv_id", convID, "error", err)
 		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
 		return
@@ -174,8 +183,8 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 
 	JSON(w, map[string]interface{}{
 		"conv_id": convID,
-		"name":    req.Name,
-		"avatar":  req.Avatar,
+		"name":    name,
+		"avatar":  avatar,
 	})
 }
 

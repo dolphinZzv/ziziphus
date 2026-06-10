@@ -33,6 +33,10 @@ struct AppSettingsView: View {
                     .pickerStyle(.menu)
                 }
 
+                Section("聊天气泡") {
+                    BubbleColorPicker(selectedHex: $appSettings.bubbleColorHex)
+                }
+
                 Section(loc("settings.device")) {
                     HStack {
                         Text(loc("settings.session_id"))

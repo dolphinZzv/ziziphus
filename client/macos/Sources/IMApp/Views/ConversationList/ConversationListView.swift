@@ -4,6 +4,8 @@ import IMCore
 struct ConversationListView: View {
     @StateObject private var vm = ConversationListViewModel()
     @State private var showNewChat = false
+    @State private var showCreateGroup = false
+    @State private var showJoinGroup = false
     @State private var showProfile = false
     @Binding var selectedConvID: String?
     @EnvironmentObject private var localizationManager: LocalizationManager
@@ -28,13 +30,24 @@ struct ConversationListView: View {
 
                 Spacer()
 
-                Button(action: { showNewChat = true }) {
+                Menu {
+                    Button(action: { showNewChat = true }) {
+                        Label(loc("conv.new_chat"), systemImage: "plus.message")
+                    }
+                    Button(action: { showCreateGroup = true }) {
+                        Label(loc("conv.new_group"), systemImage: "person.3")
+                    }
+                    Button(action: { showJoinGroup = true }) {
+                        Label(loc("group.join_request"), systemImage: "person.badge.plus")
+                    }
+                } label: {
                     Image(systemName: "plus")
                         .font(.appleBody)
                         .foregroundColor(AppleDesign.Colors.actionBlue)
                 }
-                .buttonStyle(.plain)
-                .help(loc("conv.new_chat"))
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -82,7 +95,7 @@ struct ConversationListView: View {
                 .frame(width: 340, height: 460)
         }
         .sheet(isPresented: $showNewChat) {
-            NewConversationView { convID, name, convType in
+            NewChatView { convID, name, convType in
                 showNewChat = false
                 if convType == .p2p {
                     selectedConvID = convID
@@ -93,6 +106,25 @@ struct ConversationListView: View {
             } onCancel: {
                 showNewChat = false
             }
+            .environmentObject(localizationManager)
+        }
+        .sheet(isPresented: $showCreateGroup) {
+            CreateGroupView { convID, name, convType in
+                showCreateGroup = false
+                vm.refresh()
+            } onCancel: {
+                showCreateGroup = false
+            }
+            .environmentObject(localizationManager)
+        }
+        .sheet(isPresented: $showJoinGroup) {
+            JoinGroupView { convID, name, convType in
+                showJoinGroup = false
+                vm.refresh()
+            } onCancel: {
+                showJoinGroup = false
+            }
+            .environmentObject(localizationManager)
         }
         .onAppear {
             vm.loadConversations()

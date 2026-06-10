@@ -24,7 +24,7 @@ type userRepo interface {
 	GetByID(ctx context.Context, id string) (*model.User, error)
 	GetByIDs(ctx context.Context, ids []string) (map[string]*model.User, error)
 	Search(ctx context.Context, q string, page, size int) ([]*model.User, int, error)
-	Update(ctx context.Context, id, name, avatar string) error
+	Update(ctx context.Context, id, name, avatar, primaryColor, secondaryColor string) error
 }
 
 type sessionChecker interface {
@@ -196,20 +196,24 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 			u.Status = model.UserOffline
 		}
 		result[id] = map[string]interface{}{
-			"user_id": u.ID,
-			"account": u.Account,
-			"name":    u.Name,
-			"avatar":  u.Avatar,
-			"type":    u.Type,
-			"status":  u.Status,
+			"user_id":         u.ID,
+			"account":         u.Account,
+			"name":            u.Name,
+			"avatar":          u.Avatar,
+			"type":            u.Type,
+			"status":          u.Status,
+			"primary_color":   u.PrimaryColor,
+			"secondary_color": u.SecondaryColor,
 		}
 	}
 	JSON(w, map[string]interface{}{"users": result})
 }
 
 type updateMeReq struct {
-	Name   string `json:"name"`
-	Avatar string `json:"avatar"`
+	Name           string `json:"name"`
+	Avatar         string `json:"avatar"`
+	PrimaryColor   string `json:"primary_color"`
+	SecondaryColor string `json:"secondary_color"`
 }
 
 func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
@@ -219,14 +223,16 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := auth.UserFromCtx(r.Context())
-	if err := h.userRepo.Update(r.Context(), userID, req.Name, req.Avatar); err != nil {
+	if err := h.userRepo.Update(r.Context(), userID, req.Name, req.Avatar, req.PrimaryColor, req.SecondaryColor); err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{
-		"user_id": userID,
-		"name":    req.Name,
-		"avatar":  req.Avatar,
+		"user_id":         userID,
+		"name":            req.Name,
+		"avatar":          req.Avatar,
+		"primary_color":   req.PrimaryColor,
+		"secondary_color": req.SecondaryColor,
 	})
 }
 
@@ -252,12 +258,14 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 	items := make([]map[string]interface{}, 0, len(users))
 	for _, u := range users {
 		items = append(items, map[string]interface{}{
-			"user_id": u.ID,
-			"account": u.Account,
-			"name":    u.Name,
-			"avatar":  u.Avatar,
-			"type":    u.Type,
-			"status":  u.Status,
+			"user_id":         u.ID,
+			"account":         u.Account,
+			"name":            u.Name,
+			"avatar":          u.Avatar,
+			"type":            u.Type,
+			"status":          u.Status,
+			"primary_color":   u.PrimaryColor,
+			"secondary_color": u.SecondaryColor,
 		})
 	}
 	Paginated(w, items, total, page, size)

@@ -13,6 +13,7 @@ enum AppleDesign {
         static let inkMuted = Color.adaptive(light: "#7a7a7a", dark: "#98989d")
         static let hairline = Color.adaptive(light: "#e0e0e0", dark: "#38383a")
         static let chatGray = Color.adaptive(light: "#e5e5ea", dark: "#2c2c2e")
+        static let chatBubbleOther = Color.adaptive(light: "#d5e3f8", dark: "#2c2c2e")
         static let dividerSoft = Color.adaptive(light: "#f0f0f0", dark: "#2c2c2e")
         static let pearl = Color.adaptive(light: "#fafafc", dark: "#1c1c1e")
         static let surfaceBlack = Color.black
@@ -149,7 +150,7 @@ extension Color {
 
 // MARK: - Color Hex Extension
 
-private extension Color {
+extension Color {
     init(hex: String) {
         let (r, g, b) = hexToRGBA(hex)
         self.init(.displayP3, red: r, green: g, blue: b)

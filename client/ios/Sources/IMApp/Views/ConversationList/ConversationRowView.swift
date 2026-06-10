@@ -4,35 +4,10 @@ import IMCore
 struct ConversationRowView: View {
     let conv: ConvListItem
 
-    private var avatarColor: Color {
-        let colors: [Color] = [.blue, .green, .orange, .purple, .pink, .teal, .indigo, .mint]
-        let hash = abs(conv.convID.hashValue)
-        return colors[hash % colors.count]
-    }
-
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
-            if conv.type == .group {
-                Circle()
-                    .fill(avatarColor.opacity(0.2))
-                    .frame(width: 48, height: 48)
-                    .overlay {
-                        Image(systemName: "person.3.fill")
-                            .font(.caption)
-                            .foregroundColor(avatarColor)
-                    }
-            } else {
-                Circle()
-                    .fill(avatarColor.opacity(0.2))
-                    .frame(width: 48, height: 48)
-                    .overlay {
-                        Text(String(conv.name.prefix(1)))
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundColor(avatarColor)
-                    }
-            }
+            AvatarView(name: conv.name, url: conv.avatar, size: 48)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
@@ -70,10 +45,14 @@ struct ConversationRowView: View {
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
-                        Text(last.body)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
+                        if last.contentType == 1, let url = last.imageFileURL {
+                            LastImageThumbnailView(url: url)
+                        } else {
+                            Text(last.body)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
                     } else {
                         Text(loc("chat.no_messages"))
                             .font(.caption)
@@ -114,5 +93,40 @@ struct ConversationRowView: View {
             formatter.dateFormat = "MM/dd"
         }
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Last Image Thumbnail
+
+private struct LastImageThumbnailView: View {
+    let url: URL
+
+    var body: some View {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case .success(let img):
+                img
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            default:
+                Image(systemName: "photo")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(width: 36, height: 36)
+    }
+}
+
+private extension LastMessage {
+    var imageFileURL: URL? {
+        guard contentType == 1,
+              let data = body.data(using: .utf8),
+              let fileBody = try? JSONDecoder().decode(FileMessageBody.self, from: data) else {
+            return nil
+        }
+        return URL(string: AppSettings.serverBaseURL() + fileBody.url)
     }
 }

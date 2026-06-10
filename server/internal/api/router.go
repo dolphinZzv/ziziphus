@@ -1,7 +1,10 @@
 package api
 
 import (
+	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -17,6 +20,7 @@ type Handlers struct {
 	Message      *MsgHandler
 	Contact      *ContactHandler
 	Session      *SessionHandler
+	File         *FileHandler
 	DB           *pgxpool.Pool
 	RDB          *redis.Client
 	LoginRL      *LoginRateLimiter
@@ -24,7 +28,7 @@ type Handlers struct {
 
 func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 	r := chi.NewRouter()
-	r.Use(chimw.Logger)
+	r.Use(requestLogger)
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.RealIP)
 	r.Use(i18n.Middleware)
@@ -77,7 +81,45 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 
 		r.Get("/api/v1/sessions", h.Session.ListSessions)
 		r.Delete("/api/v1/sessions/{session_id}", h.Session.DeleteSession)
+
+		// File upload (authenticated)
+		r.Post("/api/v1/files/upload", h.File.Upload)
+		r.Get("/api/v1/files/{file_id}", h.File.GetInfo)
 	})
+
+	// Static file serving (public)
+	r.Get("/files/*", h.File.ServeFile)
 
 	return r
 }
+
+// requestLogger is a custom logger that redacts sensitive query parameters
+// (e.g. tokens) before logging the request URL.
+func requestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Redact token from URL for logging
+		sanitized := r.URL.Path
+		if r.URL.RawQuery != "" {
+			query := r.URL.Query()
+			if query.Has("token") {
+				query.Set("token", "REDACTED")
+			}
+			sanitized = r.URL.Path + "?" + query.Encode()
+		}
+
+		ww := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
+		next.ServeHTTP(ww, r)
+
+		latency := time.Since(start)
+		log.Printf("%s %s %d %s",
+			r.Method,
+			sanitized,
+			ww.Status(),
+			latency.Round(time.Millisecond),
+		)
+	})
+}
+
+var _ = strings.TrimSpace // ensure "strings" import is used

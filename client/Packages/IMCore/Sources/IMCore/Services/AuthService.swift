@@ -72,4 +72,25 @@ public class AuthService {
         AuthManager.shared.setLoggedIn(user: user)
         return user
     }
+
+    // MARK: - Update Profile
+    public func updateProfile(name: String? = nil, avatar: String? = nil, primaryColor: String? = nil, secondaryColor: String? = nil) async throws -> User {
+        struct UpdateProfileReq: Codable, Sendable {
+            let name: String?
+            let avatar: String?
+            let primaryColor: String?
+            let secondaryColor: String?
+
+            enum CodingKeys: String, CodingKey {
+                case name, avatar
+                case primaryColor = "primary_color"
+                case secondaryColor = "secondary_color"
+            }
+        }
+
+        let body = UpdateProfileReq(name: name, avatar: avatar, primaryColor: primaryColor, secondaryColor: secondaryColor)
+        let _: [String: String] = try await api.request("/api/v1/users/me", method: .put, body: body)
+        // Fetch full user after update
+        return try await getMe()
+    }
 }

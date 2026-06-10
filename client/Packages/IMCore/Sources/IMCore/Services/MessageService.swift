@@ -22,8 +22,8 @@ public class MessageService {
     }
 
     // MARK: - Send Message (WS)
-    public func sendMessage(convID: String, body: String, clientSeq: Int64) async throws -> MsgSendAckPayload {
-        let payload = MsgSendPayload(convID: convID, body: body, clientSeq: clientSeq)
+    public func sendMessage(convID: String, body: String, clientSeq: Int64, contentType: Int = 0, replyTo: Int64 = 0) async throws -> MsgSendAckPayload {
+        let payload = MsgSendPayload(convID: convID, contentType: contentType, body: body, replyTo: replyTo, clientSeq: clientSeq)
         let data = try JSONEncoder().encode(payload)
         let frame = WSFrame(type: .msgSend, id: UUID().uuidString, payload: data)
         let response = try await ws.sendWithAck(frame: frame, timeout: 5)

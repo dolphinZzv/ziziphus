@@ -1,5 +1,6 @@
 import SwiftUI
 import IMCore
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     let convID: String
@@ -40,13 +41,17 @@ struct ChatView: View {
                                     .id(item.id)
 
                             case .message(let msg, let isFirst, let isLast):
+                                let repliedMsg = vm.messages.first(where: { $0.msgID == msg.replyTo })
                                 MessageBubble(
                                     message: msg,
                                     convType: convType,
                                     senderInfo: vm.senderInfo,
                                     onRetry: { vm.retryMessage(clientSeq: msg.clientSeq) },
+                                    onReply: { vm.replyingToMsg = msg },
+                                    repliedMessage: repliedMsg,
                                     isFirstInGroup: isFirst,
-                                    isLastInGroup: isLast
+                                    isLastInGroup: isLast,
+                                    uploadProgress: vm.uploadProgress[msg.clientSeq]
                                 )
                                 .id(msg.stableId)
                                 .onAppear {
@@ -128,7 +133,8 @@ struct ChatView: View {
                                             showSearch = false
                                             searchText = ""
                                             searchResults = []
-                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                            vm.loadContextAround(msgID: msg.msgID)
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                                 withAnimation {
                                                     proxy.scrollTo(msg.stableId, anchor: .center)
                                                 }
@@ -170,6 +176,16 @@ struct ChatView: View {
                 vm.sendMessage()
             }, onTyping: {
                 vm.userDidStartTyping()
+            }, onPickImage: {
+                pickFile(fileTypes: ["public.image"])
+            }, onPickFile: {
+                pickFile(fileTypes: ["public.data"])
+            }, replyingToMsg: vm.replyingToMsg, replyingToSender: vm.replyingToMsg.map { msg in
+                msg.senderID == AuthManager.shared.currentUser?.userID
+                    ? loc("chat.you")
+                    : vm.senderInfo[msg.senderID]?.name ?? msg.senderID
+            }, onCancelReply: {
+                vm.replyingToMsg = nil
             })
             .environmentObject(localizationManager)
         }
@@ -199,7 +215,7 @@ struct ChatView: View {
                             Label(loc("history.view_history"), systemImage: "clock")
                         }
                     } label: {
-                        Image(systemName: "gearshape")
+                        EmptyView()
                     }
                 }
             }
@@ -218,6 +234,10 @@ struct ChatView: View {
         .onAppear {
             vm.loadInitialMessages()
             vm.markAsReadIfActive()
+            vm.inputText = UserDefaults.standard.string(forKey: "draft_\(convID)") ?? ""
+        }
+        .onChange(of: vm.inputText) { _, newText in
+            UserDefaults.standard.set(newText, forKey: "draft_\(convID)")
         }
     }
 
@@ -234,6 +254,24 @@ struct ChatView: View {
                 searchResults = []
             }
             isSearching = false
+        }
+    }
+
+    // MARK: - File Picker
+    private func pickFile(fileTypes: [String]) {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = fileTypes.compactMap { UTType($0) }
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            guard let data = try? Data(contentsOf: url) else { return }
+            let isImage = ["jpg", "jpeg", "png", "gif", "webp", "heic"].contains(url.pathExtension.lowercased())
+            if isImage {
+                vm.sendImage(fileData: data, fileName: url.lastPathComponent)
+            } else {
+                vm.sendFile(fileData: data, fileName: url.lastPathComponent)
+            }
         }
     }
 

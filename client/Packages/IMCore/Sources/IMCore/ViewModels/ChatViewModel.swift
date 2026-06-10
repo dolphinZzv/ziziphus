@@ -27,10 +27,12 @@ public class ChatViewModel: ObservableObject {
     @Published public var isLoadingHistory = false
     @Published public var allHistoryLoaded = false
     @Published public var isSending = false
+    @Published public var replyingToMsg: Message?
     @Published public var isTyping = false
     @Published public var peerOnline = false
     @Published public var sendErrorMessage: String?
     @Published public var errorMessage: String?
+    @Published public var uploadProgress: [Int64: Double] = [:]
 
     private let maxBodyBytes = 10_240
     private let maxMessages = 500
@@ -183,6 +185,24 @@ public class ChatViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Load Context Around Message
+    public func loadContextAround(msgID: Int64) {
+        Task {
+            do {
+                let msgs = try await ConversationService.shared.getHistory(convID: convID, aroundMsgID: msgID, limit: 50)
+                for msg in msgs {
+                    cache.insertMessage(msg)
+                }
+                messages = msgs
+                sortMessages()
+                allHistoryLoaded = false
+            } catch {
+                logToFile("[ChatVM] load context error: \(error)")
+            }
+            loadSenderInfo()
+        }
+    }
+
     // MARK: - Send Message
     public func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -195,6 +215,7 @@ public class ChatViewModel: ObservableObject {
 
         sendErrorMessage = nil
         inputText = ""
+        replyingToMsg = nil
         isSending = true
 
         let clientSeq = AuthManager.shared.nextClientSeq()
@@ -202,6 +223,7 @@ public class ChatViewModel: ObservableObject {
             convID: convID,
             senderID: AuthManager.shared.currentUser?.userID ?? "",
             body: text,
+            replyTo: replyingToMsg?.msgID ?? 0,
             timestamp: Int64(Date().timeIntervalSince1970 * 1000),
             clientSeq: clientSeq,
             status: .sending
@@ -211,7 +233,9 @@ public class ChatViewModel: ObservableObject {
 
         Task {
             do {
-                let ack = try await msgService.sendMessage(convID: convID, body: text, clientSeq: clientSeq)
+                let replyTo = replyingToMsg?.msgID ?? 0
+                let ack = try await msgService.sendMessage(convID: convID, body: text, clientSeq: clientSeq, replyTo: replyTo)
+                replyingToMsg = nil
                 if let idx = messages.firstIndex(where: { $0.clientSeq == ack.clientSeq && $0.msgID == 0 }) {
                     messages[idx].msgID = ack.msgID
                     messages[idx].timestamp = ack.timestamp
@@ -229,6 +253,83 @@ public class ChatViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Send File/Image
+    public func sendFile(fileData: Data, fileName: String, fileType: Int = 1) {
+        guard !isSending else { return }
+        sendErrorMessage = nil
+        isSending = true
+
+        let clientSeq = AuthManager.shared.nextClientSeq()
+
+        // Create placeholder message before upload so progress is visible
+        let placeholderMsg = Message(
+            convID: convID,
+            senderID: AuthManager.shared.currentUser?.userID ?? "",
+            contentType: fileType == 0 ? .image : .file,
+            body: fileName,
+            timestamp: Int64(Date().timeIntervalSince1970 * 1000),
+            clientSeq: clientSeq,
+            status: .sending
+        )
+        messages.append(placeholderMsg)
+        sortMessages()
+        uploadProgress[clientSeq] = 0
+
+        // Use detached task to avoid @MainActor isolation inheritance for the progress closure
+        Task.detached { [weak self] in
+            guard let self else { return }
+            do {
+                let finfo = try await APIClient.shared.uploadFile(
+                    fileData: fileData,
+                    fileName: fileName,
+                    fileType: fileType,
+                    onProgress: { progress in
+                        Task { @MainActor in
+                            self.uploadProgress[clientSeq] = progress
+                        }
+                    }
+                )
+                let fileBody = FileMessageBody(fileID: finfo.fileID, url: finfo.url, name: finfo.name, size: finfo.size)
+                let bodyData = try JSONEncoder().encode(fileBody)
+                let bodyStr = String(data: bodyData, encoding: .utf8) ?? finfo.url
+
+                await MainActor.run {
+                    // Update placeholder with real body
+                    if let idx = self.messages.firstIndex(where: { $0.clientSeq == clientSeq }) {
+                        self.messages[idx].body = bodyStr
+                    }
+                }
+
+                let ct = fileType == 0 ? 1 : 2
+                let ack = try await self.msgService.sendMessage(convID: convID, body: bodyStr, clientSeq: clientSeq, contentType: ct, replyTo: 0)
+                await MainActor.run {
+                    if let idx = self.messages.firstIndex(where: { $0.clientSeq == ack.clientSeq && $0.msgID == 0 }) {
+                        self.messages[idx].msgID = ack.msgID
+                        self.messages[idx].timestamp = ack.timestamp
+                        self.messages[idx].status = .sent
+                        self.cache.insertMessage(self.messages[idx])
+                    }
+                    self.uploadProgress.removeValue(forKey: clientSeq)
+                    self.isSending = false
+                }
+            } catch {
+                logToFile("[ChatVM] sendFile error: \(error)")
+                await MainActor.run {
+                    if let idx = self.messages.firstIndex(where: { $0.clientSeq == clientSeq }) {
+                        self.messages[idx].status = .failed
+                    }
+                    self.sendErrorMessage = loc("chat.send_failed")
+                    self.uploadProgress.removeValue(forKey: clientSeq)
+                    self.isSending = false
+                }
+            }
+        }
+    }
+
+    public func sendImage(fileData: Data, fileName: String) {
+        sendFile(fileData: fileData, fileName: fileName, fileType: 0)
+    }
+
     public func retryMessage(clientSeq: Int64) {
         guard !isSending else { return }
         guard let idx = messages.firstIndex(where: { $0.clientSeq == clientSeq && $0.status == .failed }),
@@ -238,7 +339,7 @@ public class ChatViewModel: ObservableObject {
 
         Task {
             do {
-                let ack = try await msgService.sendMessage(convID: convID, body: failedMsg.body, clientSeq: clientSeq)
+                let ack = try await msgService.sendMessage(convID: convID, body: failedMsg.body, clientSeq: clientSeq, replyTo: failedMsg.replyTo)
                 if let updateIdx = messages.firstIndex(where: { $0.clientSeq == ack.clientSeq && $0.msgID == 0 }) {
                     messages[updateIdx].msgID = ack.msgID
                     messages[updateIdx].timestamp = ack.timestamp

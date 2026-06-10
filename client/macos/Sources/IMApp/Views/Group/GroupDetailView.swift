@@ -1,5 +1,6 @@
 import SwiftUI
 import IMCore
+import UniformTypeIdentifiers
 
 struct GroupDetailView: View {
     let convID: String
@@ -10,6 +11,12 @@ struct GroupDetailView: View {
     @State private var confirmRemoveMember: ConvMember?
     @State private var errorMessage = ""
     @State private var showError = false
+    @State private var showImagePicker = false
+    @State private var isUploadingAvatar = false
+    @State private var isEditingName = false
+    @State private var editedName = ""
+    @State private var isSavingName = false
+    @State private var displayName = ""
     @EnvironmentObject private var localizationManager: LocalizationManager
     @Environment(\.dismiss) private var dismiss
 
@@ -23,9 +30,22 @@ struct GroupDetailView: View {
                     .font(.appleBodySemibold)
                     .foregroundColor(AppleDesign.Colors.ink)
                 Spacer()
-                Button(loc("common.close")) { dismiss() }
+                if isEditingName {
+                    Button(loc("common.save")) { saveGroupName() }
+                        .disabled(editedName.trimmingCharacters(in: .whitespaces).isEmpty || isSavingName)
+                        .font(.appleBody)
+                        .foregroundColor(AppleDesign.Colors.actionBlue)
+                    Button(loc("common.cancel")) {
+                        isEditingName = false
+                        editedName = displayName
+                    }
                     .font(.appleBody)
                     .foregroundColor(AppleDesign.Colors.actionBlue)
+                } else {
+                    Button(loc("common.close")) { dismiss() }
+                        .font(.appleBody)
+                        .foregroundColor(AppleDesign.Colors.actionBlue)
+                }
             }
             .padding(AppleDesign.Spacing.lg)
 
@@ -35,18 +55,47 @@ struct GroupDetailView: View {
                 // Info section
                 Section {
                     HStack {
-                        Circle()
-                            .fill(Color.blue.opacity(0.2))
-                            .frame(width: 50, height: 50)
-                            .overlay {
-                                Text(String(convName.prefix(1)))
-                                    .font(.appleBodySemibold)
-                                    .foregroundColor(.blue)
+                        ZStack(alignment: .bottomTrailing) {
+                            AvatarView(name: displayName, url: vm.conversationAvatar, size: 50)
+
+                            if vm.isAdmin {
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 18, height: 18)
+                                    .overlay {
+                                        Image(systemName: "camera.fill")
+                                            .font(.system(size: 9))
+                                            .foregroundColor(.white)
+                                    }
                             }
+                        }
+                        .onTapGesture {
+                            if vm.isAdmin { showImagePicker = true }
+                        }
 
                         VStack(alignment: .leading) {
-                            Text(convName)
-                                .font(.appleBodySemibold)
+                            if isEditingName {
+                                TextField(loc("group.name_placeholder"), text: $editedName)
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.appleBodySemibold)
+                                    .onSubmit { saveGroupName() }
+                            } else {
+                                HStack {
+                                    Text(displayName)
+                                        .font(.appleBodySemibold)
+                                    if vm.isAdmin {
+                                        Button(action: {
+                                            editedName = displayName
+                                            isEditingName = true
+                                        }) {
+                                            Image(systemName: "pencil")
+                                                .font(.caption)
+                                                .foregroundColor(AppleDesign.Colors.actionBlue)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
                             Text(String(format: loc("group.member_count"), vm.members.count))
                                 .font(.appleCaption)
                                 .foregroundColor(AppleDesign.Colors.inkMuted)
@@ -205,7 +254,7 @@ struct GroupDetailView: View {
                 }
             }
         } message: {
-            Text(String(format: loc("group.leave_confirm_message"), convName))
+            Text(String(format: loc("group.leave_confirm_message"), displayName))
         }
         .alert(loc("group.remove_confirm_title"), isPresented: .init(
             get: { confirmRemoveMember != nil },
@@ -233,12 +282,71 @@ struct GroupDetailView: View {
         } message: {
             Text(errorMessage)
         }
+        .fileImporter(isPresented: $showImagePicker, allowedContentTypes: [.image]) { result in
+            switch result {
+            case .success(let url):
+                guard url.startAccessingSecurityScopedResource() else { return }
+                defer { url.stopAccessingSecurityScopedResource() }
+                guard let data = try? Data(contentsOf: url) else { return }
+                Task { await uploadGroupAvatar(data: data) }
+            case .failure:
+                break
+            }
+        }
+        .overlay {
+            if isUploadingAvatar {
+                ProgressView()
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
         .onAppear {
+            displayName = convName
             vm.loadDetail(convID: convID)
             vm.loadJoinRequests(convID: convID)
         }
     }
 
+
+    private func uploadGroupAvatar(data: Data) async {
+        await MainActor.run { isUploadingAvatar = true }
+        do {
+            let finfo = try await APIClient.shared.uploadFile(fileData: data, fileName: "group_avatar.jpg", fileType: 0)
+            try await ConversationService.shared.updateGroup(convID: convID, name: displayName, avatar: finfo.url)
+            await MainActor.run {
+                vm.conversationAvatar = finfo.url
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
+        await MainActor.run { isUploadingAvatar = false }
+    }
+
+    private func saveGroupName() {
+        let newName = editedName.trimmingCharacters(in: .whitespaces)
+        guard !newName.isEmpty else { return }
+        isSavingName = true
+        Task {
+            do {
+                try await ConversationService.shared.updateGroup(convID: convID, name: newName)
+                await MainActor.run {
+                    displayName = newName
+                    isEditingName = false
+                    isSavingName = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showError = true
+                    isSavingName = false
+                }
+            }
+        }
+    }
 
     private func roleName(_ role: ConvRole) -> String {
         switch role {

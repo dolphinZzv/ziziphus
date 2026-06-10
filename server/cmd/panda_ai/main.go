@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/spf13/afero"
 	"siciv.space/agent/panda_ai/config"
 	"siciv.space/agent/panda_ai/internal/api"
 	"siciv.space/agent/panda_ai/internal/auth"
@@ -21,6 +22,7 @@ import (
 	"siciv.space/agent/panda_ai/internal/session"
 	"siciv.space/agent/panda_ai/internal/storage/cache"
 	"siciv.space/agent/panda_ai/internal/storage/db"
+	"siciv.space/agent/panda_ai/internal/storage/file"
 	"siciv.space/agent/panda_ai/pkg/logger"
 	"siciv.space/agent/panda_ai/pkg/model"
 )
@@ -67,6 +69,7 @@ func main() {
 	contactRepo := db.NewContactRepo(pool)
 	receiptRepo := db.NewReceiptRepo(pool)
 	joinRequestRepo := db.NewJoinRequestRepo(pool)
+	fileRepo := db.NewFileRepo(pool)
 
 	// Caches
 	sessCache := cache.NewSessionCache(rdb)
@@ -111,6 +114,11 @@ func main() {
 	readReceiptRepo := receiptRepo // satisfies receiptWriter interface
 	receiptHandler := message.NewReceiptHandler(msgRepo, seqCache, convRepo, gwMgr, readReceiptRepo)
 
+	// File storage (using afero for filesystem abstraction)
+	fileFs := afero.NewOsFs()
+	fileStore := file.NewStore(fileFs, cfg.Storage.LocalPath)
+	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL)
+
 	// HTTP API handlers
 	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
@@ -123,6 +131,7 @@ func main() {
 		Message:      msgHandler,
 		Contact:      contactHandler,
 		Session:      sessionHandler,
+		File:         fileHandler,
 		DB:           pool,
 		RDB:          rdb,
 	}

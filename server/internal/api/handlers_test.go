@@ -66,7 +66,7 @@ type mockUserRepo struct {
 	getByIDFunc  func(ctx context.Context, id string) (*model.User, error)
 	getByIDsFunc func(ctx context.Context, ids []string) (map[string]*model.User, error)
 	searchFunc   func(ctx context.Context, q string, page, size int) ([]*model.User, int, error)
-	updateFunc   func(ctx context.Context, id, name, avatar string) error
+	updateFunc   func(ctx context.Context, id, name, avatar, primaryColor, secondaryColor string) error
 }
 
 func (m *mockUserRepo) Create(ctx context.Context, u *model.User) error {
@@ -97,9 +97,9 @@ func (m *mockUserRepo) Search(ctx context.Context, q string, page, size int) ([]
 	return nil, 0, nil
 }
 
-func (m *mockUserRepo) Update(ctx context.Context, id, name, avatar string) error {
+func (m *mockUserRepo) Update(ctx context.Context, id, name, avatar, primaryColor, secondaryColor string) error {
 	if m.updateFunc != nil {
-		return m.updateFunc(ctx, id, name, avatar)
+		return m.updateFunc(ctx, id, name, avatar, primaryColor, secondaryColor)
 	}
 	return nil
 }
@@ -316,12 +316,12 @@ func (m *mockConvDataRepo) SearchByName(ctx context.Context, q string, page, siz
 // ---------------------------------------------------------------------------
 
 type mockMsgStorage struct {
-	getHistoryFunc func(ctx context.Context, convID string, beforeMsgID int64, limit int) ([]*model.Message, error)
+	getHistoryFunc func(ctx context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error)
 }
 
-func (m *mockMsgStorage) GetHistory(ctx context.Context, convID string, beforeMsgID int64, limit int) ([]*model.Message, error) {
+func (m *mockMsgStorage) GetHistory(ctx context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
 	if m.getHistoryFunc != nil {
-		return m.getHistoryFunc(ctx, convID, beforeMsgID, limit)
+		return m.getHistoryFunc(ctx, convID, beforeMsgID, aroundMsgID, limit, keyword, startDate, endDate)
 	}
 	return nil, nil
 }
@@ -907,15 +907,17 @@ func TestUserHandler_UpdateMe(t *testing.T) {
 	authUserRepo := &testAuthUserRepo{}
 	handler, _, userRepo, _ := newTestUserHandler(authUserRepo)
 
-	var capturedID, capturedName, capturedAvatar string
-	userRepo.updateFunc = func(_ context.Context, id, name, avatar string) error {
+	var capturedID, capturedName, capturedAvatar, capturedPrimaryColor, capturedSecondaryColor string
+	userRepo.updateFunc = func(_ context.Context, id, name, avatar, primaryColor, secondaryColor string) error {
 		capturedID = id
 		capturedName = name
 		capturedAvatar = avatar
+		capturedPrimaryColor = primaryColor
+		capturedSecondaryColor = secondaryColor
 		return nil
 	}
 
-	body := `{"name":"newname","avatar":"new_avatar"}`
+	body := `{"name":"newname","avatar":"new_avatar","primary_color":"#FF0000","secondary_color":"#00FF00"}`
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/users/me", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = setAuthCtx(req, "user_42")
@@ -934,6 +936,12 @@ func TestUserHandler_UpdateMe(t *testing.T) {
 	}
 	if capturedAvatar != "new_avatar" {
 		t.Errorf("capturedAvatar = %q, want %q", capturedAvatar, "new_avatar")
+	}
+	if capturedPrimaryColor != "#FF0000" {
+		t.Errorf("capturedPrimaryColor = %q, want %q", capturedPrimaryColor, "#FF0000")
+	}
+	if capturedSecondaryColor != "#00FF00" {
+		t.Errorf("capturedSecondaryColor = %q, want %q", capturedSecondaryColor, "#00FF00")
 	}
 }
 
@@ -1467,7 +1475,7 @@ func TestConvHandler_UpdateGroup_NotGroup(t *testing.T) {
 func TestMsgHandler_GetHistory(t *testing.T) {
 	handler := &MsgHandler{
 		msgRepo: &mockMsgStorage{
-			getHistoryFunc: func(_ context.Context, convID string, beforeMsgID int64, limit int) ([]*model.Message, error) {
+			getHistoryFunc: func(_ context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
 				return []*model.Message{
 					{MsgID: 3, ConvID: convID, SenderID: "user_1", Body: "third", ContentType: model.ContentText, ConvSeq: 3, Status: model.MsgSent},
 					{MsgID: 2, ConvID: convID, SenderID: "user_1", Body: "second"},
@@ -1510,7 +1518,7 @@ func TestMsgHandler_GetHistory_WithBefore(t *testing.T) {
 	var capturedLimit int
 	handler := &MsgHandler{
 		msgRepo: &mockMsgStorage{
-			getHistoryFunc: func(_ context.Context, convID string, beforeMsgID int64, limit int) ([]*model.Message, error) {
+			getHistoryFunc: func(_ context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
 				capturedBefore = beforeMsgID
 				capturedLimit = limit
 				return nil, nil
@@ -1542,7 +1550,7 @@ func TestMsgHandler_GetHistory_DefaultLimit(t *testing.T) {
 	var capturedLimit int
 	handler := &MsgHandler{
 		msgRepo: &mockMsgStorage{
-			getHistoryFunc: func(_ context.Context, convID string, beforeMsgID int64, limit int) ([]*model.Message, error) {
+			getHistoryFunc: func(_ context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
 				capturedLimit = limit
 				return nil, nil
 			},
