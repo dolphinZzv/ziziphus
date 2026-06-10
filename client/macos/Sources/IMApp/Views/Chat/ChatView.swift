@@ -181,8 +181,26 @@ struct ChatView: View {
             }
 
             ToolbarItem(placement: .primaryAction) {
-                Button(action: { showSearch.toggle() }) {
-                    Image(systemName: "magnifyingglass")
+                HStack(spacing: 4) {
+                    Button(action: { showSearch.toggle() }) {
+                        Image(systemName: "magnifyingglass")
+                    }
+                    Menu {
+                        Button(action: {
+                            if convType == .group {
+                                showGroupDetail = true
+                            } else {
+                                showP2PDetail = true
+                            }
+                        }) {
+                            Label(loc("history.conversation_info"), systemImage: "info.circle")
+                        }
+                        Button(action: { showHistory = true }) {
+                            Label(loc("history.view_history"), systemImage: "clock")
+                        }
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
                 }
             }
         }
