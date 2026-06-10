@@ -56,6 +56,12 @@ struct ProfileView: View {
                 } label: {
                     Label(loc("settings.title"), systemImage: "gearshape")
                 }
+
+                NavigationLink {
+                    SessionManageView()
+                } label: {
+                    Label(loc("settings.device_management"), systemImage: "ipad.and.iphone")
+                }
             }
 
             // Actions

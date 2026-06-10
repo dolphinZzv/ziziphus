@@ -8,7 +8,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/dolphinz/im-server/pkg/i18n"
+	"siciv.space/agent/panda_ai/pkg/i18n"
 )
 
 type Handlers struct {
@@ -16,8 +16,10 @@ type Handlers struct {
 	Conversation *ConvHandler
 	Message      *MsgHandler
 	Contact      *ContactHandler
+	Session      *SessionHandler
 	DB           *pgxpool.Pool
 	RDB          *redis.Client
+	LoginRL      *LoginRateLimiter
 }
 
 func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
@@ -27,16 +29,21 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 	r.Use(chimw.RealIP)
 	r.Use(i18n.Middleware)
 
-	// public routes
+	// Public routes
 	r.Group(func(r chi.Router) {
+		// Apply login rate limiting if configured
+		if h.LoginRL != nil {
+			r.Use(h.LoginRL.Middleware)
+		}
 		r.Post("/api/v1/users/register", h.User.Register)
 		r.Post("/api/v1/users/login", h.User.Login)
+		r.Post("/api/v1/users/refresh", h.User.Refresh)
 		r.Get("/api/v1/version", h.GetVersion)
-			r.Get("/health", h.Health)
-			r.Get("/metrics", promhttp.Handler().ServeHTTP)
+		r.Get("/health", h.Health)
+		r.Get("/metrics", promhttp.Handler().ServeHTTP)
 	})
 
-	// authenticated routes
+	// Authenticated routes
 	r.Group(func(r chi.Router) {
 		r.Use(authMW)
 		r.Get("/api/v1/users/me", h.User.GetMe)
@@ -67,6 +74,9 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/contacts", h.Contact.Add)
 		r.Delete("/api/v1/contacts/{user_id}", h.Contact.Remove)
 		r.Put("/api/v1/contacts/{user_id}", h.Contact.UpdateNickname)
+
+		r.Get("/api/v1/sessions", h.Session.ListSessions)
+		r.Delete("/api/v1/sessions/{session_id}", h.Session.DeleteSession)
 	})
 
 	return r

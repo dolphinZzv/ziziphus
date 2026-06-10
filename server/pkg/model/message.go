@@ -20,6 +20,7 @@ type Message struct {
 	MsgID          int64      `json:"msg_id"`
 	ConvID         string     `json:"conv_id"`
 	SenderID       string     `json:"sender_id"`
+	SenderName     string     `json:"sender_name"`
 	SenderSessionID string    `json:"sender_session_id"`
 	ContentType    ContentType `json:"content_type"`
 	Body           string     `json:"body"`

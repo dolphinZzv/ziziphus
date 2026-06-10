@@ -8,26 +8,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/dolphinz/im-server/internal/auth"
-	"github.com/dolphinz/im-server/internal/storage/db"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/internal/auth"
+	"siciv.space/agent/panda_ai/internal/storage/db"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
-
-// ---------------------------------------------------------------------------
-// Global test crypto (generated once for all tests)
-// ---------------------------------------------------------------------------
-
-var testCrypto *auth.Crypto
-
-func init() {
-	priv, err := auth.GenerateKeyPair()
-	if err != nil {
-		panic(fmt.Sprintf("generate test key pair: %v", err))
-	}
-	testCrypto = auth.NewCryptoFromKeys(priv)
-}
 
 // ---------------------------------------------------------------------------
 // testAuthUserRepo — satisfies auth.userRepository (unexported interface)
@@ -157,6 +144,7 @@ type mockConvManager struct {
 	listJoinRequestsFunc  func(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error)
 	approveJoinRequestFunc func(ctx context.Context, convID, userID, operatorID string) error
 	rejectJoinRequestFunc  func(ctx context.Context, convID, userID, operatorID string) error
+	getMemberRoleFunc func(ctx context.Context, convID, userID string) (model.ConvRole, error)
 	}
 func (m *mockConvManager) Get(ctx context.Context, convID string) (*model.Conversation, error) {
 	if m.getFunc != nil {
@@ -241,7 +229,12 @@ func (m *mockConvManager) RejectJoinRequest(ctx context.Context, convID, userID,
 	}
 	return nil
 }
-
+func (m *mockConvManager) GetMemberRole(ctx context.Context, convID, userID string) (model.ConvRole, error) {
+	if m.getMemberRoleFunc != nil {
+		return m.getMemberRoleFunc(ctx, convID, userID)
+	}
+		return model.ConvRoleMember, nil
+}
 // ---------------------------------------------------------------------------
 // Mock: convSeqCache
 // ---------------------------------------------------------------------------
@@ -280,7 +273,7 @@ type mockSysMsgSender struct {
 	sendSystemMessageFunc func(ctx context.Context, convID, body string) (*model.Message, error)
 }
 
-func (m *mockSysMsgSender) SendSystemMessage(ctx context.Context, convID, body string) (*model.Message, error) {
+func (m *mockSysMsgSender) SendSystemMessage(ctx context.Context, convID, body string, senderID ...string) (*model.Message, error) {
 	if m.sendSystemMessageFunc != nil {
 		return m.sendSystemMessageFunc(ctx, convID, body)
 	}
@@ -545,7 +538,7 @@ func TestUnauthorized_returns401(t *testing.T) {
 
 // newTestUserHandler creates a UserHandler with fresh mocks.
 func newTestUserHandler(authUserRepo *testAuthUserRepo) (*UserHandler, *auth.Service, *mockUserRepo, *mockSessionChecker) {
-	authSvc := auth.NewService(testCrypto, "test-jwt-secret", 24, authUserRepo)
+	authSvc := auth.NewService("test-jwt-secret", 24, 168, authUserRepo, nil, func() int64 { return time.Now().UnixNano() })
 	userRepo := &mockUserRepo{}
 	sessMgr := &mockSessionChecker{}
 	return NewUserHandler(authSvc, userRepo, sessMgr), authSvc, userRepo, sessMgr
@@ -1139,7 +1132,13 @@ func TestConvHandler_CreateGroup(t *testing.T) {
 }
 
 func TestConvHandler_CreateGroup_EmptyName(t *testing.T) {
-	handler := &ConvHandler{}
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
+			},
+		},
+	}
 
 	body := `{"name":"","member_ids":[]}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/group", strings.NewReader(body))
@@ -1342,6 +1341,11 @@ func TestConvHandler_MarkRead(t *testing.T) {
 				return nil
 			},
 		},
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
+			},
+		},
 	}
 
 	body := `{"msg_id":100}`
@@ -1369,7 +1373,13 @@ func TestConvHandler_MarkRead(t *testing.T) {
 
 func TestConvHandler_MarkRead_NilMarker(t *testing.T) {
 	// readMarker is nil — handler should not panic
-	handler := &ConvHandler{}
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
+			},
+		},
+	}
 
 	body := `{"msg_id":50}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/read", strings.NewReader(body))
@@ -1392,6 +1402,9 @@ func TestConvHandler_UpdateGroup(t *testing.T) {
 					ConvID: convID,
 					Type:   model.ConvGroup,
 				}, nil
+			},
+			getMemberRoleFunc: func(_ context.Context, convID, userID string) (model.ConvRole, error) {
+				return model.ConvRoleOwner, nil
 			},
 		},
 		convRepo: &mockConvDataRepo{
@@ -1462,10 +1475,16 @@ func TestMsgHandler_GetHistory(t *testing.T) {
 				}, nil
 			},
 		},
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
+			},
+		},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/messages", nil)
 	req = setChiURLParam(req, "conv_id", "conv_1")
+	req = setAuthCtx(req, "user_1")
 	w := httptest.NewRecorder()
 	handler.GetHistory(w, req)
 
@@ -1497,10 +1516,16 @@ func TestMsgHandler_GetHistory_WithBefore(t *testing.T) {
 				return nil, nil
 			},
 		},
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
+			},
+		},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/messages?before_msg_id=100&limit=10", nil)
 	req = setChiURLParam(req, "conv_id", "conv_1")
+	req = setAuthCtx(req, "user_1")
 	w := httptest.NewRecorder()
 	handler.GetHistory(w, req)
 
@@ -1522,10 +1547,16 @@ func TestMsgHandler_GetHistory_DefaultLimit(t *testing.T) {
 				return nil, nil
 			},
 		},
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
+			},
+		},
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/messages", nil)
 	req = setChiURLParam(req, "conv_id", "conv_1")
+	req = setAuthCtx(req, "user_1")
 	w := httptest.NewRecorder()
 	handler.GetHistory(w, req)
 
@@ -1533,6 +1564,27 @@ func TestMsgHandler_GetHistory_DefaultLimit(t *testing.T) {
 		t.Errorf("capturedLimit = %d, want 50", capturedLimit)
 	}
 	_ = w
+}
+
+func TestMsgHandler_GetHistory_NotMember(t *testing.T) {
+	handler := &MsgHandler{
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return false, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/messages", nil)
+	req = setChiURLParam(req, "conv_id", "conv_1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.GetHistory(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNotFound {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNotFound)
+	}
 }
 
 // =========================================================================

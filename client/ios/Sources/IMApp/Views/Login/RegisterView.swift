@@ -17,18 +17,11 @@ struct RegisterView: View {
                 .fontWeight(.bold)
 
             VStack(spacing: 16) {
-                TextField(loc("login.account_placeholder"), text: $loginVM.account)
-                    .textFieldStyle(.roundedBorder)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
+                CapsuleTextField(placeholder: loc("login.account_placeholder"), text: $loginVM.account)
 
-                TextField(loc("login.name_placeholder"), text: $loginVM.name)
-                    .textFieldStyle(.roundedBorder)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
+                CapsuleTextField(placeholder: loc("login.name_placeholder"), text: $loginVM.name)
 
-                SecureField(loc("login.password_placeholder"), text: $loginVM.password)
-                    .textFieldStyle(.roundedBorder)
+                CapsuleSecureField(placeholder: loc("login.password_placeholder"), text: $loginVM.password)
             }
             .padding(.horizontal, 40)
 

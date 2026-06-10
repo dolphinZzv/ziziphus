@@ -8,6 +8,7 @@ struct ProfileView: View {
     @EnvironmentObject private var localizationManager: LocalizationManager
     @State private var showLogoutAlert = false
     @State private var showSettings = false
+    @State private var showSessionManage = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -72,6 +73,14 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal)
+
+                Button(action: { showSessionManage = true }) {
+                    Label(loc("settings.device_management"), systemImage: "ipad.and.iphone")
+                        .font(.appleBody)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
             }
             .padding(.vertical, AppleDesign.Spacing.md)
 
@@ -97,6 +106,9 @@ struct ProfileView: View {
                 .environmentObject(appSettings)
                 .environmentObject(themeManager)
                 .environmentObject(localizationManager)
+        }
+        .sheet(isPresented: $showSessionManage) {
+            SessionManageView()
         }
         .alert(loc("login.logout"), isPresented: $showLogoutAlert) {
             Button(loc("common.cancel"), role: .cancel) {}

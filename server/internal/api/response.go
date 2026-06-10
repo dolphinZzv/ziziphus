@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/dolphinz/im-server/pkg/i18n"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/i18n"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type APIResponse struct {

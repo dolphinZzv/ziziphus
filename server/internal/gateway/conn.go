@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/protocol"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 type Connection struct {
@@ -68,6 +68,9 @@ func (c *Connection) Close() error {
 		return nil
 	}
 	c.closed = true
+	if c.Conn == nil {
+		return nil
+	}
 	return c.Conn.Close()
 }
 

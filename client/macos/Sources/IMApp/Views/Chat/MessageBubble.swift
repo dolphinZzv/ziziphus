@@ -1,11 +1,14 @@
 import SwiftUI
 import IMCore
+import MarkdownUI
 
 struct MessageBubble: View {
     let message: Message
     let convType: ConvType
     let senderInfo: [String: User]
     var onRetry: (() -> Void)?
+    var isFirstInGroup = true
+    var isLastInGroup = true
 
     private var isMine: Bool {
         message.senderID == AuthManager.shared.currentUser?.userID
@@ -38,15 +41,15 @@ struct MessageBubble: View {
                                 Image(systemName: "exclamationmark.circle.fill")
                                     .font(.system(size: 11))
                                     .foregroundColor(.red)
-                                Text(message.body)
+                                Markdown( message.body)
                                     .font(.system(size: AppleDesign.Typography.bodySize))
                                     .foregroundColor(.red)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
                                     .background(.red.opacity(0.08))
-                                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                                    .clipShape(bubbleShape)
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 18)
+                                        bubbleShape
                                             .stroke(.red.opacity(0.4), lineWidth: 1)
                                     )
                                 Text(loc("chat.retry"))
@@ -56,13 +59,15 @@ struct MessageBubble: View {
                         }
                         .buttonStyle(.plain)
                     } else {
-                        Text(message.body)
+                        Markdown(message.body)
+                            .markdownTextStyle {
+                                ForegroundColor(isMine ? .white : AppleDesign.Colors.ink)
+                            }
                             .font(.system(size: AppleDesign.Typography.bodySize))
-                            .foregroundColor(isMine ? .white : AppleDesign.Colors.ink)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
                             .background(isMine ? AppleDesign.Colors.actionBlue : AppleDesign.Colors.chatGray)
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                            .clipShape(bubbleShape)
                             .textSelection(.enabled)
                             .contextMenu {
                                 Button(loc("common.copy")) {
@@ -91,6 +96,17 @@ struct MessageBubble: View {
             if !isMine { Spacer(minLength: 60) }
         }
         .padding(.vertical, 2)
+    }
+
+    private var bubbleShape: UnevenRoundedRectangle {
+        let r: CGFloat = 14
+        let flat: CGFloat = 4
+        return UnevenRoundedRectangle(
+            topLeadingRadius: isFirstInGroup ? r : flat,
+            bottomLeadingRadius: isLastInGroup ? r : flat,
+            bottomTrailingRadius: isLastInGroup ? r : flat,
+            topTrailingRadius: isFirstInGroup ? r : flat
+        )
     }
 
     private var statusIconName: String {

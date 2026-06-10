@@ -3,11 +3,14 @@ package message
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
-	"github.com/dolphinz/im-server/pkg/protocol"
+	"github.com/jackc/pgx/v5"
+
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 type ReceiptHandler struct {
@@ -48,14 +51,24 @@ func NewReceiptHandler(msgRepo receiptMsgRepo, seqCache receiptSeqCache, convRep
 
 func (h *ReceiptHandler) MarkRead(ctx context.Context, userID, convID string, msgID int64) error {
 	timestamp := time.Now().UnixMilli()
-	if err := h.seqCache.SetUserSeq(ctx, userID, convID, msgID); err != nil {
-		return err
-	}
 
 	msg, err := h.msgRepo.Get(ctx, msgID)
 	if err != nil {
-		logger.Debug("mark read: msg not found", "msg_id", msgID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			logger.Debug("mark read: msg not found", "msg_id", msgID)
+			return nil
+		}
+		return err
+	}
+
+	if msg.ConvID != convID {
+		logger.Debug("mark read: msg convID mismatch", "msg_id", msgID, "msg_conv_id", msg.ConvID, "conv_id", convID)
 		return nil
+	}
+
+	// Use convSeq for unread count calculation, not msgID
+	if err := h.seqCache.SetUserSeq(ctx, userID, convID, msg.ConvSeq); err != nil {
+		return err
 	}
 
 	if msg.SenderID == userID {

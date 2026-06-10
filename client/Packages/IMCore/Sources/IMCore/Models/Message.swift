@@ -24,6 +24,7 @@ public struct Message: Codable, Sendable, Identifiable, Hashable {
     public var msgID: Int64
     public var convID: String
     public var senderID: String
+    public var senderName: String
     public var senderSessionID: String
     public var contentType: ContentType
     public var body: String
@@ -34,12 +35,18 @@ public struct Message: Codable, Sendable, Identifiable, Hashable {
     public var convSeq: Int64
     public var status: MsgStatus
 
+    /// Stable identity for use in ForEach/scrollTo.
+    /// Confirmed messages (msgID > 0) use msgID; unsent local messages use clientSeq
+    /// to avoid collisions when multiple messages have msgID == 0.
+    public var stableId: Int64 { msgID > 0 ? msgID : -clientSeq }
+
     public var id: Int64 { msgID }
 
     enum CodingKeys: String, CodingKey {
         case msgID = "msg_id"
         case convID = "conv_id"
         case senderID = "sender_id"
+        case senderName = "sender_name"
         case senderSessionID = "sender_session_id"
         case contentType = "content_type"
         case body
@@ -52,6 +59,7 @@ public struct Message: Codable, Sendable, Identifiable, Hashable {
     }
 
     public init(msgID: Int64 = 0, convID: String, senderID: String,
+                senderName: String = "",
                 senderSessionID: String = "", contentType: ContentType = .text,
                 body: String, replyTo: Int64 = 0, mention: [String] = [],
                 timestamp: Int64 = 0, clientSeq: Int64 = 0,
@@ -59,6 +67,7 @@ public struct Message: Codable, Sendable, Identifiable, Hashable {
         self.msgID = msgID
         self.convID = convID
         self.senderID = senderID
+        self.senderName = senderName
         self.senderSessionID = senderSessionID
         self.contentType = contentType
         self.body = body
@@ -75,6 +84,7 @@ public struct Message: Codable, Sendable, Identifiable, Hashable {
         msgID = try container.decode(Int64.self, forKey: .msgID)
         convID = try container.decode(String.self, forKey: .convID)
         senderID = try container.decode(String.self, forKey: .senderID)
+        senderName = try container.decodeIfPresent(String.self, forKey: .senderName) ?? ""
         senderSessionID = try container.decodeIfPresent(String.self, forKey: .senderSessionID) ?? ""
         contentType = try container.decodeIfPresent(ContentType.self, forKey: .contentType) ?? .text
         body = try container.decodeIfPresent(String.self, forKey: .body) ?? ""

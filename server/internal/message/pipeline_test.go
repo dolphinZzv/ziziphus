@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dolphinz/im-server/pkg/model"
-	"github.com/dolphinz/im-server/pkg/protocol"
+	"siciv.space/agent/panda_ai/pkg/model"
+	pgx "github.com/jackc/pgx/v5"
+	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 // ---------------------------------------------------------------------------
@@ -98,11 +99,11 @@ func (m *mockMessageStore) Get(_ context.Context, msgID int64) (*model.Message, 
 		return nil, m.getErr
 	}
 	if m.messages == nil {
-		return nil, errors.New("msg not found")
+		return nil, pgx.ErrNoRows
 	}
 	msg, ok := m.messages[msgID]
 	if !ok {
-		return nil, errors.New("msg not found")
+		return nil, pgx.ErrNoRows
 	}
 	return msg, nil
 }
@@ -1216,6 +1217,7 @@ func TestMarkRead_Success(t *testing.T) {
 		MsgID:    200,
 		ConvID:   "conv_x",
 		SenderID: "user_b",
+			ConvSeq: 50,
 	}
 	store.messages = map[int64]*model.Message{200: msg}
 	
@@ -1231,8 +1233,8 @@ func TestMarkRead_Success(t *testing.T) {
 	}
 
 	// User seq was set.
-	if seqCache.userSeqs["user_a|conv_x"] != 200 {
-		t.Errorf("user seq = %d; want 200", seqCache.userSeqs["user_a|conv_x"])
+	if seqCache.userSeqs["user_a|conv_x"] != 50 {
+		t.Errorf("user seq = %d; want 50", seqCache.userSeqs["user_a|conv_x"])
 	}
 
 	// Read notify was sent to sender's connections.
@@ -1261,7 +1263,7 @@ func TestMarkRead_Success(t *testing.T) {
 }
 
 func TestMarkRead_MsgNotFound(t *testing.T) {
-	store := &mockMessageStore{getErr: errors.New("not found")}
+	store := &mockMessageStore{}
 	seqCache := &mockSeqCache{}
 	receiptW := &mockReceiptWriter{}
 
@@ -1272,9 +1274,9 @@ func TestMarkRead_MsgNotFound(t *testing.T) {
 		t.Fatalf("MarkRead should return nil when msg not found, got: %v", err)
 	}
 
-	// User seq should still be set.
-	if seqCache.userSeqs["user_a|conv_x"] != 999 {
-		t.Errorf("user seq = %d; want 999", seqCache.userSeqs["user_a|conv_x"])
+	// User seq should NOT be set (early return before SetUserSeq).
+	if seqCache.userSeqs["user_a|conv_x"] != 0 {
+		t.Errorf("user seq = %d; want 0", seqCache.userSeqs["user_a|conv_x"])
 	}
 
 	// No receipt should be written (msg not found → no notify → no receipt).
@@ -1290,7 +1292,7 @@ func TestMarkRead_OwnMessage(t *testing.T) {
 
 	// Message was sent by user_a (same as the reader).
 	store.messages = map[int64]*model.Message{
-		101: {MsgID: 101, ConvID: "conv_x", SenderID: "user_a"},
+		101: {MsgID: 101, ConvID: "conv_x", SenderID: "user_a", ConvSeq: 30},
 	}
 
 	handler := NewReceiptHandler(store, seqCache, nil, nil, receiptW)
@@ -1301,8 +1303,8 @@ func TestMarkRead_OwnMessage(t *testing.T) {
 	}
 
 	// User seq should be set.
-	if seqCache.userSeqs["user_a|conv_x"] != 101 {
-		t.Errorf("user seq = %d; want 101", seqCache.userSeqs["user_a|conv_x"])
+	if seqCache.userSeqs["user_a|conv_x"] != 30 {
+		t.Errorf("user seq = %d; want 30", seqCache.userSeqs["user_a|conv_x"])
 	}
 
 	// No receipt should be written for own message.
@@ -1316,7 +1318,7 @@ func TestMarkRead_NilReceiptWriter(t *testing.T) {
 	seqCache := &mockSeqCache{}
 	connReg := &mockConnRegistry{}
 
-	msg := &model.Message{MsgID: 300, ConvID: "conv_x", SenderID: "user_b"}
+	msg := &model.Message{MsgID: 300, ConvID: "conv_x", SenderID: "user_b", ConvSeq: 60}
 	store.messages = map[int64]*model.Message{300: msg}
 
 	senderConn := &mockConn{}
@@ -1331,8 +1333,8 @@ func TestMarkRead_NilReceiptWriter(t *testing.T) {
 	}
 
 	// User seq was set.
-	if seqCache.userSeqs["user_a|conv_x"] != 300 {
-		t.Errorf("user seq = %d; want 300", seqCache.userSeqs["user_a|conv_x"])
+	if seqCache.userSeqs["user_a|conv_x"] != 60 {
+		t.Errorf("user seq = %d; want 60", seqCache.userSeqs["user_a|conv_x"])
 	}
 
 	// Read notify was still sent.
@@ -1358,7 +1360,7 @@ func (e *errSeqCache) GetAndIncrementConvSeq(_ context.Context, _ string) (int64
 func TestMarkRead_SetUserSeqError(t *testing.T) {
 	failSeq := &errSeqCache{err: errors.New("seq set failed")}
 	store := &mockMessageStore{
-		messages: map[int64]*model.Message{400: {MsgID: 400, SenderID: "user_b"}},
+		messages: map[int64]*model.Message{400: {MsgID: 400, ConvID: "conv_x", SenderID: "user_b", ConvSeq: 70}},
 	}
 	receiptW := &mockReceiptWriter{}
 

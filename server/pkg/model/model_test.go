@@ -158,6 +158,11 @@ func TestConstants_DeviceType(t *testing.T) {
 			t.Errorf("DeviceWeb = %d, want 2", DeviceWeb)
 		}
 	})
+	t.Run("DeviceTablet is 3", func(t *testing.T) {
+		if DeviceTablet != 3 {
+			t.Errorf("DeviceTablet = %d, want 3", DeviceTablet)
+		}
+	})
 }
 
 // ---------------------------------------------------------------------------

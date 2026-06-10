@@ -32,9 +32,9 @@ type RedisConfig struct {
 }
 
 type JWTConfig struct {
-	Secret        string `yaml:"secret"`
-	ExpireHours   int    `yaml:"expire_hours"`
-	PrivateKeyPath string `yaml:"private_key_path"`
+	Secret              string `yaml:"secret"`
+	ExpireHours         int    `yaml:"expire_hours"`
+	RefreshExpireHours  int    `yaml:"refresh_expire_hours"`
 }
 
 type SnowflakeConfig struct {
@@ -72,7 +72,10 @@ func setDefaults(cfg *Config) {
 		cfg.Postgres.Migrations = "internal/storage/db/migrations"
 	}
 	if cfg.JWT.ExpireHours == 0 {
-		cfg.JWT.ExpireHours = 168 // 7 days
+		cfg.JWT.ExpireHours = 1 // 1 hour (access token)
+	}
+	if cfg.JWT.RefreshExpireHours == 0 {
+		cfg.JWT.RefreshExpireHours = 168 // 7 days (refresh token)
 	}
 	if cfg.RateLimit.MsgPerSec == 0 {
 		cfg.RateLimit.MsgPerSec = 30

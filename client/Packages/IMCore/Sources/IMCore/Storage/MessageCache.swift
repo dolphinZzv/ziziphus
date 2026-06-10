@@ -40,14 +40,17 @@ public class MessageCache: @unchecked Sendable {
         queue.async(flags: .barrier) { [weak self] in
             guard let self else { return }
             var messages = self.cache[message.convID] ?? []
-            if !messages.contains(where: { $0.msgID == message.msgID && $0.msgID > 0 }) {
+            if let idx = messages.firstIndex(where: { $0.msgID == message.msgID && $0.msgID > 0 }) {
+                // Update existing message (status, body, etc. may have changed)
+                messages[idx] = message
+            } else {
                 messages.append(message)
-                if messages.count > self.maxPerConv {
-                    messages = Array(messages.suffix(self.maxPerConv))
-                }
-                self.cache[message.convID] = messages
-                self.saveToDisk()
             }
+            if messages.count > self.maxPerConv {
+                messages = Array(messages.suffix(self.maxPerConv))
+            }
+            self.cache[message.convID] = messages
+            self.saveToDisk()
         }
     }
 
@@ -56,13 +59,15 @@ public class MessageCache: @unchecked Sendable {
             guard let self else { return }
             for msg in messages {
                 var existing = self.cache[msg.convID] ?? []
-                if !existing.contains(where: { $0.msgID == msg.msgID && $0.msgID > 0 }) {
+                if let idx = existing.firstIndex(where: { $0.msgID == msg.msgID && $0.msgID > 0 }) {
+                    existing[idx] = msg
+                } else {
                     existing.append(msg)
-                    if existing.count > self.maxPerConv {
-                        existing = Array(existing.suffix(self.maxPerConv))
-                    }
-                    self.cache[msg.convID] = existing
                 }
+                if existing.count > self.maxPerConv {
+                    existing = Array(existing.suffix(self.maxPerConv))
+                }
+                self.cache[msg.convID] = existing
             }
             self.saveToDisk()
         }

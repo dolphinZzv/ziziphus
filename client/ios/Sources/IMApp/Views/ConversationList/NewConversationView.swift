@@ -33,6 +33,7 @@ struct NewConversationView: View {
     @State private var joinGroupResults: [GroupSearchItem] = []
     @State private var isSearchingGroups = false
     @State private var joiningGroupID: String?
+    @State private var searchGroupsTask: Task<Void, Never>?
 
     @Environment(\.dismiss) private var dismiss
     let onCreated: (String, String, ConvType) -> Void
@@ -248,7 +249,13 @@ struct NewConversationView: View {
         .padding(.horizontal)
         .padding(.bottom, 8)
         .onChange(of: joinGroupQuery) { _, newValue in
-            searchGroups(query: newValue)
+            searchGroupsTask?.cancel()
+            let q = newValue
+            searchGroupsTask = Task {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                guard !Task.isCancelled else { return }
+                await searchGroups(query: q)
+            }
         }
 
         // Error
@@ -329,23 +336,22 @@ struct NewConversationView: View {
         }
     }
 
-    private func searchGroups(query: String) {
+    private func searchGroups(query: String) async {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             joinGroupResults = []
             return
         }
         isSearchingGroups = true
         errorMessage = nil
-        Task {
-            do {
-                let results = try await ConversationService.shared.searchGroups(query: query)
-                joinGroupResults = results
-            } catch {
-                errorMessage = error.localizedDescription
-                showError = true
-            }
-            isSearchingGroups = false
+        do {
+            let results = try await ConversationService.shared.searchGroups(query: query)
+            joinGroupResults = results
+        } catch {
+            guard !Task.isCancelled else { return }
+            errorMessage = error.localizedDescription
+            showError = true
         }
+        isSearchingGroups = false
     }
 
     private func requestJoinGroup(convID: String, name: String) {

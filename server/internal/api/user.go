@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/dolphinz/im-server/internal/auth"
-	"github.com/dolphinz/im-server/pkg/i18n"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
 	"github.com/go-chi/chi/v5"
+	"siciv.space/agent/panda_ai/internal/auth"
+	"siciv.space/agent/panda_ai/pkg/i18n"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type UserHandler struct {
@@ -53,21 +53,22 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		BadRequest(w, r, i18n.T(r.Context(), "err.name_password_required"))
 		return
 	}
-	user, token, err := h.authSvc.Register(r.Context(), req.Name, req.Password, req.Account)
+	user, accessToken, refreshToken, err := h.authSvc.Register(r.Context(), req.Name, req.Password, req.Account)
 	if err != nil {
 		if appErr, ok := err.(*model.AppError); ok {
-			Error(w, r,http.StatusBadRequest, appErr)
+			Error(w, r, http.StatusBadRequest, appErr)
 			return
 		}
 		logger.Error("register failed", "error", err)
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{
-		"user_id": user.ID,
-		"account": user.Account,
-		"name":    user.Name,
-		"token":   token,
+		"user_id":       user.ID,
+		"account":       user.Account,
+		"name":          user.Name,
+		"token":         accessToken,
+		"refresh_token": refreshToken,
 	})
 }
 
@@ -82,13 +83,13 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
-	token, expiresAt, userID, err := h.authSvc.Login(r.Context(), req.Account, req.Password)
+	accessToken, refreshToken, expiresAt, userID, err := h.authSvc.Login(r.Context(), req.Account, req.Password)
 	if err != nil {
 		if appErr, ok := err.(*model.AppError); ok {
-			Error(w, r,http.StatusUnauthorized, appErr)
+			Error(w, r, http.StatusUnauthorized, appErr)
 			return
 		}
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	user, _ := h.userRepo.GetByID(r.Context(), userID)
@@ -96,10 +97,41 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		user.Password = ""
 	}
 	JSON(w, map[string]interface{}{
-		"user_id":    userID,
-		"account":    req.Account,
-		"name":       user.Name,
-		"token":      token,
+		"user_id":       userID,
+		"account":       req.Account,
+		"name":          user.Name,
+		"token":         accessToken,
+		"refresh_token": refreshToken,
+		"expires_at":    expiresAt,
+	})
+}
+
+type refreshReq struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+func (h *UserHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var req refreshReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+	if req.RefreshToken == "" {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+
+	accessToken, expiresAt, err := h.authSvc.RefreshToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		if appErr, ok := err.(*model.AppError); ok {
+			Error(w, r, http.StatusUnauthorized, appErr)
+			return
+		}
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]interface{}{
+		"token":      accessToken,
 		"expires_at": expiresAt,
 	})
 }
@@ -152,7 +184,7 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 	}
 	users, err := h.userRepo.GetByIDs(r.Context(), req.UserIDs)
 	if err != nil {
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	result := make(map[string]interface{}, len(users))
@@ -188,7 +220,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := auth.UserFromCtx(r.Context())
 	if err := h.userRepo.Update(r.Context(), userID, req.Name, req.Avatar); err != nil {
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{
@@ -200,6 +232,10 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
+	if len(q) < 2 {
+		Paginated(w, []map[string]interface{}{}, 0, 1, 20)
+		return
+	}
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
 	if page < 1 {
@@ -210,7 +246,7 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 	users, total, err := h.userRepo.Search(r.Context(), q, page, size)
 	if err != nil {
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	items := make([]map[string]interface{}, 0, len(users))

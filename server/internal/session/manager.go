@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type Manager struct {
@@ -40,13 +40,15 @@ func NewManager(sessionCache sessionCache, sessionRepo sessionRepo) *Manager {
 	}
 }
 
-func (m *Manager) Create(ctx context.Context, userID string, device model.DeviceType, deviceName string) (*model.Session, error) {
+func (m *Manager) Create(ctx context.Context, userID string, device model.DeviceType, deviceName string, clientIP string, deviceID string) (*model.Session, error) {
 	sessionID := "sess_" + uuid.New().String()[:8]
 	s := &model.Session{
 		SessionID:  sessionID,
 		UserID:     userID,
 		Device:     device,
 		DeviceName: deviceName,
+		DeviceID:   deviceID,
+		ClientIP:   clientIP,
 		Status:     model.SessionActive,
 		LoginAt:    time.Now().UnixMilli(),
 		LastActive: time.Now().UnixMilli(),

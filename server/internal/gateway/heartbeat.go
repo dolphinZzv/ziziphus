@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dolphinz/im-server/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/logger"
 )
 
 type HeartbeatConfig struct {

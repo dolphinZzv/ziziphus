@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dolphinz/im-server/internal/auth"
-	"github.com/dolphinz/im-server/pkg/i18n"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/internal/auth"
+	"siciv.space/agent/panda_ai/pkg/i18n"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
 	"github.com/go-chi/chi/v5"
 )
 

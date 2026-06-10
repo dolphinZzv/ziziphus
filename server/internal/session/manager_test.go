@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 // ---------------------------------------------------------------------------
@@ -203,7 +203,7 @@ func TestNewManager(t *testing.T) {
 func TestCreate_Success(t *testing.T) {
 	m, cache, repo := newManager()
 
-	s, err := m.Create(ctx, "user1", model.DevicePhone, "iPhone 15")
+	s, err := m.Create(ctx, "user1", model.DevicePhone, "iPhone 15", "", "")
 	if err != nil {
 		t.Fatalf("Create returned unexpected error: %v", err)
 	}
@@ -267,7 +267,7 @@ func TestCreate_RepoError(t *testing.T) {
 	// Inject a repo error
 	repo.createErr = fmt.Errorf("database unavailable")
 
-	s, err := m.Create(ctx, "user2", model.DeviceDesktop, "MacBook")
+	s, err := m.Create(ctx, "user2", model.DeviceDesktop, "MacBook", "", "")
 	if err == nil {
 		t.Fatal("expected error but got nil")
 	}
@@ -310,7 +310,7 @@ func TestCreate_CacheSetError(t *testing.T) {
 	// Make cache.Set fail
 	cache.setErr(fmt.Errorf("redis timeout"))
 
-	s, err := m.Create(ctx, "user_cachefail", model.DeviceWeb, "Firefox")
+	s, err := m.Create(ctx, "user_cachefail", model.DeviceWeb, "Firefox", "", "")
 	if err != nil {
 		t.Fatalf("Create should succeed even when cache.Set fails: %v", err)
 	}
@@ -662,11 +662,11 @@ func TestGetUserSessionIDs(t *testing.T) {
 	m, _, _ := newManager()
 
 	// Create two sessions for the same user
-	s1, err := m.Create(ctx, "multi_user", model.DevicePhone, "iPhone")
+	s1, err := m.Create(ctx, "multi_user", model.DevicePhone, "iPhone", "", "")
 	if err != nil {
 		t.Fatalf("Create session 1 failed: %v", err)
 	}
-	s2, err := m.Create(ctx, "multi_user", model.DeviceDesktop, "MacBook")
+	s2, err := m.Create(ctx, "multi_user", model.DeviceDesktop, "MacBook", "", "")
 	if err != nil {
 		t.Fatalf("Create session 2 failed: %v", err)
 	}
@@ -708,8 +708,8 @@ func TestGetUserSessionIDs_UnknownUser(t *testing.T) {
 func TestDelete_OnlyOneSessionOfMultiple(t *testing.T) {
 	m, cache, repo := newManager()
 
-	s1, _ := m.Create(ctx, "multi_user2", model.DevicePhone, "Phone")
-	s2, _ := m.Create(ctx, "multi_user2", model.DeviceDesktop, "Desktop")
+	s1, _ := m.Create(ctx, "multi_user2", model.DevicePhone, "Phone", "", "")
+	s2, _ := m.Create(ctx, "multi_user2", model.DeviceDesktop, "Desktop", "", "")
 
 	// Delete only the first session
 	err := m.Delete(ctx, s1.SessionID)
@@ -759,7 +759,7 @@ func TestDelete_OnlyOneSessionOfMultiple(t *testing.T) {
 func newManagerWithSession(t *testing.T, userID string, device model.DeviceType, deviceName string) (*Manager, *mockCache, *mockRepo) {
 	t.Helper()
 	m, c, r := newManager()
-	s, err := m.Create(ctx, userID, device, deviceName)
+	s, err := m.Create(ctx, userID, device, deviceName, "", "")
 	if err != nil {
 		t.Fatalf("helper Create failed: %v", err)
 	}

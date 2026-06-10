@@ -93,6 +93,9 @@ func (c *SeqCache) InitConvSeq(ctx context.Context, convID string, seq int64) er
 			   return redis.call("SET", KEYS[1], ARGV[1])
 			 end
 			 return nil`, []string{"conv:seq:" + convID}, seq).Result()
+		if err == redis.Nil {
+			err = nil // existing seq is higher or equal, not an error
+		}
 	}
 	return err
 }

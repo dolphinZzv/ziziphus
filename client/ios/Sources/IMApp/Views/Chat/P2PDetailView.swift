@@ -9,9 +9,14 @@ struct P2PDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     private var otherUserID: String {
-        let parts = convID.split(separator: ":").map(String.init)
         let currentID = AuthManager.shared.currentUser?.userID ?? ""
-        return parts.first { $0 != currentID } ?? convName
+        // convID format: "userA:userB" for P2P conversations
+        let parts = convID.split(separator: ":", maxSplits: 1).map(String.init)
+        if parts.count == 2 {
+            return parts.first { $0 != currentID } ?? parts[0]
+        }
+        // Fallback: if convID is not in expected format, use convName
+        return convName
     }
 
     var body: some View {

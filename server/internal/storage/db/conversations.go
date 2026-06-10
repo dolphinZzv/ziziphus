@@ -5,15 +5,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type ConvRepo struct {
-	pool *pgxpool.Pool
+	pool DBPool
 }
 
-func NewConvRepo(pool *pgxpool.Pool) *ConvRepo {
+func NewConvRepo(pool DBPool) *ConvRepo {
 	return &ConvRepo{pool: pool}
 }
 

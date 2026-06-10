@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dolphinz/im-server/internal/metrics"
-	"github.com/dolphinz/im-server/pkg/model"
-	"github.com/dolphinz/im-server/pkg/protocol"
+	"siciv.space/agent/panda_ai/internal/metrics"
+	"siciv.space/agent/panda_ai/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 type Ingest struct {
@@ -88,6 +88,15 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 		}
 	}
 
+	// Verify sender is a member of the conversation
+	isMember, err := in.convMgr.IsMember(ctx, payload.ConvID, senderID)
+	if err != nil {
+		return nil, err
+	}
+	if !isMember {
+		return nil, model.ErrNotInConv
+	}
+
 	// 4. assign IDs
 	msgID := in.idGen.NextID()
 	convSeq, err := in.seqCache.GetAndIncrementConvSeq(ctx, payload.ConvID)
@@ -138,7 +147,9 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 }
 
 // SendSystemMessage creates, persists, and pushes a system message (content_type=5).
-func (in *Ingest) SendSystemMessage(ctx context.Context, convID, body string) (*model.Message, error) {
+// senderID is the user who triggered the system message; if non-empty, their
+// user_seq is set so the system message doesn't count as unread for them.
+func (in *Ingest) SendSystemMessage(ctx context.Context, convID, body string, senderID ...string) (*model.Message, error) {
 	msgID := in.idGen.NextID()
 	convSeq, err := in.seqCache.GetAndIncrementConvSeq(ctx, convID)
 	if err != nil {
@@ -158,6 +169,12 @@ func (in *Ingest) SendSystemMessage(ctx context.Context, convID, body string) (*
 		return nil, err
 	}
 	in.seqCache.SetRecentMsg(ctx, convID, msgID, float64(msgID))
+
+	// Set the sender's user_seq so the system message doesn't
+	// count as unread for the user who triggered it.
+	if len(senderID) > 0 && senderID[0] != "" {
+		in.seqCache.SetUserSeq(ctx, senderID[0], convID, convSeq)
+	}
 
 	targets := in.router.Route(ctx, msg)
 	if len(targets) > 0 {

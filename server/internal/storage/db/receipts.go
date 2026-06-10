@@ -3,15 +3,14 @@ package db
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type ReceiptRepo struct {
-	pool *pgxpool.Pool
+	pool DBPool
 }
 
-func NewReceiptRepo(pool *pgxpool.Pool) *ReceiptRepo {
+func NewReceiptRepo(pool DBPool) *ReceiptRepo {
 	return &ReceiptRepo{pool: pool}
 }
 

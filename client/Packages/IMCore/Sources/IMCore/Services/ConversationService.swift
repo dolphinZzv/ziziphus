@@ -85,6 +85,28 @@ public class ConversationService {
         return detail
     }
 
+    // MARK: - History
+    public func getHistory(convID: String, beforeMsgID: Int64 = 0, limit: Int = 50, keyword: String = "", startDate: Int64 = 0, endDate: Int64 = 0) async throws -> [Message] {
+        var query: [String: String] = ["limit": "\(limit)"]
+        if beforeMsgID > 0 {
+            query["before_msg_id"] = "\(beforeMsgID)"
+        }
+        if !keyword.isEmpty {
+            query["keyword"] = keyword
+        }
+        if startDate > 0 {
+            query["start_date"] = "\(startDate)"
+        }
+        if endDate > 0 {
+            query["end_date"] = "\(endDate)"
+        }
+        let messages: [Message] = try await api.request(
+            "/api/v1/conversations/\(convID)/messages",
+            query: query
+        )
+        return messages
+    }
+
     // MARK: - Mark Read
     public func markRead(convID: String, msgID: Int64) async throws {
         let _: [String: String] = try await api.request(

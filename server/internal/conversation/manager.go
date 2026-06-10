@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type Manager struct {
@@ -199,6 +199,10 @@ func (m *Manager) GetMembers(ctx context.Context, convID string) ([]*model.ConvM
 
 func (m *Manager) IsMember(ctx context.Context, convID, userID string) (bool, error) {
 	return m.convRepo.IsMember(ctx, convID, userID)
+}
+
+func (m *Manager) GetMemberRole(ctx context.Context, convID, userID string) (model.ConvRole, error) {
+	return m.convRepo.GetMemberRole(ctx, convID, userID)
 }
 
 func (m *Manager) RequestJoin(ctx context.Context, convID, userID string) error {

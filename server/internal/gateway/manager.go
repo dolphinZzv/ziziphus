@@ -2,10 +2,13 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
+	"time"
 
-	"github.com/dolphinz/im-server/internal/metrics"
-	"github.com/dolphinz/im-server/pkg/logger"
+	"siciv.space/agent/panda_ai/internal/metrics"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 type Manager struct {
@@ -69,6 +72,37 @@ func (m *Manager) GetBySessionID(_ context.Context, sessionID string) any {
 		return nil
 	}
 	return conn
+}
+
+// DisconnectBySessionID force-disconnects a WebSocket connection by session ID
+// and removes it from the manager. Used for session revocation.
+func (m *Manager) DisconnectBySessionID(ctx context.Context, sessionID string) {
+	m.mu.Lock()
+	conn, ok := m.sessConns[sessionID]
+	if !ok {
+		m.mu.Unlock()
+		return
+	}
+	connID := conn.ConnID
+	userID := conn.UserID
+	delete(m.sessConns, sessionID)
+	if c, ok2 := m.conns[connID]; ok2 {
+		// send kicked error frame before closing
+		errPayload, _ := json.Marshal(protocol.ErrorPayload{Code: 4001, Message: "kicked"})
+		c.SendFrame(protocol.Frame{Type: protocol.Error, Payload: errPayload})
+		time.Sleep(100 * time.Millisecond)
+		c.Close()
+		delete(m.conns, connID)
+	}
+	if userMap, ok2 := m.userConns[userID]; ok2 {
+		delete(userMap, connID)
+		if len(userMap) == 0 {
+			delete(m.userConns, userID)
+		}
+	}
+	m.mu.Unlock()
+	metrics.ConnectionsTotal.Dec()
+	logger.Info("connection force-disconnected", "session_id", sessionID, "conn_id", connID)
 }
 
 func (m *Manager) GetByUserID(_ context.Context, userID string) []any {

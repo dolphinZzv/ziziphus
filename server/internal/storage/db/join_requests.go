@@ -5,15 +5,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type JoinRequestRepo struct {
-	pool *pgxpool.Pool
+	pool DBPool
 }
 
-func NewJoinRequestRepo(pool *pgxpool.Pool) *JoinRequestRepo {
+func NewJoinRequestRepo(pool DBPool) *JoinRequestRepo {
 	return &JoinRequestRepo{pool: pool}
 }
 

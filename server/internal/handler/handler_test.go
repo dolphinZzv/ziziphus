@@ -13,10 +13,10 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/dolphinz/im-server/internal/auth"
-	"github.com/dolphinz/im-server/internal/gateway"
-	"github.com/dolphinz/im-server/pkg/model"
-	"github.com/dolphinz/im-server/pkg/protocol"
+	"siciv.space/agent/panda_ai/internal/auth"
+	"siciv.space/agent/panda_ai/internal/gateway"
+	"siciv.space/agent/panda_ai/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 // ---------------------------------------------------------------------------
@@ -24,7 +24,7 @@ import (
 // ---------------------------------------------------------------------------
 
 type mockSessionManager struct {
-	createFunc     func(ctx context.Context, userID string, device model.DeviceType, deviceName string) (*model.Session, error)
+	createFunc     func(ctx context.Context, userID string, device model.DeviceType, deviceName string, clientIP string, deviceID string) (*model.Session, error)
 	getFunc        func(ctx context.Context, sessionID string) *model.Session
 	deleteFunc     func(ctx context.Context, sessionID string) error
 	bindFunc       func(ctx context.Context, sessionID, connID string) error
@@ -36,13 +36,15 @@ type mockSessionManager struct {
 	lastCreateDev  model.DeviceType
 }
 
-func (m *mockSessionManager) Create(ctx context.Context, userID string, device model.DeviceType, deviceName string) (*model.Session, error) {
+func (m *mockSessionManager) GetUserSessionIDs(ctx context.Context, userID string) []string { return nil }
+
+func (m *mockSessionManager) Create(ctx context.Context, userID string, device model.DeviceType, deviceName string, clientIP string, deviceID string) (*model.Session, error) {
 	m.mu.Lock()
 	m.lastCreateUser = userID
 	m.lastCreateDev = device
 	m.mu.Unlock()
 	if m.createFunc != nil {
-		return m.createFunc(ctx, userID, device, deviceName)
+		return m.createFunc(ctx, userID, device, deviceName, clientIP, deviceID)
 	}
 	return &model.Session{SessionID: "sess1", UserID: userID}, nil
 }
@@ -653,7 +655,11 @@ func TestDispatch_MsgReadNotify_InvalidPayload(t *testing.T) {
 
 func TestDispatch_SessionRecover(t *testing.T) {
 	serverConn, clientConn := setupConnPair(t)
-	sessMgr := &mockSessionManager{}
+	sessMgr := &mockSessionManager{
+		getFunc: func(_ context.Context, sessionID string) *model.Session {
+			return &model.Session{SessionID: sessionID, UserID: "user1"}
+		},
+	}
 	h := newHandler(
 		defaultHandler().authMW,
 		sessMgr,
@@ -765,12 +771,12 @@ func TestServeHTTP_FullFlow(t *testing.T) {
 	connMgr := gateway.NewManager()
 
 	sessMgr := &mockSessionManager{
-		createFunc: func(ctx context.Context, userID string, device model.DeviceType, deviceName string) (*model.Session, error) {
+		createFunc: func(ctx context.Context, userID string, device model.DeviceType, deviceName string, clientIP string, deviceID string) (*model.Session, error) {
 			if device != model.DeviceDesktop {
 				t.Errorf("expected DeviceDesktop (%d), got %d", model.DeviceDesktop, device)
 			}
-			if deviceName != "web" {
-				t.Errorf("expected deviceName web, got %s", deviceName)
+			if deviceName != "macOS" {
+				t.Errorf("expected deviceName macOS, got %s", deviceName)
 			}
 			return &model.Session{SessionID: "sess-flow", UserID: userID}, nil
 		},
@@ -816,6 +822,12 @@ func TestServeHTTP_FullFlow(t *testing.T) {
 	t.Fatalf("handler init did not complete: connMgr.Count()=%d bindCalled=%v", connMgr.Count(), sessMgr.wasBindCalled())
 
 initialised:
+
+	// ---- expect welcome (SessionRecoverAck) ----
+	welcome := readFrame(t, conn)
+	if welcome.Type != protocol.SessionRecoverAck {
+		t.Fatalf("expected SessionRecoverAck (%d) welcome frame, got %d", protocol.SessionRecoverAck, welcome.Type)
+	}
 
 	// ---- send Ping, expect Pong ----
 	if err := conn.WriteJSON(protocol.Frame{Type: protocol.Ping, ID: "f1"}); err != nil {
@@ -964,4 +976,3 @@ func TestReadLoop_ReadError(t *testing.T) {
 		t.Fatal("readLoop did not return within 3s after abnormal close")
 	}
 }
-

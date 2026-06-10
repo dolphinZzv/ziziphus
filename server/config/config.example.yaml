@@ -16,8 +16,8 @@ redis:
 jwt:
   # CHANGE THIS in production — generate a random 256-bit key.
   secret: "change-me-to-a-random-secret"
-  expire_hours: 168
-  private_key_path: "config/rsa_key.pem"
+  expire_hours: 1       # access token lifetime in hours
+  refresh_expire_hours: 168  # refresh token lifetime in hours
 
 snowflake:
   worker_id: 1

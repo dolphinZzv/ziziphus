@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/dolphinz/im-server/internal/metrics"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
-	"github.com/dolphinz/im-server/pkg/protocol"
+	"siciv.space/agent/panda_ai/internal/metrics"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 type Pusher struct {

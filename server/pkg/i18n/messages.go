@@ -44,7 +44,7 @@ var Messages = map[string]map[Lang]string{
 	"err.create_session_failed": {LangZH: "创建会话失败", LangEN: "Failed to create session"},
 
 	// ===== System notification messages =====
-	"sys.group_created":  {LangZH: "%s 创建了群", LangEN: "%s created the group"},
+	"sys.group_created":  {LangZH: "%s 创建了群「%s」", LangEN: "%s created the group \"%s\""},
 	"sys.member_added":   {LangZH: "%s 被加入群", LangEN: "%s joined the group"},
 	"sys.member_removed": {LangZH: "%s 被移出群", LangEN: "%s was removed from the group"},
 	"sys.member_left":    {LangZH: "%s 退出了群", LangEN: "%s left the group"},

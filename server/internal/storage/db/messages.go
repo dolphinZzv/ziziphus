@@ -2,17 +2,18 @@ package db
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type MessageRepo struct {
-	pool *pgxpool.Pool
+	pool DBPool
 }
 
-func NewMessageRepo(pool *pgxpool.Pool) *MessageRepo {
+func NewMessageRepo(pool DBPool) *MessageRepo {
 	return &MessageRepo{pool: pool}
 }
 
@@ -33,8 +34,8 @@ func (r *MessageRepo) Insert(ctx context.Context, msg *model.Message) error {
 	}
 
 	_, err = tx.Exec(ctx,
-		`UPDATE conversations SET last_msg_id = $1, last_msg_at = to_timestamp($2::numeric / 1000.0) WHERE conv_id = $3`,
-		msg.MsgID, msg.Timestamp, msg.ConvID)
+		`UPDATE conversations SET last_msg_id = $1, last_msg_at = $2 WHERE conv_id = $3`,
+		msg.MsgID, time.UnixMilli(msg.Timestamp), msg.ConvID)
 	if err != nil {
 		return err
 	}
@@ -55,25 +56,44 @@ func (r *MessageRepo) GetByClientSeq(ctx context.Context, senderID, sessionID st
 	return msg, nil
 }
 
-func (r *MessageRepo) GetHistory(ctx context.Context, convID string, beforeMsgID int64, limit int) ([]*model.Message, error) {
-	var rows pgx.Rows
-	var err error
+func (r *MessageRepo) GetHistory(ctx context.Context, convID string, beforeMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
+	query := `SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status
+		 FROM messages m
+		 LEFT JOIN users u ON u.id = m.sender_id
+		 WHERE m.conv_id = $1 AND m.deleted = false`
+	args := []interface{}{convID}
+	argIdx := 2
+
 	if beforeMsgID > 0 {
-		rows, err = r.pool.Query(ctx,
-			`SELECT msg_id, conv_id, sender_id, content_type, body, mention, reply_to, timestamp, conv_seq, status
-			 FROM messages WHERE conv_id = $1 AND msg_id < $2 AND deleted = false
-			 ORDER BY msg_id DESC LIMIT $3`, convID, beforeMsgID, limit)
-	} else {
-		rows, err = r.pool.Query(ctx,
-			`SELECT msg_id, conv_id, sender_id, content_type, body, mention, reply_to, timestamp, conv_seq, status
-			 FROM messages WHERE conv_id = $1 AND deleted = false
-			 ORDER BY msg_id DESC LIMIT $2`, convID, limit)
+		query += fmt.Sprintf(" AND m.msg_id < $%d", argIdx)
+		args = append(args, beforeMsgID)
+		argIdx++
 	}
+	if keyword != "" {
+		query += fmt.Sprintf(" AND m.body ILIKE $%d", argIdx)
+		args = append(args, "%"+keyword+"%")
+		argIdx++
+	}
+	if startDate > 0 {
+		query += fmt.Sprintf(" AND m.timestamp >= $%d", argIdx)
+		args = append(args, startDate)
+		argIdx++
+	}
+	if endDate > 0 {
+		query += fmt.Sprintf(" AND m.timestamp <= $%d", argIdx)
+		args = append(args, endDate)
+		argIdx++
+	}
+
+	query += fmt.Sprintf(" ORDER BY m.msg_id DESC LIMIT $%d", argIdx)
+	args = append(args, limit)
+
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	return scanMessages(rows)
+	return scanHistoryMessages(rows)
 }
 
 func (r *MessageRepo) GetMessagesSinceSeq(ctx context.Context, convID string, lastSeq int64, limit int) ([]*model.Message, error) {
@@ -114,6 +134,19 @@ func scanMessages(rows pgx.Rows) ([]*model.Message, error) {
 		msg := &model.Message{}
 		if err := rows.Scan(&msg.MsgID, &msg.ConvID, &msg.SenderID, &msg.ContentType,
 			&msg.Body, &msg.Mention, &msg.ReplyTo, &msg.Timestamp, &msg.ConvSeq, &msg.Status); err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, msg)
+	}
+	return msgs, nil
+}
+
+func scanHistoryMessages(rows pgx.Rows) ([]*model.Message, error) {
+	var msgs []*model.Message
+	for rows.Next() {
+		msg := &model.Message{}
+		if err := rows.Scan(&msg.MsgID, &msg.ConvID, &msg.SenderID, &msg.SenderName,
+			&msg.ContentType, &msg.Body, &msg.Mention, &msg.ReplyTo, &msg.Timestamp, &msg.ConvSeq, &msg.Status); err != nil {
 			return nil, err
 		}
 		msgs = append(msgs, msg)

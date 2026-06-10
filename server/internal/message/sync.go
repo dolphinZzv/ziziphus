@@ -3,8 +3,8 @@ package message
 import (
 	"context"
 
-	"github.com/dolphinz/im-server/pkg/model"
-	"github.com/dolphinz/im-server/pkg/protocol"
+	"siciv.space/agent/panda_ai/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 type SyncHandler struct {

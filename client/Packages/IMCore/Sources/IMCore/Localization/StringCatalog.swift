@@ -19,7 +19,7 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
 
     // MARK: - Conversation List
     "conv.title": [.zhHans: "会话", .en: "Conversations"],
-    "conv.new_chat": [.zhHans: "新建聊天", .en: "New Chat"],
+    "conv.new_chat": [.zhHans: "新建会话", .en: "New Chat"],
     "conv.new_group": [.zhHans: "创建群组", .en: "New Group"],
     "conv.search_placeholder": [.zhHans: "搜索", .en: "Search"],
     "conv.no_conversations": [.zhHans: "暂无会话", .en: "No conversations"],
@@ -29,6 +29,8 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "conv.unread": [.zhHans: "未读", .en: "unread"],
 
     // MARK: - Chat
+    "chat.today": [.zhHans: "今天", .en: "Today"],
+    "chat.yesterday": [.zhHans: "昨天", .en: "Yesterday"],
     "chat.placeholder": [.zhHans: "输入消息...", .en: "Type a message..."],
     "chat.send": [.zhHans: "发送", .en: "Send"],
     "chat.detail": [.zhHans: "聊天详情", .en: "Chat Details"],
@@ -61,7 +63,7 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "profile.settings": [.zhHans: "设置", .en: "Settings"],
 
     // MARK: - Settings
-    "settings.title": [.zhHans: "设置", .en: "Settings"],
+    "settings.title": [.zhHans: "应用设置", .en: "App Settings"],
     "settings.theme": [.zhHans: "主题", .en: "Theme"],
     "settings.language": [.zhHans: "语言", .en: "Language"],
     "settings.language.follow_system": [.zhHans: "跟随系统", .en: "Follow System"],
@@ -75,6 +77,15 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "settings.client_version": [.zhHans: "客户端版本", .en: "Client Version"],
     "settings.server_version": [.zhHans: "服务端版本", .en: "Server Version"],
     "settings.build": [.zhHans: "构建版本", .en: "Build"],
+    "settings.device": [.zhHans: "设备", .en: "Device"],
+    "settings.session_id": [.zhHans: "会话 ID", .en: "Session ID"],
+    "settings.device_id": [.zhHans: "设备 ID", .en: "Device ID"],
+    "settings.device_management": [.zhHans: "终端管理", .en: "Device Management"],
+    "settings.device_management_desc": [.zhHans: "管理登录设备", .en: "Manage logged-in devices"],
+    "settings.current_device": [.zhHans: "当前设备", .en: "Current Device"],
+    "settings.kick_device": [.zhHans: "下线该设备", .en: "Disconnect this device"],
+    "settings.kick_device_confirm": [.zhHans: "确定要下线该设备吗？", .en: "Are you sure you want to disconnect this device?"],
+    "settings.kick_device_failed": [.zhHans: "下线失败", .en: "Failed to disconnect"],
     "settings.server_build": [.zhHans: "服务端构建", .en: "Server Build"],
 
     // MARK: - Group
@@ -110,6 +121,7 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     // MARK: - Search
     "search.title": [.zhHans: "搜索", .en: "Search"],
     "search.placeholder": [.zhHans: "搜索用户...", .en: "Search users..."],
+    "search.chat_placeholder": [.zhHans: "搜索消息...", .en: "Search messages..."],
     "search.group_placeholder": [.zhHans: "搜索会话...", .en: "Search conversations..."],
     "search.no_results": [.zhHans: "未找到用户", .en: "No users found"],
 
@@ -137,4 +149,15 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "common.online": [.zhHans: "在线", .en: "Online"],
     "common.offline": [.zhHans: "离线", .en: "Offline"],
     "common.unknown": [.zhHans: "未知", .en: "Unknown"],
+    "common.retry": [.zhHans: "重试", .en: "Retry"],
+
+    // MARK: - History
+    "history.title": [.zhHans: "%@ 的历史消息", .en: "%@ History"],
+    "history.all_loaded": [.zhHans: "已加载全部消息", .en: "All messages loaded"],
+    "history.conversation_info": [.zhHans: "会话信息", .en: "Conversation Info"],
+    "history.view_history": [.zhHans: "历史记录", .en: "History"],
+    "history.filter_year": [.zhHans: "年", .en: "Year"],
+    "history.filter_month": [.zhHans: "月", .en: "Month"],
+    "history.filter_day": [.zhHans: "日", .en: "Day"],
+    "history.filter_clear": [.zhHans: "清除筛选", .en: "Clear Filters"],
 ]

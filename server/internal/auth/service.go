@@ -2,26 +2,40 @@ package auth
 
 import (
 	"context"
-	"encoding/base64"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
+// Claims represents the JWT claims for access tokens.
 type Claims struct {
 	UserID string `json:"uid"`
 	Type   int    `json:"typ"`
 	jwt.RegisteredClaims
 }
 
+// refreshTokenClaims contains the claims for refresh tokens (opaque, stored in Redis).
+type refreshTokenData struct {
+	UserID     string `json:"uid"`
+	TokenID    string `json:"tid"`
+	ExpiresAt  int64  `json:"exp"`
+}
+
+// Service handles authentication, including password hashing, JWT access tokens,
+// and refresh tokens stored in Redis.
 type Service struct {
-	crypto   *Crypto
-	jwtSecret []byte
-	expireDur time.Duration
-	userRepo  userRepository
+	jwtSecret      []byte
+	accessExpire   time.Duration
+	refreshExpire  time.Duration
+	userRepo       userRepository
+	rdb            redis.UniversalClient
+	idGen          func() int64
 }
 
 type userRepository interface {
@@ -30,30 +44,38 @@ type userRepository interface {
 	GetByAccount(ctx context.Context, account string) (*model.User, error)
 }
 
-func NewService(crypto *Crypto, jwtSecret string, expireHours int, userRepo userRepository) *Service {
+const (
+	refreshTokenKeyPrefix = "refresh_token:"
+	blacklistKeyPrefix    = "token_blacklist:"
+)
+
+// NewService creates a new auth Service.
+// If rdb is nil, refresh token and blacklist features are disabled.
+func NewService(jwtSecret string, accessExpireHours, refreshExpireHours int, userRepo userRepository, rdb redis.UniversalClient, idGen func() int64) *Service {
 	return &Service{
-		crypto:    crypto,
-		jwtSecret: []byte(jwtSecret),
-		expireDur: time.Duration(expireHours) * time.Hour,
-		userRepo:  userRepo,
+		jwtSecret:      []byte(jwtSecret),
+		accessExpire:   time.Duration(accessExpireHours) * time.Hour,
+		refreshExpire:  time.Duration(refreshExpireHours) * time.Hour,
+		userRepo:       userRepo,
+		rdb:            rdb,
+		idGen:          idGen,
 	}
 }
 
-func (s *Service) Register(ctx context.Context, name, password, account string) (*model.User, string, error) {
+// Register creates a new user with a bcrypt-hashed password and returns tokens.
+func (s *Service) Register(ctx context.Context, name, password, account string) (*model.User, string, string, error) {
 	if account != "" {
 		existing, _ := s.userRepo.GetByAccount(ctx, account)
 		if existing != nil {
-			return nil, "", &model.AppError{Code: model.ErrBadMessage, Message: "账户已存在", Key: "auth.account_exists"}
+			return nil, "", "", &model.AppError{Code: model.ErrBadMessage, Message: "账户已存在", Key: "auth.account_exists"}
 		}
 	}
 
-	snowflake := model.NewSnowflake(time.Now().UnixMilli(), time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
-	userID := model.GenerateUserID(snowflake.NextID)
+	userID := model.GenerateUserID(s.idGen)
 
-	encrypted, err := s.crypto.Encrypt(ctx, []byte(password))
+	hashed, err := HashPassword(password)
 	if err != nil {
-		logger.Error("encrypt password failed", "error", err)
-		return nil, "", fmt.Errorf("encrypt password: %w", err)
+		return nil, "", "", fmt.Errorf("hash password: %w", err)
 	}
 
 	user := &model.User{
@@ -62,48 +84,84 @@ func (s *Service) Register(ctx context.Context, name, password, account string) 
 		Type:      model.UserHuman,
 		Name:      name,
 		Status:    model.UserOffline,
-		Password:  base64.StdEncoding.EncodeToString(encrypted),
+		Password:  hashed,
 		CreatedAt: time.Now().UnixMilli(),
 	}
 	if err := s.userRepo.Create(ctx, user); err != nil {
-		return nil, "", fmt.Errorf("create user: %w", err)
+		return nil, "", "", fmt.Errorf("create user: %w", err)
 	}
 
-	token, err := s.generateToken(userID, int(model.UserHuman))
+	accessToken, err := s.generateAccessToken(userID, int(model.UserHuman))
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
+	refreshToken, err := s.generateRefreshToken(ctx, userID)
+	if err != nil {
+		return nil, "", "", err
+	}
+
 	user.Password = ""
-	return user, token, nil
+	return user, accessToken, refreshToken, nil
 }
 
-func (s *Service) Login(ctx context.Context, account, password string) (string, int64, string, error) {
+// Login verifies credentials and returns tokens.
+func (s *Service) Login(ctx context.Context, account, password string) (string, string, int64, string, error) {
 	user, err := s.userRepo.GetByAccount(ctx, account)
 	if err != nil {
-		logger.Info("Login user not found", "account", account, "error", err)
-		return "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "用户不存在", Key: "auth.user_not_found"}
+		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "用户不存在", Key: "auth.user_not_found"}
 	}
 
-	var ciphertext []byte
-	ciphertext, err = base64.StdEncoding.DecodeString(user.Password)
-	if err != nil {
-		return "", 0, "", fmt.Errorf("decode password: %w", err)
-	}
-	decrypted, err := s.crypto.Decrypt(ctx, ciphertext)
-	if err != nil {
-		return "", 0, "", fmt.Errorf("decrypt password: %w", err)
-	}
-	if string(decrypted) != password {
-		return "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "密码错误", Key: "auth.wrong_password"}
+	if !CheckPassword(password, user.Password) {
+		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "密码错误", Key: "auth.wrong_password"}
 	}
 
-	token, err := s.generateToken(user.ID, int(user.Type))
+	accessToken, err := s.generateAccessToken(user.ID, int(user.Type))
 	if err != nil {
-		return "", 0, "", err
+		return "", "", 0, "", err
 	}
-	return token, time.Now().Add(s.expireDur).Unix(), user.ID, nil
+	refreshToken, err := s.generateRefreshToken(ctx, user.ID)
+	if err != nil {
+		return "", "", 0, "", err
+	}
+
+	return accessToken, refreshToken, time.Now().Add(s.accessExpire).Unix(), user.ID, nil
 }
 
+// RefreshToken validates a refresh token and returns a new access token.
+func (s *Service) RefreshToken(ctx context.Context, refreshTokenStr string) (string, int64, error) {
+	if s.rdb == nil {
+		return "", 0, fmt.Errorf("refresh tokens not available")
+	}
+
+	data, err := s.rdb.Get(ctx, refreshTokenKeyPrefix+refreshTokenStr).Bytes()
+	if err == redis.Nil {
+		return "", 0, &model.AppError{Code: model.ErrNoPermission, Message: "刷新令牌无效或已过期", Key: "auth.invalid_refresh_token"}
+	}
+	if err != nil {
+		return "", 0, fmt.Errorf("get refresh token: %w", err)
+	}
+
+	var rt refreshTokenData
+	if err := json.Unmarshal(data, &rt); err != nil {
+		return "", 0, fmt.Errorf("unmarshal refresh token: %w", err)
+	}
+
+	// Delete the used refresh token (rotation)
+	s.rdb.Del(ctx, refreshTokenKeyPrefix+refreshTokenStr)
+
+	if rt.ExpiresAt < time.Now().Unix() {
+		return "", 0, &model.AppError{Code: model.ErrNoPermission, Message: "刷新令牌已过期", Key: "auth.invalid_refresh_token"}
+	}
+
+	accessToken, err := s.generateAccessToken(rt.UserID, 0)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return accessToken, time.Now().Add(s.accessExpire).Unix(), nil
+}
+
+// ParseToken parses and validates an access token, checking the blacklist.
 func (s *Service) ParseToken(tokenStr string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -118,18 +176,62 @@ func (s *Service) ParseToken(tokenStr string) (*Claims, error) {
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid token")
 	}
+
+	// Check blacklist if Redis is available
+	if s.rdb != nil {
+		blacklisted, err := s.rdb.Exists(ctxTODO, blacklistKeyPrefix+claims.ID).Result()
+		if err == nil && blacklisted > 0 {
+			return nil, fmt.Errorf("token has been revoked")
+		}
+	}
+
 	return claims, nil
 }
 
-func (s *Service) generateToken(userID string, userType int) (string, error) {
+func (s *Service) generateAccessToken(userID string, userType int) (string, error) {
+	now := time.Now()
 	claims := &Claims{
 		UserID: userID,
 		Type:   userType,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.expireDur)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "im-server",
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessExpire)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			Issuer:    "panda_ai",
 		},
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.jwtSecret)
 }
+
+// generateRefreshToken creates an opaque refresh token stored in Redis.
+func (s *Service) generateRefreshToken(ctx context.Context, userID string) (string, error) {
+	if s.rdb == nil {
+		// Fallback: return empty string if Redis is not configured
+		return "", nil
+	}
+
+	tokenID := make([]byte, 32)
+	if _, err := rand.Read(tokenID); err != nil {
+		return "", fmt.Errorf("generate refresh token: %w", err)
+	}
+	tokenStr := hex.EncodeToString(tokenID)
+
+	rt := refreshTokenData{
+		UserID:    userID,
+		TokenID:   tokenStr,
+		ExpiresAt: time.Now().Add(s.refreshExpire).Unix(),
+	}
+	data, err := json.Marshal(rt)
+	if err != nil {
+		return "", fmt.Errorf("marshal refresh token: %w", err)
+	}
+
+	if err := s.rdb.Set(ctx, refreshTokenKeyPrefix+tokenStr, data, s.refreshExpire).Err(); err != nil {
+		return "", fmt.Errorf("store refresh token: %w", err)
+	}
+
+	return tokenStr, nil
+}
+
+// ctxTODO is a background context for blacklist checks where the request
+// context isn't available. Only used in ParseToken for blacklist lookups.
+var ctxTODO = context.Background()

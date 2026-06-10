@@ -4,15 +4,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type ContactRepo struct {
-	pool *pgxpool.Pool
+	pool DBPool
 }
 
-func NewContactRepo(pool *pgxpool.Pool) *ContactRepo {
+func NewContactRepo(pool DBPool) *ContactRepo {
 	return &ContactRepo{pool: pool}
 }
 

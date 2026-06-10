@@ -23,7 +23,7 @@ redis:
 jwt:
   secret: "test-secret"
   expire_hours: 72
-  private_key_path: "/keys/private.pem"
+  refresh_expire_hours: 168
 snowflake:
   worker_id: 3
   start_time: "2025-01-01T00:00:00Z"
@@ -78,8 +78,8 @@ ratelimit:
 	if cfg.JWT.ExpireHours != 72 {
 		t.Errorf("JWT.ExpireHours = %d, want 72", cfg.JWT.ExpireHours)
 	}
-	if cfg.JWT.PrivateKeyPath != "/keys/private.pem" {
-		t.Errorf("JWT.PrivateKeyPath = %q, want %q", cfg.JWT.PrivateKeyPath, "/keys/private.pem")
+	if cfg.JWT.RefreshExpireHours != 168 {
+		t.Errorf("JWT.RefreshExpireHours = %d, want 168", cfg.JWT.RefreshExpireHours)
 	}
 
 	// Snowflake
@@ -149,8 +149,11 @@ func TestLoad_MinimalConfig_AppliesDefaults(t *testing.T) {
 	if cfg.Postgres.Migrations != "internal/storage/db/migrations" {
 		t.Errorf("Postgres.Migrations default = %q, want %q", cfg.Postgres.Migrations, "internal/storage/db/migrations")
 	}
-	if cfg.JWT.ExpireHours != 168 {
-		t.Errorf("JWT.ExpireHours default = %d, want 168", cfg.JWT.ExpireHours)
+	if cfg.JWT.ExpireHours != 1 {
+		t.Errorf("JWT.ExpireHours default = %d, want 1", cfg.JWT.ExpireHours)
+	}
+	if cfg.JWT.RefreshExpireHours != 168 {
+		t.Errorf("JWT.RefreshExpireHours default = %d, want 168", cfg.JWT.RefreshExpireHours)
 	}
 	if cfg.RateLimit.MsgPerSec != 30 {
 		t.Errorf("RateLimit.MsgPerSec default = %d, want 30", cfg.RateLimit.MsgPerSec)
@@ -192,6 +195,9 @@ func TestSetDefaults(t *testing.T) {
 		if cfg.JWT.ExpireHours != 24 {
 			t.Errorf("JWT.ExpireHours = %d, want 24", cfg.JWT.ExpireHours)
 		}
+		if cfg.JWT.RefreshExpireHours != 168 {
+			t.Errorf("JWT.RefreshExpireHours = %d, want 168", cfg.JWT.RefreshExpireHours)
+		}
 		if cfg.RateLimit.MsgPerSec != 99 {
 			t.Errorf("RateLimit.MsgPerSec = %d, want 99", cfg.RateLimit.MsgPerSec)
 		}
@@ -216,8 +222,11 @@ func TestSetDefaults(t *testing.T) {
 		if cfg.Postgres.Migrations != "internal/storage/db/migrations" {
 			t.Errorf("Postgres.Migrations = %q, want %q", cfg.Postgres.Migrations, "internal/storage/db/migrations")
 		}
-		if cfg.JWT.ExpireHours != 168 {
-			t.Errorf("JWT.ExpireHours = %d, want 168", cfg.JWT.ExpireHours)
+		if cfg.JWT.ExpireHours != 1 {
+			t.Errorf("JWT.ExpireHours = %d, want 1", cfg.JWT.ExpireHours)
+		}
+		if cfg.JWT.RefreshExpireHours != 168 {
+			t.Errorf("JWT.RefreshExpireHours = %d, want 168", cfg.JWT.RefreshExpireHours)
 		}
 		if cfg.RateLimit.MsgPerSec != 30 {
 			t.Errorf("RateLimit.MsgPerSec = %d, want 30", cfg.RateLimit.MsgPerSec)

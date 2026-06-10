@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -13,18 +11,18 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dolphinz/im-server/config"
-	"github.com/dolphinz/im-server/internal/api"
-	"github.com/dolphinz/im-server/internal/auth"
-	"github.com/dolphinz/im-server/internal/conversation"
-	"github.com/dolphinz/im-server/internal/gateway"
-	"github.com/dolphinz/im-server/internal/handler"
-	"github.com/dolphinz/im-server/internal/message"
-	"github.com/dolphinz/im-server/internal/session"
-	"github.com/dolphinz/im-server/internal/storage/cache"
-	"github.com/dolphinz/im-server/internal/storage/db"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/config"
+	"siciv.space/agent/panda_ai/internal/api"
+	"siciv.space/agent/panda_ai/internal/auth"
+	"siciv.space/agent/panda_ai/internal/conversation"
+	"siciv.space/agent/panda_ai/internal/gateway"
+	"siciv.space/agent/panda_ai/internal/handler"
+	"siciv.space/agent/panda_ai/internal/message"
+	"siciv.space/agent/panda_ai/internal/session"
+	"siciv.space/agent/panda_ai/internal/storage/cache"
+	"siciv.space/agent/panda_ai/internal/storage/db"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 func main() {
@@ -82,26 +80,8 @@ func main() {
 	}
 	sf := model.NewSnowflake(cfg.Snowflake.WorkerID, startTime)
 
-	// Crypto (RSA for passwords)
-	var crypto *auth.Crypto
-	if cfg.JWT.PrivateKeyPath != "" {
-		crypto, err = auth.NewCrypto(cfg.JWT.PrivateKeyPath)
-		if err != nil {
-			logger.Error("load rsa key failed", "error", err)
-			os.Exit(1)
-		}
-	} else {
-		// Generate in-memory key for dev
-		priv, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			logger.Error("generate rsa key failed", "error", err)
-			os.Exit(1)
-		}
-		crypto = auth.NewCryptoFromKeys(priv)
-	}
-
-	// Auth service
-	authSvc := auth.NewService(crypto, cfg.JWT.Secret, cfg.JWT.ExpireHours, userRepo)
+	// Auth service (bcrypt password hashing + JWT with refresh tokens)
+	authSvc := auth.NewService(cfg.JWT.Secret, cfg.JWT.ExpireHours, cfg.JWT.RefreshExpireHours, userRepo, rdb, sf.NextID)
 
 	// Session manager
 	sessMgr := session.NewManager(sessCache, sessRepo)
@@ -134,13 +114,15 @@ func main() {
 	// HTTP API handlers
 	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
-	msgHandler := api.NewMsgHandler(msgRepo)
+	msgHandler := api.NewMsgHandler(msgRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, userRepo, sessMgr)
+	sessionHandler := api.NewSessionHandler(sessMgr, gwMgr)
 	handlers := &api.Handlers{
 		User:         userHandler,
 		Conversation: convHandler,
 		Message:      msgHandler,
 		Contact:      contactHandler,
+		Session:      sessionHandler,
 		DB:           pool,
 		RDB:          rdb,
 	}

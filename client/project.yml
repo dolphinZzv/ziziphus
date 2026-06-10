@@ -24,6 +24,9 @@ schemes:
 packages:
   IMCore:
     path: Packages/IMCore
+  MarkdownUI:
+    url: https://github.com/gonzalezreal/swift-markdown-ui
+    from: 2.4.0
 
 targets:
   IMApp:
@@ -33,8 +36,9 @@ targets:
       - path: macos/Sources/IMApp
     dependencies:
       - package: IMCore
+      - package: MarkdownUI
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.dolphinz.imapp
+      PRODUCT_BUNDLE_IDENTIFIER: space.siciv.pandaai.macos
       DEVELOPMENT_TEAM: ""
       CODE_SIGN_STYLE: Manual
       CODE_SIGN_IDENTITY: "-"
@@ -48,8 +52,9 @@ targets:
       - path: ios/Resources
     dependencies:
       - package: IMCore
+      - package: MarkdownUI
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.dolphinz.imapp
+      PRODUCT_BUNDLE_IDENTIFIER: space.siciv.pandaai.ios
       DEVELOPMENT_TEAM: ZNNCFNN477
       CODE_SIGN_STYLE: Automatic
       CODE_SIGN_IDENTITY: Apple Development

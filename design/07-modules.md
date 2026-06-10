@@ -4,7 +4,7 @@
 
 ```
 server/
-├── cmd/im-server/          # 服务入口
+├── cmd/panda_ai/          # 服务入口
 ├── internal/
 │   ├── gateway/            # WebSocket 连接管理
 │   │   ├── conn.go         # 连接封装

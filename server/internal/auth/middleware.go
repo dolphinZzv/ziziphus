@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dolphinz/im-server/pkg/i18n"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/i18n"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type ctxKey string
@@ -22,7 +22,12 @@ func UserFromCtx(ctx context.Context) string {
 	return uid
 }
 
-func AuthMiddleware(service *Service) func(http.Handler) http.Handler {
+// tokenParser is satisfied by *Service and allows mocking in tests.
+type tokenParser interface {
+	ParseToken(tokenStr string) (*Claims, error)
+}
+
+func AuthMiddleware(service tokenParser) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tokenStr := extractBearerToken(r)
@@ -41,7 +46,7 @@ func AuthMiddleware(service *Service) func(http.Handler) http.Handler {
 	}
 }
 
-func WSAuthMiddleware(service *Service) func(ctx context.Context, token string) (context.Context, error) {
+func WSAuthMiddleware(service tokenParser) func(ctx context.Context, token string) (context.Context, error) {
 	return func(ctx context.Context, token string) (context.Context, error) {
 		claims, err := service.ParseToken(token)
 		if err != nil {

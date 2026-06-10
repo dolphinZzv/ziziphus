@@ -8,11 +8,11 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/dolphinz/im-server/internal/auth"
-	"github.com/dolphinz/im-server/internal/storage/db"
-	"github.com/dolphinz/im-server/pkg/i18n"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/internal/auth"
+	"siciv.space/agent/panda_ai/internal/storage/db"
+	"siciv.space/agent/panda_ai/pkg/i18n"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type userGetter interface {
@@ -36,7 +36,7 @@ type ConvHandler struct {
 }
 
 type sysMsgSender interface {
-	SendSystemMessage(ctx context.Context, convID, body string) (*model.Message, error)
+	SendSystemMessage(ctx context.Context, convID, body string, senderID ...string) (*model.Message, error)
 }
 
 type readMarker interface {
@@ -52,11 +52,12 @@ type convManager interface {
 	Leave(ctx context.Context, convID, userID string) error
 	GetMembers(ctx context.Context, convID string) ([]*model.ConvMember, error)
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
+	GetMemberRole(ctx context.Context, convID, userID string) (model.ConvRole, error)
 	RequestJoin(ctx context.Context, convID, userID string) error
 	ListJoinRequests(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error)
 	ApproveJoinRequest(ctx context.Context, convID, userID, operatorID string) error
 	RejectJoinRequest(ctx context.Context, convID, userID, operatorID string) error
-	}
+}
 
 type convSeqCache interface {
 	GetUnreadCount(ctx context.Context, userID, convID string) (int64, error)
@@ -153,6 +154,18 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Only owner or admin can update group info
+	userID := auth.UserFromCtx(r.Context())
+	role, err := h.convMgr.GetMemberRole(r.Context(), convID, userID)
+	if err != nil {
+		NotFound(w, r)
+		return
+	}
+	if role < model.ConvRoleAdmin {
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
+		return
+	}
+
 	if err := h.convRepo.UpdateNameAvatar(r.Context(), convID, req.Name, req.Avatar); err != nil {
 		logger.Error("update group failed", "conv_id", convID, "error", err)
 		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
@@ -196,7 +209,7 @@ func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.sysMsg != nil {
-		h.sysMsg.SendSystemMessage(r.Context(), conv.ConvID, i18n.T(r.Context(), "sys.group_created", userID))
+		h.sysMsg.SendSystemMessage(r.Context(), conv.ConvID, i18n.T(r.Context(), "sys.group_created", userID, conv.Name), userID)
 	}
 
 	JSON(w, map[string]interface{}{
@@ -273,23 +286,30 @@ func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
 
-	var lastErr error
+	var succeeded []string
+	var firstErr error
 	for _, mid := range req.UserIDs {
 		if err := h.convMgr.AddMember(r.Context(), convID, mid, userID); err != nil {
-			lastErr = err
 			logger.Warn("add member failed", "conv_id", convID, "member_id", mid, "error", err)
-		}
-	}
-	if lastErr != nil {
-		if appErr, ok := lastErr.(*model.AppError); ok {
-			Error(w, r,http.StatusForbidden, appErr)
-			return
+			if firstErr == nil {
+				firstErr = err
+			}
+		} else {
+			succeeded = append(succeeded, mid)
 		}
 	}
 	if h.sysMsg != nil {
-		for _, mid := range req.UserIDs {
-			h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_added", mid))
+		for _, mid := range succeeded {
+			h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_added", mid), userID)
 		}
+	}
+	if len(succeeded) == 0 && firstErr != nil {
+		if appErr, ok := firstErr.(*model.AppError); ok {
+			Error(w, r, http.StatusForbidden, appErr)
+			return
+		}
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
 	}
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }
@@ -374,7 +394,7 @@ func (h *ConvHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.sysMsg != nil {
-		h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_removed", targetID))
+		h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_removed", targetID), userID)
 	}
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }
@@ -388,7 +408,7 @@ func (h *ConvHandler) Leave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.sysMsg != nil {
-		h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_left", userID))
+		h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_left", userID), userID)
 	}
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }
@@ -405,6 +425,16 @@ func (h *ConvHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
+
+	isMember, err := h.convMgr.IsMember(r.Context(), convID, userID)
+	if err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	if !isMember {
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.not_in_conv_specific")})
+		return
+	}
 
 	if h.readMarker != nil {
 		h.readMarker.MarkRead(r.Context(), userID, convID, req.MsgID)

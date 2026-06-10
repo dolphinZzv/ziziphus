@@ -29,7 +29,7 @@ struct LoginView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.blue)
 
-            Text("DolphinZ")
+            Text("PandaAI")
                 .font(.largeTitle)
                 .fontWeight(.bold)
 

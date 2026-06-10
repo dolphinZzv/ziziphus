@@ -37,7 +37,7 @@ struct ConversationRowView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     HStack(spacing: 6) {
-                        Text(conv.name)
+                        Text(conv.type == .p2p ? String(format: loc("chat.session_title"), conv.name) : conv.name)
                             .fontWeight(.medium)
                             .lineLimit(1)
 
@@ -50,7 +50,9 @@ struct ConversationRowView: View {
 
                     Spacer()
 
-                    if conv.lastMsgAt > 0 {
+                    if let timestamp = conv.lastMessage?.timestamp, timestamp > 0 {
+                        Text(formatTime(timestamp))
+                    } else if conv.lastMsgAt > 0 {
                         Text(formatTime(conv.lastMsgAt))
                             .font(.caption2)
                             .foregroundColor(.secondary)

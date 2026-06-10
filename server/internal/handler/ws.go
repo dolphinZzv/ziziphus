@@ -3,17 +3,18 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/dolphinz/im-server/internal/auth"
-	"github.com/dolphinz/im-server/internal/gateway"
-	"github.com/dolphinz/im-server/pkg/i18n"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
-	"github.com/dolphinz/im-server/pkg/protocol"
+	"siciv.space/agent/panda_ai/internal/auth"
+	"siciv.space/agent/panda_ai/internal/gateway"
+	"siciv.space/agent/panda_ai/pkg/i18n"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 var upgrader = websocket.Upgrader{
@@ -34,8 +35,9 @@ type WSHandler struct {
 }
 
 type sessionManager interface {
-	Create(ctx context.Context, userID string, device model.DeviceType, deviceName string) (*model.Session, error)
+	Create(ctx context.Context, userID string, device model.DeviceType, deviceName string, clientIP string, deviceID string) (*model.Session, error)
 	Get(ctx context.Context, sessionID string) *model.Session
+	GetUserSessionIDs(ctx context.Context, userID string) []string
 	Delete(ctx context.Context, sessionID string) error
 	BindConnection(ctx context.Context, sessionID, connID string) error
 }
@@ -79,6 +81,27 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	token := r.URL.Query().Get("token")
+	platform := r.URL.Query().Get("platform")
+
+	deviceType := model.DeviceDesktop
+	deviceName := "macOS"
+	switch platform {
+	case "ios":
+		deviceType = model.DevicePhone
+		deviceName = "iOS"
+	case "ipados":
+		deviceType = model.DeviceTablet
+		deviceName = "iPadOS"
+	}
+
+	deviceID := r.URL.Query().Get("device_id")
+
+	// extract client IP
+	clientIP := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(clientIP); err == nil {
+		clientIP = host
+	}
+
 	ctx, err := h.authMW(r.Context(), token)
 	if err != nil {
 		logger.Warn("ws auth failed", "error", err)
@@ -87,7 +110,18 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := auth.UserFromCtx(ctx)
 
-	sess, err := h.sessMgr.Create(ctx, userID, model.DeviceDesktop, "web")
+	// dedup: remove any existing session with the same device_id
+	if deviceID != "" {
+		for _, sid := range h.sessMgr.GetUserSessionIDs(ctx, userID) {
+			existing := h.sessMgr.Get(ctx, sid)
+			if existing != nil && existing.DeviceID == deviceID {
+				h.connMgr.DisconnectBySessionID(ctx, sid)
+				h.sessMgr.Delete(ctx, sid)
+			}
+		}
+	}
+
+	sess, err := h.sessMgr.Create(ctx, userID, deviceType, deviceName, clientIP, deviceID)
 	if err != nil {
 		logger.Error("ws session create failed", "user_id", userID, "error", err)
 		writeWSError(conn, model.ErrInternal, i18n.T(r.Context(), "err.create_session_failed"))
@@ -95,7 +129,7 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	connID := "conn_" + uuid.New().String()[:8]
-	gwConn := gateway.NewConnection(connID, userID, sess.SessionID, int(model.DeviceDesktop), conn)
+	gwConn := gateway.NewConnection(connID, userID, sess.SessionID, int(deviceType), conn)
 
 	h.connMgr.Add(ctx, gwConn)
 	h.sessMgr.BindConnection(ctx, sess.SessionID, connID)
@@ -103,14 +137,23 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger.Info("ws connected", "user_id", userID, "session_id", sess.SessionID, "conn_id", connID)
 
 	// notify other online users
-	h.broadcastSessionEvent(ctx, userID, sess.SessionID, int(model.DeviceDesktop), protocol.SessionOnline)
+	h.broadcastSessionEvent(ctx, userID, sess.SessionID, int(deviceType), protocol.SessionOnline)
+
+	// send welcome frame so the client can transition out of .connecting
+	welcome := protocol.SessionRecoverAckPayload{
+		SessionID: sess.SessionID,
+		UserID:    userID,
+		Timestamp: time.Now().UnixMilli(),
+	}
+	welcomeData, _ := json.Marshal(welcome)
+	gwConn.SendFrame(protocol.Frame{Type: protocol.SessionRecoverAck, Payload: welcomeData})
 
 	// read loop (blocks until disconnect)
 	h.readLoop(ctx, gwConn, userID, sess.SessionID)
 
 	// cleanup on disconnect
 	logger.Info("ws disconnected", "user_id", userID, "session_id", sess.SessionID, "conn_id", connID)
-	h.broadcastSessionEvent(context.Background(), userID, sess.SessionID, int(model.DeviceDesktop), protocol.SessionOffline)
+	h.broadcastSessionEvent(context.Background(), userID, sess.SessionID, int(deviceType), protocol.SessionOffline)
 	h.connMgr.Remove(context.Background(), connID)
 }
 
@@ -189,9 +232,13 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 		if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 			return err
 		}
-		recoveredID := payload.SessionID
-		if err := h.sessMgr.BindConnection(context.Background(), payload.SessionID, conn.ConnID); err != nil {
-			recoveredID = sessionID
+		recoveredID := sessionID
+		existingSess := h.sessMgr.Get(context.Background(), payload.SessionID)
+		if existingSess != nil && existingSess.UserID == userID {
+			recoveredID = payload.SessionID
+			if err := h.sessMgr.BindConnection(context.Background(), payload.SessionID, conn.ConnID); err != nil {
+				recoveredID = sessionID
+			}
 		}
 		ack := protocol.SessionRecoverAckPayload{
 			SessionID: recoveredID,

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 func TestNewRateLimiter(t *testing.T) {

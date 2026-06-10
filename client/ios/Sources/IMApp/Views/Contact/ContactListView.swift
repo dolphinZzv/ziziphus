@@ -122,8 +122,10 @@ struct ContactListView: View {
             }
             Button(loc("contact.delete_button"), role: .destructive) {
                 if let indexSet = confirmDelete {
-                    for idx in indexSet {
-                        Task { try? await vm.removeContact(userID: vm.contacts[idx].userID) }
+                    Task {
+                        for idx in indexSet.sorted(by: >) {
+                            try? await vm.removeContact(userID: vm.contacts[idx].userID)
+                        }
                     }
                 }
                 confirmDelete = nil

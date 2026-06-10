@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/dolphinz/im-server/pkg/version"
+	"siciv.space/agent/panda_ai/pkg/version"
 )
 
 type versionResp struct {

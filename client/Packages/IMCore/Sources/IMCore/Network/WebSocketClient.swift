@@ -86,7 +86,18 @@ public class WebSocketClient: ObservableObject {
         let wsBase = AppSettings.shared.serverURL
             .replacingOccurrences(of: "http://", with: "ws://")
             .replacingOccurrences(of: "https://", with: "wss://")
-        guard let url = URL(string: "\(wsBase)/ws?token=\(encodedToken)") else {
+        #if os(iOS)
+        let platform: String = {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                return "ipados"
+            }
+            return "ios"
+        }()
+        #else
+        let platform = "macos"
+        #endif
+        let deviceID = DeviceManager.shared.deviceID
+        guard let url = URL(string: "\(wsBase)/ws?token=\(encodedToken)&platform=\(platform)&device_id=\(deviceID)") else {
             connectionStatus = .disconnected
             return
         }
@@ -96,7 +107,8 @@ public class WebSocketClient: ObservableObject {
         webSocketTask = task
         task.resume()
         hasConnectedOnce = false
-        connectionStatus = .connected
+        // Don't set .connected here — wait for the first incoming message
+        // in startReadLoop to confirm the handshake actually succeeded.
         startReadLoop()
 
         if let sessionID = AuthManager.shared.sessionID {
@@ -161,6 +173,8 @@ public class WebSocketClient: ObservableObject {
                     if let cont = self?.ackContinuations.removeValue(forKey: ackID) {
                         cont.resume(throwing: APIError.timeout)
                     }
+                    // Remove from sendQueue to prevent stale delivery on reconnect
+                    self?.sendQueue.removeAll { $0.id == ackID }
                 }
             }
         }
@@ -227,6 +241,17 @@ public class WebSocketClient: ObservableObject {
 
         if !frameID.isEmpty, let cont = ackContinuations.removeValue(forKey: frameID) {
             cont.resume(returning: frame)
+            return
+        }
+
+        if messageType == .error,
+           let errPayload = try? JSONDecoder().decode(WSErrorPayload.self, from: payloadData),
+           errPayload.code == 4001 {
+            // kicked by server — stop reconnecting and trigger logout
+            isActive = false
+            disconnect()
+            AuthManager.shared.logout()
+            NotificationCenter.default.post(name: .init("kicked"), object: nil)
             return
         }
 

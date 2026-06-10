@@ -13,16 +13,23 @@ public class ConversationListViewModel: ObservableObject {
     private let wsClient = WebSocketClient.shared
     private let cache = ConversationCache.shared
     private var cancellables: Set<AnyCancellable> = []
+    private var connectionStatusTask: Task<Void, Never>?
+    private var refreshTask: Task<Void, Never>?
 
     public init() {
         setupSubscriptions()
     }
 
+    deinit {
+        connectionStatusTask?.cancel()
+    }
+
     private func setupSubscriptions() {
         // Observe connection status
-        Task { [weak self, weak wsClient] in
+        connectionStatusTask = Task { [weak self, weak wsClient] in
             guard let wsClient else { return }
             for await status in wsClient.$connectionStatus.values {
+                guard !Task.isCancelled else { break }
                 self?.connectionStatus = status
             }
         }
@@ -88,14 +95,18 @@ public class ConversationListViewModel: ObservableObject {
     }
 
     private func handlePush(payload: MsgPushPayload, frame: WSFrame) {
-        // Update conversation list when new message arrives
-        Task {
+        // Throttle: cancel any pending refresh and debounce to avoid redundant requests
+        refreshTask?.cancel()
+        refreshTask = Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(nanoseconds: 500_000_000)  // 500ms debounce
+            guard !Task.isCancelled else { return }
             do {
                 let items = try await convService.listConversations()
                 self.conversations = items
                 self.cache.upsertConversations(items)
             } catch {
-                errorMessage = error.localizedDescription
+                self.errorMessage = error.localizedDescription
             }
         }
     }

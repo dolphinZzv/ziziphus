@@ -5,15 +5,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type RateLimiter struct {
-	mu          sync.Mutex
-	userBuckets map[string]*bucket
-	msgPerSec   int
-	burstSize   int
-	maxBodyBytes int
+	mu              sync.Mutex
+	userBuckets     map[string]*bucket
+	msgPerSec       int
+	burstSize       int
+	maxBodyBytes    int
+	cleanupInterval time.Duration
+	stopped         chan struct{}
 }
 
 type bucket struct {
@@ -22,12 +24,16 @@ type bucket struct {
 }
 
 func NewRateLimiter(msgPerSec, burstSize, maxBodyBytes int) *RateLimiter {
-	return &RateLimiter{
-		userBuckets:  make(map[string]*bucket),
-		msgPerSec:    msgPerSec,
-		burstSize:    burstSize,
-		maxBodyBytes: maxBodyBytes,
+	rl := &RateLimiter{
+		userBuckets:     make(map[string]*bucket),
+		msgPerSec:       msgPerSec,
+		burstSize:       burstSize,
+		maxBodyBytes:    maxBodyBytes,
+		cleanupInterval: 5 * time.Minute,
+		stopped:         make(chan struct{}),
 	}
+	go rl.cleanupLoop()
+	return rl
 }
 
 func (rl *RateLimiter) Check(ctx context.Context, userID string) error {
@@ -60,4 +66,28 @@ func (rl *RateLimiter) CheckBodySize(body string) error {
 		return model.ErrMsgTooLarge
 	}
 	return nil
+}
+
+func (rl *RateLimiter) cleanupLoop() {
+	ticker := time.NewTicker(rl.cleanupInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			rl.cleanup()
+		case <-rl.stopped:
+			return
+		}
+	}
+}
+
+func (rl *RateLimiter) cleanup() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	threshold := time.Now().Add(-rl.cleanupInterval * 2)
+	for userID, b := range rl.userBuckets {
+		if b.lastCheck.Before(threshold) {
+			delete(rl.userBuckets, userID)
+		}
+	}
 }

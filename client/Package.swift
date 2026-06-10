@@ -11,7 +11,9 @@ let package = Package(
         .executable(name: "IMApp-macOS", targets: ["IMApp-macOS"]),
         .library(name: "IMCore", targets: ["IMCore"]),
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.0"),
+    ],
     targets: [
         .target(
             name: "IMCore",
@@ -19,7 +21,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "IMApp-macOS",
-            dependencies: ["IMCore"],
+            dependencies: ["IMCore", .product(name: "MarkdownUI", package: "swift-markdown-ui")],
             path: "macOS/Sources/IMApp",
             resources: []
         ),

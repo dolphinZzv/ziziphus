@@ -14,12 +14,12 @@ build-info:
 
 # 后端服务
 server: server-stop
-	cd server && go build -ldflags "-X github.com/dolphinz/im-server/pkg/version.GitCommit=$(GIT_HASH)" -o /tmp/im-server ./cmd/im-server/
-	cd server && /tmp/im-server --config config/config.yaml &
+	cd server && go build -ldflags "-X siciv.space/agent/panda_ai/pkg/version.GitCommit=$(GIT_HASH)" -o /tmp/panda_ai ./cmd/panda_ai/
+	cd server && /tmp/panda_ai -c config/config.yaml &
 	@echo "Server started"
 
 server-stop:
-	@pkill -f "/tmp/im-server" 2>/dev/null || true
+	@pkill -f "/tmp/panda_ai" 2>/dev/null || true
 	@echo "Server stopped"
 
 APP_BUNDLE = client/.build/debug/IMApp-macOS.app
@@ -36,8 +36,9 @@ macos: build-info macos-stop
 	fi
 	plutil -replace CFBundleShortVersionString -string "1.0" "$(APP_BUNDLE)/Contents/Info.plist" && \
 	plutil -replace CFBundleExecutable -string IMApp-macOS "$(APP_BUNDLE)/Contents/Info.plist" && \
-	plutil -replace CFBundleIdentifier -string com.dolphinz.imapp "$(APP_BUNDLE)/Contents/Info.plist" && \
-	plutil -replace CFBundleName -string "Dolphin" "$(APP_BUNDLE)/Contents/Info.plist" && \
+	plutil -replace CFBundleIdentifier -string space.siciv.pandaai.macos "$(APP_BUNDLE)/Contents/Info.plist" && \
+	plutil -replace CFBundleName -string "Panda" "$(APP_BUNDLE)/Contents/Info.plist" && \
+		plutil -replace CFBundleDisplayName -string "Panda" "$(APP_BUNDLE)/Contents/Info.plist" && \
 	plutil -replace CFBundleVersion -string 1 "$(APP_BUNDLE)/Contents/Info.plist" && \
 	plutil -replace CFBundlePackageType -string APPL "$(APP_BUNDLE)/Contents/Info.plist" && \
 	plutil -replace LSMinimumSystemVersion -string "15.0" "$(APP_BUNDLE)/Contents/Info.plist"

@@ -57,6 +57,35 @@ struct AppSettingsView: View {
                     .padding(.horizontal)
                     .padding(.top, AppleDesign.Spacing.md)
 
+                    // Device
+                    GroupBox(loc("settings.device")) {
+                        VStack(spacing: 8) {
+                            HStack {
+                                Text(loc("settings.session_id"))
+                                    .font(.appleBody)
+                                    .foregroundColor(AppleDesign.Colors.ink)
+                                Spacer()
+                                Text(AuthManager.shared.sessionID ?? "")
+                                    .font(.appleBody)
+                                    .foregroundColor(AppleDesign.Colors.inkMuted)
+                                    .textSelection(.enabled)
+                            }
+                            HStack {
+                                Text(loc("settings.device_id"))
+                                    .font(.appleBody)
+                                    .foregroundColor(AppleDesign.Colors.ink)
+                                Spacer()
+                                Text(DeviceManager.shared.deviceID)
+                                    .font(.appleBody)
+                                    .foregroundColor(AppleDesign.Colors.inkMuted)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, AppleDesign.Spacing.md)
+
                     // App Info
                     GroupBox(loc("settings.app_info")) {
                         Button(action: { showAppInfo = true }) {
@@ -69,6 +98,7 @@ struct AppSettingsView: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, AppleDesign.Spacing.md)
+
                 }
             }
 

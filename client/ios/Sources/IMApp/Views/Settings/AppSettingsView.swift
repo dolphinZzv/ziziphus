@@ -33,6 +33,23 @@ struct AppSettingsView: View {
                     .pickerStyle(.menu)
                 }
 
+                Section(loc("settings.device")) {
+                    HStack {
+                        Text(loc("settings.session_id"))
+                        Spacer()
+                        Text(AuthManager.shared.sessionID ?? "")
+                            .textSelection(.enabled)
+                            .foregroundColor(.secondary)
+                    }
+                    HStack {
+                        Text(loc("settings.device_id"))
+                        Spacer()
+                        Text(DeviceManager.shared.deviceID)
+                            .textSelection(.enabled)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
                 Section {
                     NavigationLink {
                         AppInfoView()

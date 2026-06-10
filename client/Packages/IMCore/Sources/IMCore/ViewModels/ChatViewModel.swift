@@ -33,6 +33,7 @@ public class ChatViewModel: ObservableObject {
     @Published public var errorMessage: String?
 
     private let maxBodyBytes = 10_240
+    private let maxMessages = 500
 
     public let convID: String
     private let msgService = MessageService.shared
@@ -105,6 +106,7 @@ public class ChatViewModel: ObservableObject {
 
     // MARK: - Load Messages
     public func loadInitialMessages() {
+        // Show cached messages instantly
         messages = cache.getMessages(convID: convID)
         sortMessages()
 
@@ -114,8 +116,12 @@ public class ChatViewModel: ObservableObject {
                 for msg in msgs {
                     cache.insertMessage(msg)
                 }
-                messages = cache.getMessages(convID: convID)
-                sortMessages()
+                // Check if there are truly new messages before replacing
+                let updated = cache.getMessages(convID: convID)
+                if updated.map(\.msgID) != messages.map(\.msgID) {
+                    messages = updated
+                    sortMessages()
+                }
                 if msgs.count < 50 {
                     allHistoryLoaded = true
                 }
@@ -136,8 +142,20 @@ public class ChatViewModel: ObservableObject {
                 for msg in msgs {
                     cache.insertMessage(msg)
                 }
-                messages = cache.getMessages(convID: convID)
-                sortMessages()
+                // Prepend new messages directly — don't use cache.getMessages (returns only last 50)
+                let existingIDs = Set(messages.filter { $0.msgID > 0 }.map(\.msgID))
+                let newMsgs = msgs.filter { !existingIDs.contains($0.msgID) }
+                if !newMsgs.isEmpty {
+                    messages.append(contentsOf: newMsgs)
+                    sortMessages()
+                    // Cap to prevent unbounded growth.
+                    // When capping discards the oldest messages, mark allHistoryLoaded
+                    // to prevent the next scroll-to-top from requesting a gap.
+                    if messages.count > maxMessages {
+                        messages = Array(messages.suffix(maxMessages))
+                        allHistoryLoaded = true
+                    }
+                }
                 if msgs.count < 50 {
                     allHistoryLoaded = true
                 }
@@ -173,6 +191,7 @@ public class ChatViewModel: ObservableObject {
             sendErrorMessage = loc("chat.message_too_long")
             return
         }
+        guard !isSending else { return }
 
         sendErrorMessage = nil
         inputText = ""
@@ -211,6 +230,7 @@ public class ChatViewModel: ObservableObject {
     }
 
     public func retryMessage(clientSeq: Int64) {
+        guard !isSending else { return }
         guard let idx = messages.firstIndex(where: { $0.clientSeq == clientSeq && $0.status == .failed }),
               idx < messages.count else { return }
         let failedMsg = messages[idx]
@@ -254,6 +274,57 @@ public class ChatViewModel: ObservableObject {
         if let data = try? JSONEncoder().encode(payload) {
             ws.send(frame: WSFrame(type: .typing, payload: data))
         }
+    }
+
+    // MARK: - Chat Items (with date grouping & bubble merging)
+    public var chatItems: [ChatItem] {
+        guard !messages.isEmpty else { return [] }
+        var items: [ChatItem] = []
+        let calendar = Calendar.current
+        let currentUserID = AuthManager.shared.currentUser?.userID ?? ""
+
+        for i in messages.indices {
+            let msg = messages[i]
+            let msgDate = Date(timeIntervalSince1970: Double(msg.timestamp) / 1000)
+
+            // Date separator
+            if i == 0 {
+                items.append(.dateSeparator(msgDate))
+            } else {
+                let prevDate = Date(timeIntervalSince1970: Double(messages[i - 1].timestamp) / 1000)
+                if !calendar.isDate(msgDate, inSameDayAs: prevDate) {
+                    items.append(.dateSeparator(msgDate))
+                }
+            }
+
+            // Group detection: same sender, within 5 minutes
+            let isSameSender = msg.senderID == currentUserID
+                ? (i > 0 && messages[i - 1].senderID == currentUserID)
+                : (i > 0 && messages[i - 1].senderID == msg.senderID)
+            let timeDiff: Double = i > 0 ? Double(msg.timestamp - messages[i - 1].timestamp) / 1000 : 999
+            let inSameGroup = isSameSender && timeDiff < 300
+
+            // Check if this message continues a group
+            let isFirstInGroup = !inSameGroup
+
+            // Check if next message continues the group
+            let isNextSameSender: Bool
+            let nextTimeDiff: Double
+            if i + 1 < messages.count {
+                let next = messages[i + 1]
+                isNextSameSender = msg.senderID == currentUserID
+                    ? next.senderID == currentUserID
+                    : next.senderID == msg.senderID
+                nextTimeDiff = Double(next.timestamp - msg.timestamp) / 1000
+            } else {
+                isNextSameSender = false
+                nextTimeDiff = 999
+            }
+            let isLastInGroup = !(isNextSameSender && nextTimeDiff < 300)
+
+            items.append(.message(msg, isFirstInGroup: isFirstInGroup, isLastInGroup: isLastInGroup))
+        }
+        return items
     }
 
     // MARK: - Helpers

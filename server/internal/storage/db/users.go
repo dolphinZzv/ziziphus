@@ -2,19 +2,17 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/dolphinz/im-server/pkg/logger"
-	"github.com/dolphinz/im-server/pkg/model"
+	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type UserRepo struct {
-	pool *pgxpool.Pool
+	pool DBPool
 }
 
-func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
+func NewUserRepo(pool DBPool) *UserRepo {
 	return &UserRepo{pool: pool}
 }
 
@@ -35,9 +33,7 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*model.User, error) 
 	if err != nil {
 		logger.Error("GetByID query failed",
 			"id", id,
-			"error", err,
-			"scan_types", fmt.Sprintf("%T %T %T %T %T %T %T %T %T",
-				&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &u.Password, &u.ExtMeta, &createdAt, &u.Account))
+			"error", err)
 		return nil, err
 	}
 	u.CreatedAt = createdAt.UnixMilli()

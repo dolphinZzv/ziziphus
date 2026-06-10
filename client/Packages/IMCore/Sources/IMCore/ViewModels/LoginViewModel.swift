@@ -44,7 +44,18 @@ public class LoginViewModel: ObservableObject {
         showAccountPicker = false
     }
 
-    public init() {}
+    public init() {
+        NotificationCenter.default.addObserver(
+            forName: .init("kicked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.isLoggedIn = false
+                self?.isCheckingSession = false
+            }
+        }
+    }
 
     public func login() {
         guard !account.isEmpty, !password.isEmpty else {
