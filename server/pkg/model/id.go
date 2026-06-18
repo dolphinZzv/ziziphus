@@ -41,11 +41,11 @@ func IsGroupConvID(convID string) bool {
 }
 
 type Snowflake struct {
-	mu         sync.Mutex
-	lastTime   int64
-	sequence   int64
-	workerID   int64
-	epoch      int64
+	mu       sync.Mutex
+	lastTime int64
+	sequence int64
+	workerID int64
+	epoch    int64
 }
 
 func NewSnowflake(workerID int64, epoch time.Time) *Snowflake {

@@ -18,22 +18,15 @@ struct AvatarView: View {
 
     var body: some View {
         if let imageURL = resolvedURL {
-            AsyncImage(url: imageURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: size, height: size)
-                        .clipShape(Circle())
-                case .failure:
-                    letterFallback
-                case .empty:
-                    ProgressView()
-                        .frame(width: size, height: size)
-                @unknown default:
-                    letterFallback
-                }
+            CachedAsyncImage(url: imageURL) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+            } placeholder: {
+                ProgressView()
+                    .frame(width: size, height: size)
             }
             .frame(width: size, height: size)
         } else {

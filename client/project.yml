@@ -3,7 +3,7 @@ options:
   bundleIdPrefix: com.dolphinz
   deploymentTarget:
     macOS: "15.0"
-    iOS: "17.0"
+    iOS: "18.0"
 
 settings:
   SWIFT_VERSION: "6.0"
@@ -24,9 +24,8 @@ schemes:
 packages:
   IMCore:
     path: Packages/IMCore
-  MarkdownUI:
-    url: https://github.com/gonzalezreal/swift-markdown-ui
-    from: 2.4.0
+  Textual:
+    path: ../deps/textual
 
 targets:
   IMApp:
@@ -36,7 +35,7 @@ targets:
       - path: macos/Sources/IMApp
     dependencies:
       - package: IMCore
-      - package: MarkdownUI
+      - package: Textual
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: space.siciv.pandaai.macos
       DEVELOPMENT_TEAM: ""
@@ -52,14 +51,14 @@ targets:
       - path: ios/Resources
     dependencies:
       - package: IMCore
-      - package: MarkdownUI
+      - package: Textual
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: space.siciv.pandaai.ios
       DEVELOPMENT_TEAM: ZNNCFNN477
       CODE_SIGN_STYLE: Automatic
       CODE_SIGN_IDENTITY: Apple Development
       INFOPLIST_FILE: ios/Resources/Info.plist
-      IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+      IPHONEOS_DEPLOYMENT_TARGET: "18.0"
 
   IMAppUITests:
     type: bundle.ui-testing

@@ -5,11 +5,17 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"siciv.space/agent/panda_ai/pkg/version"
 )
 
+var serverStartupTime = time.Now()
+
 type healthResp struct {
-	Status     string            `json:"status"`
-	Components map[string]string `json:"components"`
+	Status      string            `json:"status"`
+	Components  map[string]string `json:"components"`
+	StartupTime string            `json:"startup_time"`
+	GitCommit   string            `json:"git_commit"`
 }
 
 func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
@@ -40,8 +46,10 @@ func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(httpStatus)
 
 	resp := APIResponse{Code: 0, Msg: status, Data: healthResp{
-		Status:     status,
-		Components: components,
+		Status:      status,
+		Components:  components,
+		StartupTime: serverStartupTime.Format(time.RFC3339),
+		GitCommit:   version.GitCommit,
 	}}
 	json.NewEncoder(w).Encode(resp)
 }

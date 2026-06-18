@@ -93,4 +93,78 @@ public class AuthService {
         // Fetch full user after update
         return try await getMe()
     }
+
+    // MARK: - Agents
+    public func listAgents() async throws -> [User] {
+        let agents: [User] = try await api.request("/api/v1/users/me/agents")
+        return agents
+    }
+
+    public func createAgent(name: String, avatar: String = "", primaryColor: String = "", secondaryColor: String = "", wakeMode: Int = 0) async throws -> User {
+        struct CreateAgentReq: Codable, Sendable {
+            let name: String
+            let avatar: String
+            let primaryColor: String
+            let secondaryColor: String
+            let wakeMode: Int
+
+            enum CodingKeys: String, CodingKey {
+                case name, avatar
+                case primaryColor = "primary_color"
+                case secondaryColor = "secondary_color"
+                case wakeMode = "wake_mode"
+            }
+        }
+
+        let agent: User = try await api.request(
+            "/api/v1/users/me/agents",
+            method: .post,
+            body: CreateAgentReq(name: name, avatar: avatar, primaryColor: primaryColor, secondaryColor: secondaryColor, wakeMode: wakeMode)
+        )
+        return agent
+    }
+
+    public func updateAgent(agentID: String, name: String, avatar: String = "", primaryColor: String = "", secondaryColor: String = "", wakeMode: Int = 0) async throws {
+        struct UpdateAgentReq: Codable, Sendable {
+            let name: String
+            let avatar: String
+            let primaryColor: String
+            let secondaryColor: String
+            let wakeMode: Int
+
+            enum CodingKeys: String, CodingKey {
+                case name, avatar
+                case primaryColor = "primary_color"
+                case secondaryColor = "secondary_color"
+                case wakeMode = "wake_mode"
+            }
+        }
+
+        let _: [String: String] = try await api.request(
+            "/api/v1/users/me/agents/\(agentID)",
+            method: .put,
+            body: UpdateAgentReq(name: name, avatar: avatar, primaryColor: primaryColor, secondaryColor: secondaryColor, wakeMode: wakeMode)
+        )
+    }
+
+    public func regenerateAgentKey(agentID: String) async throws -> String {
+        struct RegenerateResp: Codable, Sendable {
+            let apiKey: String
+            enum CodingKeys: String, CodingKey {
+                case apiKey = "api_key"
+            }
+        }
+        let resp: RegenerateResp = try await api.request(
+            "/api/v1/users/me/agents/\(agentID)/regenerate-key",
+            method: .put
+        )
+        return resp.apiKey
+    }
+
+    public func deleteAgent(agentID: String) async throws {
+        let _: [String: String] = try await api.request(
+            "/api/v1/users/me/agents/\(agentID)",
+            method: .delete
+        )
+    }
 }

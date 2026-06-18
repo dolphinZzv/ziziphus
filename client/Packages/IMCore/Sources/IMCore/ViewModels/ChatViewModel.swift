@@ -45,14 +45,21 @@ public class ChatViewModel: ObservableObject {
     private let contactService = ContactService.shared
 
     @Published public var senderInfo: [String: User] = [:]
+    @Published public var members: [ConvMember] = []
 
     private var typingTimer: Timer?
     private var lastTypingSend: TimeInterval = 0
     private let typingInterval: TimeInterval = 3
+    private var cancellables = Set<AnyCancellable>()
 
     public init(convID: String) {
         self.convID = convID
         setupSubscriptions()
+        $messages
+            .sink { [weak self] newMsgs in
+                self?.rebuildChatItems(from: newMsgs)
+            }
+            .store(in: &cancellables)
     }
 
     private func setupSubscriptions() {
@@ -63,8 +70,16 @@ public class ChatViewModel: ObservableObject {
             if let msg, msg.convID == self.convID {
                 Task { @MainActor in
                     logToFile("[ChatVM] push msg arrived: msgID=\(msg.msgID) body=\(msg.body.prefix(20))")
-                    self.insertMessageInOrder(msg)
-                    self.cache.insertMessage(msg)
+                    // agentTimeline with parentMsgID > 0: append entries to parent
+                    if msg.contentType == .agentTimeline,
+                       let data = msg.body.data(using: .utf8),
+                       let timeline = try? JSONDecoder().decode(AgentTimelineBody.self, from: data),
+                       timeline.parentMsgID > 0 {
+                        self.appendAgentTimelineEntries(timeline, toParent: timeline.parentMsgID)
+                    } else {
+                        self.insertMessageInOrder(msg)
+                        self.cache.insertMessage(msg)
+                    }
                     self.markAsReadIfActive()
                     self.loadSenderInfo()
                 }
@@ -185,6 +200,18 @@ public class ChatViewModel: ObservableObject {
         }
     }
 
+    public func loadMembers() {
+        guard members.isEmpty else { return }
+        Task {
+            do {
+                let detail = try await convService.getConversationDetail(convID: convID)
+                members = detail.members.filter { $0.userID != AuthManager.shared.currentUser?.userID }
+            } catch {
+                logToFile("[ChatVM] loadMembers error: \(error)")
+            }
+        }
+    }
+
     // MARK: - Load Context Around Message
     public func loadContextAround(msgID: Int64) {
         Task {
@@ -218,12 +245,15 @@ public class ChatViewModel: ObservableObject {
         replyingToMsg = nil
         isSending = true
 
+        let mentionIDs = extractMentionIDs(from: text)
+
         let clientSeq = AuthManager.shared.nextClientSeq()
         let localMsg = Message(
             convID: convID,
             senderID: AuthManager.shared.currentUser?.userID ?? "",
             body: text,
             replyTo: replyingToMsg?.msgID ?? 0,
+            mention: mentionIDs,
             timestamp: Int64(Date().timeIntervalSince1970 * 1000),
             clientSeq: clientSeq,
             status: .sending
@@ -234,7 +264,7 @@ public class ChatViewModel: ObservableObject {
         Task {
             do {
                 let replyTo = replyingToMsg?.msgID ?? 0
-                let ack = try await msgService.sendMessage(convID: convID, body: text, clientSeq: clientSeq, replyTo: replyTo)
+                let ack = try await msgService.sendMessage(convID: convID, body: text, clientSeq: clientSeq, replyTo: replyTo, mention: mentionIDs)
                 replyingToMsg = nil
                 if let idx = messages.firstIndex(where: { $0.clientSeq == ack.clientSeq && $0.msgID == 0 }) {
                     messages[idx].msgID = ack.msgID
@@ -330,6 +360,80 @@ public class ChatViewModel: ObservableObject {
         sendFile(fileData: fileData, fileName: fileName, fileType: 0)
     }
 
+    // MARK: - Send Agent Timeline
+    /// - Returns: The server-assigned msgID for the first message (parentMsgID == 0),
+    ///            or nil for append messages / errors.
+    @discardableResult
+    public func sendAgentTimeline(body: AgentTimelineBody) async -> Int64? {
+        let clientSeq = AuthManager.shared.nextClientSeq()
+        guard let bodyData = try? JSONEncoder().encode(body),
+              let bodyStr = String(data: bodyData, encoding: .utf8) else { return nil }
+
+        // If appending to an existing message, merge locally before sending
+        if body.parentMsgID > 0 {
+            appendAgentTimelineEntries(body, toParent: body.parentMsgID)
+        }
+
+        let localMsg = Message(
+            convID: convID,
+            senderID: AuthManager.shared.currentUser?.userID ?? "",
+            contentType: .agentTimeline,
+            body: bodyStr,
+            timestamp: Int64(Date().timeIntervalSince1970 * 1000),
+            clientSeq: clientSeq,
+            status: .sending
+        )
+        // Only add a new bubble if this is NOT an append
+        if body.parentMsgID == 0 {
+            messages.append(localMsg)
+            sortMessages()
+        }
+
+        do {
+            let ack = try await msgService.sendMessage(convID: convID, body: bodyStr, clientSeq: clientSeq, contentType: 9)
+            if body.parentMsgID == 0 {
+                if let idx = messages.firstIndex(where: { $0.clientSeq == ack.clientSeq && $0.msgID == 0 }) {
+                    messages[idx].msgID = ack.msgID
+                    messages[idx].timestamp = ack.timestamp
+                    messages[idx].status = .sent
+                    cache.insertMessage(messages[idx])
+                }
+                return ack.msgID
+            }
+            return nil
+        } catch {
+            logToFile("[ChatVM] sendAgentTimeline error: \(error)")
+            if let idx = messages.firstIndex(where: { $0.clientSeq == clientSeq }) {
+                messages[idx].status = .failed
+            }
+            sendErrorMessage = loc("chat.send_failed")
+            return nil
+        }
+    }
+
+    // MARK: - Append Agent Timeline Entries
+    private func appendAgentTimelineEntries(_ timeline: AgentTimelineBody, toParent parentMsgID: Int64) {
+        guard let idx = messages.firstIndex(where: { $0.msgID == parentMsgID }) else {
+            logToFile("[ChatVM] appendAgentTimeline: parent msgID=\(parentMsgID) not found")
+            return
+        }
+        var parent = messages[idx]
+        guard var existing = try? JSONDecoder().decode(AgentTimelineBody.self, from: parent.body.data(using: .utf8) ?? Data()) else {
+            logToFile("[ChatVM] appendAgentTimeline: failed to decode parent body")
+            return
+        }
+        // Append new entries, deduplicating by id
+        let existingIDs = Set(existing.entries.map(\.id))
+        let newEntries = timeline.entries.filter { !existingIDs.contains($0.id) }
+        existing.entries.append(contentsOf: newEntries)
+        existing.status = timeline.status
+        // Re-encode
+        guard let updatedData = try? JSONEncoder().encode(existing),
+              let updatedBody = String(data: updatedData, encoding: .utf8) else { return }
+        parent.body = updatedBody
+        messages[idx] = parent
+    }
+
     public func retryMessage(clientSeq: Int64) {
         guard !isSending else { return }
         guard let idx = messages.firstIndex(where: { $0.clientSeq == clientSeq && $0.status == .failed }),
@@ -378,57 +482,132 @@ public class ChatViewModel: ObservableObject {
     }
 
     // MARK: - Chat Items (with date grouping & bubble merging)
-    public var chatItems: [ChatItem] {
-        guard !messages.isEmpty else { return [] }
+    // Stored property rebuilt on messages change, not computed on every view evaluation
+    @Published public var chatItems: [ChatItem] = []
+    @Published public var chatVersion = 0
+
+    /// Merge agent timeline append messages into their parent, removing standalone appends.
+    private func mergeAgentTimelineAppends(_ msgs: [Message]) -> [Message] {
+        var result: [Message] = []
+        var appendEntries: [Int64: [AgentTimelineBody.Entry]] = [:]
+        var appendStatus: [Int64: String] = [:]
+
+        // Partition: normal messages go to result, appends are collected for merging
+        for msg in msgs {
+            guard msg.contentType == .agentTimeline,
+                  let data = msg.body.data(using: .utf8),
+                  let timeline = try? JSONDecoder().decode(AgentTimelineBody.self, from: data),
+                  timeline.parentMsgID > 0
+            else {
+                result.append(msg)
+                continue
+            }
+            appendEntries[timeline.parentMsgID, default: []].append(contentsOf: timeline.entries)
+            if timeline.status == "completed" || timeline.status == "error" {
+                appendStatus[timeline.parentMsgID] = timeline.status
+            }
+        }
+
+        guard !appendEntries.isEmpty else { return msgs }
+
+        // Merge collected entries into parent messages
+        for i in result.indices {
+            let msg = result[i]
+            guard msg.msgID > 0,
+                  let entries = appendEntries[msg.msgID],
+                  var body = try? JSONDecoder().decode(AgentTimelineBody.self, from: (result[i].body.data(using: .utf8) ?? Data()))
+            else { continue }
+
+            let existingIDs = Set(body.entries.map(\.id))
+            body.entries.append(contentsOf: entries.filter { !existingIDs.contains($0.id) })
+            if let status = appendStatus[msg.msgID] {
+                body.status = status
+            }
+
+            guard let data = try? JSONEncoder().encode(body),
+                  let updatedBody = String(data: data, encoding: .utf8) else { continue }
+            var updated = result[i]
+            updated.body = updatedBody
+            result[i] = updated
+        }
+
+        return result
+    }
+
+    private func rebuildChatItems(from msgs: [Message]) {
+        let merged = mergeAgentTimelineAppends(msgs)
+        guard !merged.isEmpty else {
+            chatItems = []
+            return
+        }
         var items: [ChatItem] = []
         let calendar = Calendar.current
         let currentUserID = AuthManager.shared.currentUser?.userID ?? ""
 
-        for i in messages.indices {
-            let msg = messages[i]
+        for i in merged.indices {
+            let msg = merged[i]
             let msgDate = Date(timeIntervalSince1970: Double(msg.timestamp) / 1000)
 
-            // Date separator
             if i == 0 {
                 items.append(.dateSeparator(msgDate))
             } else {
-                let prevDate = Date(timeIntervalSince1970: Double(messages[i - 1].timestamp) / 1000)
+                let prevDate = Date(timeIntervalSince1970: Double(merged[i - 1].timestamp) / 1000)
                 if !calendar.isDate(msgDate, inSameDayAs: prevDate) {
                     items.append(.dateSeparator(msgDate))
                 }
             }
 
-            // Group detection: same sender, within 5 minutes
-            let isSameSender = msg.senderID == currentUserID
-                ? (i > 0 && messages[i - 1].senderID == currentUserID)
-                : (i > 0 && messages[i - 1].senderID == msg.senderID)
-            let timeDiff: Double = i > 0 ? Double(msg.timestamp - messages[i - 1].timestamp) / 1000 : 999
-            let inSameGroup = isSameSender && timeDiff < 300
+            // agentTimeline messages always stand alone — never merge with adjacent messages
+            let prevIsAgentTimeline = i > 0 && merged[i - 1].contentType == .agentTimeline
+            let isAgentTimeline = msg.contentType == .agentTimeline
 
-            // Check if this message continues a group
+            let isSameSender = msg.senderID == currentUserID
+                ? (i > 0 && merged[i - 1].senderID == currentUserID)
+                : (i > 0 && merged[i - 1].senderID == msg.senderID)
+            let timeDiff: Double = i > 0 ? Double(msg.timestamp - merged[i - 1].timestamp) / 1000 : 999
+            let inSameGroup = !isAgentTimeline && !prevIsAgentTimeline && isSameSender && timeDiff < 300
             let isFirstInGroup = !inSameGroup
 
-            // Check if next message continues the group
-            let isNextSameSender: Bool
-            let nextTimeDiff: Double
-            if i + 1 < messages.count {
-                let next = messages[i + 1]
-                isNextSameSender = msg.senderID == currentUserID
+            let isLastInGroup: Bool
+            if i + 1 < merged.count {
+                let next = merged[i + 1]
+                let nextIsAgentTimeline = next.contentType == .agentTimeline
+                let isNextSameSender = msg.senderID == currentUserID
                     ? next.senderID == currentUserID
                     : next.senderID == msg.senderID
-                nextTimeDiff = Double(next.timestamp - msg.timestamp) / 1000
+                let nextTimeDiff = Double(next.timestamp - msg.timestamp) / 1000
+                isLastInGroup = isAgentTimeline || nextIsAgentTimeline || !(isNextSameSender && nextTimeDiff < 300)
             } else {
-                isNextSameSender = false
-                nextTimeDiff = 999
+                isLastInGroup = true
             }
-            let isLastInGroup = !(isNextSameSender && nextTimeDiff < 300)
 
             items.append(.message(msg, isFirstInGroup: isFirstInGroup, isLastInGroup: isLastInGroup))
         }
-        return items
+        chatItems = items
+        chatVersion &+= 1
     }
 
     // MARK: - Helpers
+
+    /// Parse `@name` patterns from message text and return matching member user IDs.
+    private func extractMentionIDs(from text: String) -> [String] {
+        let pattern = /@(\S+)/
+        let matches = text.matches(of: pattern)
+        var ids: [String] = []
+        for match in matches {
+            let name = String(match.1)
+            // Match against member nicknames or sender names
+            if let member = members.first(where: {
+                ($0.nickname ?? "") == name || senderInfo[$0.userID]?.name == name
+            }) {
+                if !ids.contains(member.userID) {
+                    ids.append(member.userID)
+                }
+            }
+        }
+        return ids
+    }
+
     private func insertMessageInOrder(_ msg: Message) {
         // Binary search to find the correct insertion index, keeping messages sorted by timestamp then convSeq.
         // All pushed messages have msgID != 0, so no need to handle the "unsent local" edge case here.

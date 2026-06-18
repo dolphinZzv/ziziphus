@@ -18,6 +18,7 @@ struct GroupDetailView: View {
     @State private var editedName = ""
     @State private var isSavingName = false
     @State private var displayName = ""
+    @State private var cardUser: User?
     @Environment(\.dismiss) private var dismiss
 
     private let currentUserID = AuthManager.shared.currentUser?.userID ?? ""
@@ -111,6 +112,10 @@ struct GroupDetailView: View {
                                         .foregroundColor(.red)
                                 }
                             }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            cardUser = vm.membersInfo[member.userID]
                         }
                     }
                 }
@@ -281,6 +286,9 @@ struct GroupDetailView: View {
                     .background(.ultraThinMaterial)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+        }
+        .sheet(item: $cardUser) { user in
+            UserCardView(user: user)
         }
         .onAppear {
             displayName = convName

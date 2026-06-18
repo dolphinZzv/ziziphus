@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-
 	"net/http"
 	"strconv"
 
@@ -64,8 +63,8 @@ type convSeqCache interface {
 }
 
 func NewConvHandler(convMgr convManager, convRepo convDataRepo, seqCache convSeqCache, readMarker readMarker, sysMsg sysMsgSender, userGetter userGetter, idGen func() int64) *ConvHandler {
-		return &ConvHandler{convMgr: convMgr, convRepo: convRepo, seqCache: seqCache, readMarker: readMarker, sysMsg: sysMsg, userGetter: userGetter, idGen: idGen}
-	}
+	return &ConvHandler{convMgr: convMgr, convRepo: convRepo, seqCache: seqCache, readMarker: readMarker, sysMsg: sysMsg, userGetter: userGetter, idGen: idGen}
+}
 
 type createGroupReq struct {
 	Name      string   `json:"name"`
@@ -85,7 +84,7 @@ func (h *ConvHandler) List(w http.ResponseWriter, r *http.Request) {
 	items, total, err := h.convRepo.GetUserConvs(r.Context(), userID, page, size)
 	if err != nil {
 		logger.Error("list conversations failed", "user_id", userID, "error", err)
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	for _, item := range items {
@@ -107,13 +106,13 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 
 	isMember, err := h.convMgr.IsMember(r.Context(), convID, userID)
 	if err != nil || !isMember {
-		Error(w, r,http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.not_in_conv_specific")})
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.not_in_conv_specific")})
 		return
 	}
 
 	members, err := h.convMgr.GetMembers(r.Context(), convID)
 	if err != nil {
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 
@@ -150,7 +149,7 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if conv.Type != model.ConvGroup {
-		Error(w, r,http.StatusBadRequest, &model.AppError{Code: model.ErrBadMessage, Message: i18n.T(r.Context(), "err.group_only")})
+		Error(w, r, http.StatusBadRequest, &model.AppError{Code: model.ErrBadMessage, Message: i18n.T(r.Context(), "err.group_only")})
 		return
 	}
 
@@ -177,7 +176,7 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.convRepo.UpdateNameAvatar(r.Context(), convID, name, avatar); err != nil {
 		logger.Error("update group failed", "conv_id", convID, "error", err)
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 
@@ -214,7 +213,7 @@ func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	conv, err := h.convMgr.CreateGroup(r.Context(), req.Name, userID, req.MemberIDs, h.idGen)
 	if err != nil {
 		logger.Error("create group failed", "error", err)
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	if h.sysMsg != nil {
@@ -250,7 +249,7 @@ func (h *ConvHandler) CreateP2P(w http.ResponseWriter, r *http.Request) {
 	conv, err := h.convMgr.GetOrCreateP2P(r.Context(), userID, req.UserID)
 	if err != nil {
 		logger.Error("create p2p failed", "error", err)
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 
@@ -396,10 +395,10 @@ func (h *ConvHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.convMgr.RemoveMember(r.Context(), convID, targetID, userID); err != nil {
 		if appErr, ok := err.(*model.AppError); ok {
-			Error(w, r,http.StatusForbidden, appErr)
+			Error(w, r, http.StatusForbidden, appErr)
 			return
 		}
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	if h.sysMsg != nil {
@@ -413,7 +412,7 @@ func (h *ConvHandler) Leave(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 
 	if err := h.convMgr.Leave(r.Context(), convID, userID); err != nil {
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	if h.sysMsg != nil {
@@ -479,7 +478,7 @@ func (h *ConvHandler) UnreadTotal(w http.ResponseWriter, r *http.Request) {
 
 	items, _, err := h.convRepo.GetUserConvs(r.Context(), userID, 1, 1000)
 	if err != nil {
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 

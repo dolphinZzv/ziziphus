@@ -12,8 +12,8 @@ import (
 )
 
 type Pusher struct {
-	gateway   connRegistry
-	receipt   receiptWriter
+	gateway connRegistry
+	receipt receiptWriter
 }
 
 type connRegistry interface {
@@ -27,8 +27,8 @@ type receiptWriter interface {
 
 func NewPusher(gateway connRegistry, receipt receiptWriter) *Pusher {
 	return &Pusher{
-		gateway:   gateway,
-		receipt:   receipt,
+		gateway: gateway,
+		receipt: receipt,
 	}
 }
 

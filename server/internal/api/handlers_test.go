@@ -132,20 +132,21 @@ func (m *mockSessionChecker) GetUserSessionIDs(ctx context.Context, userID strin
 // ---------------------------------------------------------------------------
 
 type mockConvManager struct {
-	getFunc           func(ctx context.Context, convID string) (*model.Conversation, error)
-	createGroupFunc   func(ctx context.Context, name, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error)
-	getOrCreateP2PFunc func(ctx context.Context, userA, userB string) (*model.Conversation, error)
-	addMemberFunc     func(ctx context.Context, convID, userID, operatorID string) error
-	removeMemberFunc  func(ctx context.Context, convID, userID, operatorID string) error
-	leaveFunc         func(ctx context.Context, convID, userID string) error
-	getMembersFunc    func(ctx context.Context, convID string) ([]*model.ConvMember, error)
-	isMemberFunc      func(ctx context.Context, convID, userID string) (bool, error)
-	requestJoinFunc       func(ctx context.Context, convID, userID string) error
-	listJoinRequestsFunc  func(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error)
+	getFunc                func(ctx context.Context, convID string) (*model.Conversation, error)
+	createGroupFunc        func(ctx context.Context, name, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error)
+	getOrCreateP2PFunc     func(ctx context.Context, userA, userB string) (*model.Conversation, error)
+	addMemberFunc          func(ctx context.Context, convID, userID, operatorID string) error
+	removeMemberFunc       func(ctx context.Context, convID, userID, operatorID string) error
+	leaveFunc              func(ctx context.Context, convID, userID string) error
+	getMembersFunc         func(ctx context.Context, convID string) ([]*model.ConvMember, error)
+	isMemberFunc           func(ctx context.Context, convID, userID string) (bool, error)
+	requestJoinFunc        func(ctx context.Context, convID, userID string) error
+	listJoinRequestsFunc   func(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error)
 	approveJoinRequestFunc func(ctx context.Context, convID, userID, operatorID string) error
 	rejectJoinRequestFunc  func(ctx context.Context, convID, userID, operatorID string) error
-	getMemberRoleFunc func(ctx context.Context, convID, userID string) (model.ConvRole, error)
-	}
+	getMemberRoleFunc      func(ctx context.Context, convID, userID string) (model.ConvRole, error)
+}
+
 func (m *mockConvManager) Get(ctx context.Context, convID string) (*model.Conversation, error) {
 	if m.getFunc != nil {
 		return m.getFunc(ctx, convID)
@@ -229,12 +230,14 @@ func (m *mockConvManager) RejectJoinRequest(ctx context.Context, convID, userID,
 	}
 	return nil
 }
+
 func (m *mockConvManager) GetMemberRole(ctx context.Context, convID, userID string) (model.ConvRole, error) {
 	if m.getMemberRoleFunc != nil {
 		return m.getMemberRoleFunc(ctx, convID, userID)
 	}
-		return model.ConvRoleMember, nil
+	return model.ConvRoleMember, nil
 }
+
 // ---------------------------------------------------------------------------
 // Mock: convSeqCache
 // ---------------------------------------------------------------------------
@@ -1197,7 +1200,6 @@ func TestConvHandler_AddMembers(t *testing.T) {
 	}
 }
 
-
 func TestConvHandler_AddMembers_EmptyUserIDs(t *testing.T) {
 	handler := &ConvHandler{
 		convMgr: &mockConvManager{},
@@ -1249,6 +1251,7 @@ func TestConvHandler_AddMembers_DuplicateUserIDs(t *testing.T) {
 		t.Errorf("expected 2 AddMember calls (deduped), got %d", len(addMemberCalls))
 	}
 }
+
 func TestConvHandler_RemoveMember(t *testing.T) {
 	var sysMsgConvID, sysMsgBody string
 	handler := &ConvHandler{

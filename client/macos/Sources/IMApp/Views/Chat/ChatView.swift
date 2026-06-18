@@ -14,6 +14,7 @@ struct ChatView: View {
     @State private var searchText = ""
     @State private var searchResults: [Message] = []
     @State private var isSearching = false
+    @State private var isInitialScrollDone = false
     @EnvironmentObject private var localizationManager: LocalizationManager
 
     init(convID: String, convName: String, convType: ConvType = .p2p) {
@@ -55,7 +56,7 @@ struct ChatView: View {
                                 )
                                 .id(msg.stableId)
                                 .onAppear {
-                                    if idx == 0 && !vm.allHistoryLoaded && !vm.isLoadingHistory {
+                                    if idx == 0 && isInitialScrollDone && !vm.allHistoryLoaded && !vm.isLoadingHistory {
                                         vm.loadMoreHistory()
                                     }
                                 }
@@ -66,18 +67,24 @@ struct ChatView: View {
                             TypingIndicator()
                                 .padding(.leading, 12)
                         }
+
+                        Color.clear
+                            .frame(height: 1)
+                            .id("bottomAnchor")
                     }
                     .padding(.horizontal)
                 }
                 .onAppear {
-                    if let last = vm.messages.last {
-                        proxy.scrollTo(last.stableId, anchor: .bottom)
+                    guard vm.messages.last != nil else { return }
+                    isInitialScrollDone = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        proxy.scrollTo("bottomAnchor", anchor: .bottom)
                     }
                 }
                 .onChange(of: vm.messages.count) { _, _ in
-                    if let last = vm.messages.last {
-                        proxy.scrollTo(last.stableId, anchor: .bottom)
-                    }
+                    guard vm.messages.last != nil else { return }
+                    isInitialScrollDone = true
+                    proxy.scrollTo("bottomAnchor", anchor: .bottom)
                 }
 
                 // Search overlay
@@ -119,8 +126,9 @@ struct ChatView: View {
                                 LazyVStack(spacing: 0) {
                                     ForEach(searchResults) { msg in
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text(msg.body)
+                                            InlineText(markdown: msg.body, baseURL: URL(string: AppSettings.shared.serverURL))
                                                 .font(.appleBody)
+                                                .textual.textSelection(.enabled)
                                             Text(formatTime(msg.timestamp))
                                                 .font(.system(size: AppleDesign.Typography.finePrintSize))
                                                 .foregroundColor(AppleDesign.Colors.inkMuted)

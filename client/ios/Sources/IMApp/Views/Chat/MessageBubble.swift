@@ -1,6 +1,6 @@
 import SwiftUI
 import IMCore
-import MarkdownUI
+import Textual
 
 struct MessageBubble: View {
     let message: Message
@@ -8,20 +8,35 @@ struct MessageBubble: View {
     let senderInfo: [String: User]
     var onRetry: (() -> Void)?
     var onReply: (() -> Void)?
+    var onTapSender: (() -> Void)?
     var repliedMessage: Message?
     var isFirstInGroup = true
     var isLastInGroup = true
     var uploadProgress: Double?
+    var isHighlighted = false
+
+    private var serverBaseURL: URL? { URL(string: AppSettings.shared.serverURL) }
+
+    @State private var imageViewerImages: [URL] = []
+    @State private var imageViewerIndex: Int = 0
 
     private var isMine: Bool {
         message.senderID == AuthManager.shared.currentUser?.userID
+    }
+
+    private var senderUser: User? {
+        senderInfo[message.senderID]
     }
 
     private var senderDisplayName: String {
         if message.senderID == AuthManager.shared.currentUser?.userID {
             return AuthManager.shared.currentUser?.name ?? message.senderID
         }
-        return senderInfo[message.senderID]?.name ?? message.senderID
+        return senderUser?.name ?? message.senderID
+    }
+
+    private var showAvatar: Bool {
+        convType == .group && !isMine && isFirstInGroup
     }
 
     private var fileBody: FileMessageBody? {
@@ -29,15 +44,40 @@ struct MessageBubble: View {
         return try? JSONDecoder().decode(FileMessageBody.self, from: data)
     }
 
+    private var agentTimelineBody: AgentTimelineBody? {
+        guard let data = message.body.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(AgentTimelineBody.self, from: data)
+    }
+
     var body: some View {
-        HStack {
-            if isMine { Spacer(minLength: 60) }
+        HStack(alignment: .top, spacing: 6) {
+            if isMine { Spacer(minLength: 40) }
 
             VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
-                if convType == .group && isFirstInGroup {
-                    Text(senderDisplayName)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                if showAvatar || (convType == .group && isFirstInGroup) {
+                    HStack(spacing: 6) {
+                        if showAvatar {
+                            AvatarView(
+                                name: senderDisplayName,
+                                url: senderUser?.avatar ?? "",
+                                size: 28,
+                                primaryColor: senderUser?.primaryColor ?? "",
+                                secondaryColor: senderUser?.secondaryColor ?? ""
+                            )
+                            .onTapGesture { onTapSender?() }
+                        }
+                        if convType == .group && isFirstInGroup && !isMine {
+                            Button(action: { onTapSender?() }) {
+                                Text(senderDisplayName)
+                                    .font(.caption2)
+                                    .foregroundColor(.blue)
+                            }
+                        } else if convType == .group && isFirstInGroup && isMine {
+                            Text(senderDisplayName)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
 
                 VStack(alignment: isMine ? .leading : .trailing, spacing: 2) {
@@ -49,6 +89,8 @@ struct MessageBubble: View {
                         imageBubble
                     } else if message.contentType == .file {
                         fileBubble
+                    } else if message.contentType == .agentTimeline {
+                        agentTimelineBubble
                     } else {
                         textBubble
                     }
@@ -69,9 +111,41 @@ struct MessageBubble: View {
                 }
             }
 
-            if !isMine { Spacer(minLength: 60) }
+            if !isMine { Spacer() }
         }
         .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isHighlighted ? Color.yellow.opacity(0.3) : .clear)
+                .animation(.easeOut(duration: 0.8), value: isHighlighted)
+        )
+        .environment(\.openURL, OpenURLAction { url in
+            // only handle non-image URLs now; image taps come via notification
+            guard url.absoluteString.isImageURL else {
+                UIApplication.shared.open(url)
+                return .handled
+            }
+            return .handled
+        })
+        .textual.imageAttachmentLoader(.tappableImage(relativeTo: serverBaseURL))
+        .fullScreenCover(isPresented: Binding(
+            get: { !imageViewerImages.isEmpty },
+            set: { if !$0 { imageViewerImages = [] } }
+        )) {
+            ImageViewer(images: imageViewerImages, initialIndex: imageViewerIndex)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .textualImageTapped)) { notif in
+            guard let url = notif.object as? URL else { return }
+            let resolved = URL(string: url.absoluteString, relativeTo: serverBaseURL)?.absoluteURL ?? url
+            let urls = message.body.extractImageURLs(baseURL: serverBaseURL)
+            if urls.isEmpty {
+                imageViewerImages = [resolved]
+                imageViewerIndex = 0
+            } else {
+                imageViewerImages = urls
+                imageViewerIndex = urls.firstIndex(of: resolved) ?? 0
+            }
+        }
     }
 
     private var textBubble: some View {
@@ -79,16 +153,15 @@ struct MessageBubble: View {
             if let repliedMessage {
                 replyQuoteView(for: repliedMessage)
             }
-            Markdown(message.body)
-                .markdownTextStyle {
-                    ForegroundColor(isMine ? Color.primary : Color.ink)
-                }
+            InlineText(markdown: message.body, baseURL: serverBaseURL)
+                .foregroundColor(isMine ? Color.primary : Color.ink)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(isMine ? bubbleMine : bubbleOther)
         .clipShape(bubbleShape)
         .textSelection(.enabled)
+        .textual.textSelection(.enabled)
         .contextMenu {
             Button(loc("common.copy")) {
                 UIPasteboard.general.string = message.body
@@ -174,6 +247,20 @@ struct MessageBubble: View {
         }
     }
 
+    private var agentTimelineBubble: some View {
+        Group {
+            if let timeline = agentTimelineBody {
+                AgentTimelineView(timeline: timeline, isMine: isMine)
+            } else {
+                textBubble
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isMine ? bubbleMine : bubbleOther)
+        .clipShape(bubbleShape)
+    }
+
     private var failedBubble: some View {
         Button {
             onRetry?()
@@ -182,7 +269,7 @@ struct MessageBubble: View {
                 Image(systemName: "exclamationmark.circle.fill")
                     .font(.caption)
                     .foregroundColor(.red)
-                Markdown(message.body)
+                InlineText(markdown:message.body, baseURL: serverBaseURL)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(Color.red.opacity(0.08))
@@ -256,6 +343,11 @@ struct MessageBubble: View {
            let fileBody = try? JSONDecoder().decode(FileMessageBody.self, from: data) {
             return fileBody.name
         }
+        if msg.contentType == .agentTimeline,
+           let data = msg.body.data(using: .utf8),
+           let timeline = try? JSONDecoder().decode(AgentTimelineBody.self, from: data) {
+            return timeline.title ?? loc("agent.preview")
+        }
         return msg.body
     }
 
@@ -313,12 +405,12 @@ struct MessageBubble: View {
         Color(UIColor { trait in
             trait.userInterfaceStyle == .dark
                 ? UIColor(red: 0x2c / 255, green: 0x2c / 255, blue: 0x2e / 255, alpha: 1)
-                : UIColor(red: 0xe5 / 255, green: 0xe5 / 255, blue: 0xea / 255, alpha: 1)
+                : UIColor(red: 0xf0 / 255, green: 0xf0 / 255, blue: 0xf5 / 255, alpha: 1)
         })
     }
 }
 
-private extension Color {
+extension Color {
     static let ink = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
             ? UIColor(red: 0xf5 / 255, green: 0xf5 / 255, blue: 0xf7 / 255, alpha: 1)

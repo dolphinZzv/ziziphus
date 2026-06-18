@@ -23,7 +23,7 @@ func NewStore(fs afero.Fs, basePath string) *Store {
 
 func (s *Store) Save(ctx context.Context, path string, r io.Reader) (int64, error) {
 	fullPath := s.fullPath(path)
-	if err := s.fs.MkdirAll(s.basePath, 0755); err != nil {
+	if err := s.fs.MkdirAll(s.basePath, 0o755); err != nil {
 		return 0, err
 	}
 	f, err := s.fs.Create(fullPath)

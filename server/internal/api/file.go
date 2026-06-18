@@ -199,4 +199,3 @@ func decodeImageDimensions(data []byte) (int, int, error) {
 	}
 	return cfg.Width, cfg.Height, nil
 }
-

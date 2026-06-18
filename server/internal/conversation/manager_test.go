@@ -14,9 +14,9 @@ import (
 // ---------------------------------------------------------------------------
 
 type mockConvRepo struct {
-	mu       sync.Mutex
-	convs    map[string]*model.Conversation
-	members  map[string]map[string]*model.ConvMember // convID -> userID -> member
+	mu      sync.Mutex
+	convs   map[string]*model.Conversation
+	members map[string]map[string]*model.ConvMember // convID -> userID -> member
 }
 
 func newMockConvRepo() *mockConvRepo {
@@ -179,8 +179,8 @@ func (m *mockMsgRepo) GetMaxConvSeq(_ context.Context, convID string) (int64, er
 // ---------------------------------------------------------------------------
 
 type mockSeqCache struct {
-	mu    sync.Mutex
-	seqs  map[string]int64
+	mu   sync.Mutex
+	seqs map[string]int64
 }
 
 func newMockSeqCache() *mockSeqCache {
@@ -972,8 +972,8 @@ func TestListJoinRequests_Success(t *testing.T) {
 func TestListJoinRequests_PermissionDenied(t *testing.T) {
 	mgr, convRepo, userRepo, _ := newManagerWithJR()
 	ctx := context.Background()
-	userRepo.addUser("alice")   // member
-	userRepo.addUser("admin")   // admin
+	userRepo.addUser("alice") // member
+	userRepo.addUser("admin") // admin
 	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
 	_ = convRepo.AddMember(ctx, "g1", "admin", model.ConvRoleAdmin)
 	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleMember)

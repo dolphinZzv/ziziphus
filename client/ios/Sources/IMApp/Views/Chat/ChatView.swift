@@ -1,5 +1,6 @@
 import SwiftUI
 import IMCore
+import Textual
 import PhotosUI
 import UniformTypeIdentifiers
 
@@ -19,6 +20,15 @@ struct ChatView: View {
     @State private var showFilePicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isSearching = false
+    @State private var cardUser: User?
+    @State private var navigateToChat: ChatDestination?
+    @State private var highlightedMsgID: Int64?
+    @State private var isNearBottom = true
+    @State private var newMessageCount = 0
+    @State private var scrollOffset: CGFloat = 0
+    @State private var scrollContentHeight: CGFloat = 0
+    @State private var scrollViewHeight: CGFloat = 0
+    @State private var userHasScrolledUp = false
 
     init(convID: String, convName: String, convType: ConvType = .p2p) {
         self.convID = convID
@@ -55,14 +65,18 @@ struct ChatView: View {
                                     senderInfo: vm.senderInfo,
                                     onRetry: { vm.retryMessage(clientSeq: msg.clientSeq) },
                                     onReply: { vm.replyingToMsg = msg },
+                                    onTapSender: {
+                                        cardUser = vm.senderInfo[msg.senderID]
+                                    },
                                     repliedMessage: repliedMsg,
                                     isFirstInGroup: isFirst,
                                     isLastInGroup: isLast,
-                                    uploadProgress: vm.uploadProgress[msg.clientSeq]
+                                    uploadProgress: vm.uploadProgress[msg.clientSeq],
+                                    isHighlighted: highlightedMsgID == msg.stableId
                                 )
                                 .id(msg.stableId)
                                 .onAppear {
-                                    if idx == 0 && !vm.allHistoryLoaded && !vm.isLoadingHistory {
+                                    if idx == 0 && isInitialScrollDone && !vm.allHistoryLoaded && !vm.isLoadingHistory {
                                         vm.loadMoreHistory()
                                     }
                                 }
@@ -73,10 +87,80 @@ struct ChatView: View {
                             TypingIndicator()
                                 .padding(.leading, 12)
                         }
+
+                        // Anchor to detect when bottom is visible
+                        Color.clear
+                            .frame(height: 1)
+                            .id("bottomAnchor")
                     }
                     .padding(.horizontal)
+                    .background(GeometryReader { geo in
+                        Color.clear.preference(
+                            key: ScrollOffsetKey.self,
+                            value: ScrollInfo(
+                                contentHeight: geo.size.height,
+                                offset: -geo.frame(in: .named("scroll")).minY,
+                                viewHeight: UIScreen.main.bounds.height
+                            )
+                        )
+                    })
                 }
+                .coordinateSpace(name: "scroll")
                 .scrollDismissesKeyboard(.interactively)
+                .onTapGesture {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .onPreferenceChange(ScrollOffsetKey.self) { info in
+                    let bottomInset: CGFloat = 340 // approximate keyboard + input bar
+                    let isNear = (info.offset + info.viewHeight) >= (info.contentHeight - bottomInset - 20)
+                    if !isNear && isNearBottom {
+                        // User scrolled away — only if we were previously at bottom
+                        userHasScrolledUp = true
+                    }
+                    if isNear {
+                        userHasScrolledUp = false
+                        isNearBottom = true
+                        newMessageCount = 0
+                    }
+                }
+                .overlay(alignment: .bottom) {
+                    if userHasScrolledUp && newMessageCount > 0 {
+                        Button {
+                            userHasScrolledUp = false
+                            scrollToBottom(proxy)
+                            newMessageCount = 0
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.down")
+                                    .font(.caption)
+                                Text("\(newMessageCount)")
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(Color.blue).shadow(radius: 4))
+                        }
+                        .padding(.bottom, 4)
+                    }
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    if userHasScrolledUp {
+                        Button {
+                            userHasScrolledUp = false
+                            scrollToBottom(proxy)
+                            newMessageCount = 0
+                        } label: {
+                            Image(systemName: "arrow.down")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 32, height: 32)
+                                .background(Circle().fill(Color(.systemGray2)).shadow(radius: 3))
+                        }
+                        .padding(.trailing, 8)
+                        .padding(.bottom, 8)
+                    }
+                }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     VStack(spacing: 0) {
                         if let err = vm.sendErrorMessage {
@@ -107,17 +191,22 @@ struct ChatView: View {
                                 : vm.senderInfo[msg.senderID]?.name ?? msg.senderID
                         }, onCancelReply: {
                             vm.replyingToMsg = nil
-                        })
+                        }, members: vm.members, senderInfo: vm.senderInfo)
                     }
                 }
-                .onChange(of: vm.messages.count) { _, _ in
-                    if !isInitialScrollDone, let last = vm.messages.last {
+                .onReceive(vm.$chatVersion) { _ in
+                    guard vm.messages.last != nil else { return }
+                    if !isInitialScrollDone {
                         isInitialScrollDone = true
-                        proxy.scrollTo(last.stableId, anchor: .bottom)
-                    } else if isInitialScrollDone, let last = vm.messages.last {
-                        withAnimation {
-                            proxy.scrollTo(last.stableId, anchor: .bottom)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            proxy.scrollTo("bottomAnchor", anchor: .bottom)
                         }
+                    } else if !userHasScrolledUp {
+                        withAnimation {
+                            proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                        }
+                    } else {
+                        newMessageCount += 1
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
@@ -125,34 +214,9 @@ struct ChatView: View {
                     scrollToBottom(proxy)
                 }
 
-                // Search bar overlay
-                if showSearch {
+                // Search results
+                if showSearch && !searchText.isEmpty {
                     VStack(spacing: 0) {
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(.secondary)
-                            TextField(loc("search.chat_placeholder"), text: $searchText)
-                                .autocapitalization(.none)
-                                .disableAutocorrection(true)
-                                .onSubmit { performSearch() }
-                            if !searchText.isEmpty {
-                                Button(action: { searchText = "" }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            Button(loc("common.cancel")) {
-                                showSearch = false
-                                searchText = ""
-                                searchResults = []
-                            }
-                        }
-                        .padding(10)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-
                         if isSearching {
                             ProgressView()
                                 .padding()
@@ -161,8 +225,9 @@ struct ChatView: View {
                             List {
                                 ForEach(searchResults) { msg in
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(msg.body)
+                                        InlineText(markdown: msg.body, baseURL: URL(string: AppSettings.shared.serverURL))
                                             .font(.body)
+                                            .textual.textSelection(.enabled)
                                         Text(formatTime(msg.timestamp))
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
@@ -173,21 +238,24 @@ struct ChatView: View {
                                         searchText = ""
                                         searchResults = []
                                         vm.loadContextAround(msgID: msg.msgID)
+                                        let targetID = msg.stableId
                                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                             withAnimation {
-                                                proxy.scrollTo(msg.stableId, anchor: .center)
+                                                proxy.scrollTo(targetID, anchor: .center)
+                                            }
+                                            highlightedMsgID = targetID
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                                withAnimation { highlightedMsgID = nil }
                                             }
                                         }
                                     }
                                 }
                             }
                             .listStyle(.plain)
-                        } else if !searchText.isEmpty {
+                        } else {
                             Text(loc("search.no_results"))
                                 .foregroundColor(.secondary)
                                 .padding()
-                            Spacer()
-                        } else {
                             Spacer()
                         }
                     }
@@ -198,13 +266,18 @@ struct ChatView: View {
         .navigationTitle(convName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .searchable(text: $searchText, isPresented: $showSearch, placement: .navigationBarDrawer(displayMode: .automatic))
+        .onSubmit(of: .search) { performSearch() }
+        .onChange(of: showSearch) { _, visible in
+            if !visible {
+                searchText = ""
+                searchResults = []
+                isSearching = false
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 4) {
-                    Button(action: { showSearch.toggle() }) {
-                        Image(systemName: "magnifyingglass")
-                    }
-                    Menu {
+                Menu {
                         Button(action: {
                             if convType == .group {
                                 showGroupDetail = true
@@ -220,7 +293,6 @@ struct ChatView: View {
                     } label: {
                         Image(systemName: "chevron.down")
                     }
-                }
             }
         }
         .sheet(isPresented: $showGroupDetail) {
@@ -233,6 +305,22 @@ struct ChatView: View {
         }
         .sheet(isPresented: $showHistory) {
             HistoryView(convID: convID, convName: convName, convType: convType)
+        }
+        .sheet(item: $cardUser) { user in
+            UserCardView(user: user, onStartChat: { userID, name in
+                cardUser = nil
+                Task {
+                    do {
+                        let result = try await ConversationService.shared.createP2P(userID: userID)
+                        navigateToChat = ChatDestination(convID: result.convID, name: result.name, type: .p2p)
+                    } catch {
+                        // navigation will not occur on failure
+                    }
+                }
+            })
+        }
+        .navigationDestination(item: $navigateToChat) { dest in
+            ChatView(convID: dest.convID, convName: dest.name, convType: dest.type)
         }
         .photosPicker(isPresented: $showImagePicker, selection: $selectedPhotoItem, matching: .images)
         .onChange(of: selectedPhotoItem) { _, newItem in
@@ -251,6 +339,7 @@ struct ChatView: View {
         }
         .onAppear {
             vm.loadInitialMessages()
+            vm.loadMembers()
             vm.markAsReadIfActive()
             vm.inputText = UserDefaults.standard.string(forKey: "draft_\(convID)") ?? ""
         }
@@ -276,10 +365,10 @@ struct ChatView: View {
     }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
-        if let last = vm.messages.last {
-            withAnimation {
-                proxy.scrollTo(last.stableId, anchor: .bottom)
-            }
+        guard vm.messages.last != nil else { return }
+        isInitialScrollDone = true
+        withAnimation {
+            proxy.scrollTo("bottomAnchor", anchor: .bottom)
         }
     }
 
@@ -288,6 +377,21 @@ struct ChatView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy/MM/dd HH:mm"
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Scroll Position Tracking
+
+private struct ScrollInfo: Equatable {
+    let contentHeight: CGFloat
+    let offset: CGFloat
+    let viewHeight: CGFloat
+}
+
+private struct ScrollOffsetKey: PreferenceKey {
+    static let defaultValue = ScrollInfo(contentHeight: 0, offset: 0, viewHeight: 0)
+    static func reduce(value: inout ScrollInfo, nextValue: () -> ScrollInfo) {
+        value = nextValue()
     }
 }
 

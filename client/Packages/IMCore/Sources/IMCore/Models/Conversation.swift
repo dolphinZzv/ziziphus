@@ -77,6 +77,7 @@ public struct ConvListItem: Codable, Sendable, Identifiable, Hashable {
     public var role: Int
     public var mute: Bool
     public var mentionMe: Bool
+    public var partnerType: Int
 
     public var id: String { convID }
 
@@ -88,11 +89,12 @@ public struct ConvListItem: Codable, Sendable, Identifiable, Hashable {
         case lastMsgAt = "last_msg_at"
         case role, mute
         case mentionMe = "mention_me"
+        case partnerType = "partner_type"
     }
 
     public init(convID: String, type: ConvType, name: String, avatar: String = "",
                 unreadCount: Int = 0, lastMessage: LastMessage? = nil, lastMsgAt: Int64 = 0,
-                role: Int = 0, mute: Bool = false, mentionMe: Bool = false) {
+                role: Int = 0, mute: Bool = false, mentionMe: Bool = false, partnerType: Int = 0) {
         self.convID = convID
         self.type = type
         self.name = name
@@ -103,6 +105,7 @@ public struct ConvListItem: Codable, Sendable, Identifiable, Hashable {
         self.role = role
         self.mute = mute
         self.mentionMe = mentionMe
+        self.partnerType = partnerType
     }
 
     public init(from decoder: Decoder) throws {
@@ -117,6 +120,7 @@ public struct ConvListItem: Codable, Sendable, Identifiable, Hashable {
         role = try container.decodeIfPresent(Int.self, forKey: .role) ?? 0
         mute = try container.decodeIfPresent(Bool.self, forKey: .mute) ?? false
         mentionMe = try container.decodeIfPresent(Bool.self, forKey: .mentionMe) ?? false
+        partnerType = try container.decodeIfPresent(Int.self, forKey: .partnerType) ?? 0
     }
 }
 

@@ -230,11 +230,15 @@ func (b *Bot) Run() error {
 			case 11: // MsgPush
 				b.handlePush(frame.Payload)
 			case 41: // SessionOnline
-				var ev struct{ UserID string `json:"user_id"` }
+				var ev struct {
+					UserID string `json:"user_id"`
+				}
 				json.Unmarshal(frame.Payload, &ev)
 				log.Printf("[上线] %s", ev.UserID)
 			case 42: // SessionOffline
-				var ev struct{ UserID string `json:"user_id"` }
+				var ev struct {
+					UserID string `json:"user_id"`
+				}
 				json.Unmarshal(frame.Payload, &ev)
 				log.Printf("[下线] %s", ev.UserID)
 			}

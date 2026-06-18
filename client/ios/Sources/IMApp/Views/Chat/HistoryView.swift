@@ -1,6 +1,6 @@
 import SwiftUI
 import IMCore
-import MarkdownUI
+import Textual
 
 struct HistoryView: View {
     let convID: String
@@ -378,9 +378,10 @@ private struct HistoryMessageRow: View {
                     .foregroundColor(.secondary)
             }
 
-            Markdown(message.body)
+            InlineText(markdown:message.body, baseURL: URL(string: AppSettings.shared.serverURL))
                 .font(.body)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .textual.textSelection(.enabled)
 
             Text(formatTime(message.timestamp))
                 .font(.caption2)

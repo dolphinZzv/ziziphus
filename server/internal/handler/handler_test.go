@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-
 	"siciv.space/agent/panda_ai/internal/auth"
 	"siciv.space/agent/panda_ai/internal/gateway"
 	"siciv.space/agent/panda_ai/pkg/model"
@@ -36,7 +35,9 @@ type mockSessionManager struct {
 	lastCreateDev  model.DeviceType
 }
 
-func (m *mockSessionManager) GetUserSessionIDs(ctx context.Context, userID string) []string { return nil }
+func (m *mockSessionManager) GetUserSessionIDs(ctx context.Context, userID string) []string {
+	return nil
+}
 
 func (m *mockSessionManager) Create(ctx context.Context, userID string, device model.DeviceType, deviceName string, clientIP string, deviceID string) (*model.Session, error) {
 	m.mu.Lock()

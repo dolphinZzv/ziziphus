@@ -1,12 +1,13 @@
 import SwiftUI
+import IMCore
 
 // MARK: - Apple Design Tokens (from DESIGN.md)
 
 enum AppleDesign {
     // Colors
     enum Colors {
-        static let actionBlue = Color(hex: "#0066cc")
-        static let focusBlue = Color(hex: "#0071e3")
+        static var actionBlue: Color { Color(hex: AuthManager.shared.currentUser?.primaryColor ?? "#0066cc") }
+        static var focusBlue: Color { Color(hex: AuthManager.shared.currentUser?.primaryColor ?? "#0071e3") }
         static let skyBlue = Color(hex: "#2997ff")
         static let parchment = Color.adaptive(light: "#f5f5f7", dark: "#1c1c1e")
         static let ink = Color.adaptive(light: "#1d1d1f", dark: "#f5f5f7")

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"siciv.space/agent/panda_ai/pkg/logger"
 	"siciv.space/agent/panda_ai/pkg/model"
 )
 
@@ -56,13 +57,16 @@ type ConvListItem struct {
 	UnreadCount int64            `json:"unread_count"`
 	LastMessage *LastMessageInfo `json:"last_message,omitempty"`
 	LastMsgAt   int64            `json:"last_msg_at"`
+	Role        model.ConvRole   `json:"role"`
+	Mute        bool             `json:"mute"`
 	MentionMe   bool             `json:"mention_me"`
+	PartnerType int              `json:"partner_type"`
 }
 
 type LastMessageInfo struct {
 	MsgID       int64  `json:"msg_id"`
 	SenderID    string `json:"sender_id"`
-		SenderName  string `json:"sender_name"`
+	SenderName  string `json:"sender_name"`
 	Body        string `json:"body"`
 	ContentType int    `json:"content_type"`
 	Timestamp   int64  `json:"timestamp"`
@@ -94,7 +98,7 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 	}
 	defer rows.Close()
 
-	var items []*ConvListItem
+	items := make([]*ConvListItem, 0)
 	for rows.Next() {
 		item := &ConvListItem{}
 		var lastMsgID int64
@@ -105,11 +109,9 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 		var lastMsgTimestamp int64
 		var lastMsgStatus int
 		var lastMsgAt *time.Time
-		var role model.ConvRole
-		var mute bool
 		if err := rows.Scan(&item.ConvID, &item.Type, &item.Name, &item.Avatar,
 			&lastMsgID, &lastMsgSenderID, &lastMsgSenderName, &lastMsgBody, &lastMsgContentType, &lastMsgTimestamp, &lastMsgStatus,
-			&lastMsgAt, &role, &mute); err != nil {
+			&lastMsgAt, &item.Role, &item.Mute); err != nil {
 			return nil, 0, err
 		}
 		if lastMsgID > 0 {
@@ -129,16 +131,57 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 		items = append(items, item)
 	}
 
-	// For P2P conversations with empty names, resolve the partner's display name
-	for _, item := range items {
-		if item.Type == model.ConvP2P && item.Name == "" {
+	// For P2P conversations, resolve the partner's display name from users table
+	partnerIDs := make([]string, 0, len(items))
+	itemIndexByPartner := make(map[string][]int) // partnerID -> item indices
+	for i, item := range items {
+		if item.Type == model.ConvP2P {
 			parts := strings.Split(item.ConvID, ":")
 			if len(parts) == 2 {
 				partnerID := parts[0]
 				if partnerID == userID {
 					partnerID = parts[1]
 				}
-				r.pool.QueryRow(ctx, `SELECT name FROM users WHERE id = $1`, partnerID).Scan(&item.Name)
+				item.Name = partnerID // fallback to partner ID
+				partnerIDs = append(partnerIDs, partnerID)
+				itemIndexByPartner[partnerID] = append(itemIndexByPartner[partnerID], i)
+			}
+		}
+	}
+	if len(partnerIDs) > 0 {
+		// Resolve partner names with nickname priority (contacts.nickname > users.name)
+		type partnerInfo struct {
+			id, name, nickname string
+			userType           int
+		}
+		partnerMap := make(map[string]*partnerInfo, len(partnerIDs))
+		rows, err := r.pool.Query(ctx,
+			`SELECT u.id, u.name, u.type, COALESCE(c.nickname, '')
+			 FROM users u
+			 LEFT JOIN contacts c ON c.user_id = $1 AND c.contact_id = u.id
+			 WHERE u.id = ANY($2)`, userID, partnerIDs)
+		if err != nil {
+			logger.Error("resolve p2p names query failed", "error", err)
+		} else {
+			defer rows.Close()
+			for rows.Next() {
+				var info partnerInfo
+				if err := rows.Scan(&info.id, &info.name, &info.userType, &info.nickname); err != nil {
+					continue
+				}
+				partnerMap[info.id] = &info
+			}
+			for partnerID, indices := range itemIndexByPartner {
+				if info, ok := partnerMap[partnerID]; ok {
+					displayName := info.name
+					if info.nickname != "" {
+						displayName = info.nickname
+					}
+					for _, idx := range indices {
+						items[idx].Name = displayName
+						items[idx].PartnerType = info.userType
+					}
+				}
 			}
 		}
 	}
@@ -162,8 +205,11 @@ func (r *ConvRepo) RemoveMember(ctx context.Context, convID, userID string) erro
 
 func (r *ConvRepo) GetMembers(ctx context.Context, convID string) ([]*model.ConvMember, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT conv_id, user_id, role, nickname, mute, joined_at
-		 FROM conv_members WHERE conv_id = $1 ORDER BY joined_at`, convID)
+		`SELECT cm.conv_id, cm.user_id, cm.role, cm.nickname, cm.mute, cm.joined_at,
+		        COALESCE(u.type, 0), COALESCE(u.wake_mode, 0)
+		 FROM conv_members cm
+		 LEFT JOIN users u ON u.id = cm.user_id
+		 WHERE cm.conv_id = $1 ORDER BY cm.joined_at`, convID)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +218,8 @@ func (r *ConvRepo) GetMembers(ctx context.Context, convID string) ([]*model.Conv
 	for rows.Next() {
 		m := &model.ConvMember{}
 		var joinedAt time.Time
-		if err := rows.Scan(&m.ConvID, &m.UserID, &m.Role, &m.Nickname, &m.Mute, &joinedAt); err != nil {
+		if err := rows.Scan(&m.ConvID, &m.UserID, &m.Role, &m.Nickname, &m.Mute, &joinedAt,
+			&m.UserType, &m.WakeMode); err != nil {
 			return nil, err
 		}
 		m.JoinedAt = joinedAt.UnixMilli()

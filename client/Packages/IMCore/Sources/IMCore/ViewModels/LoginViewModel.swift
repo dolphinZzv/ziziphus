@@ -19,23 +19,23 @@ public class LoginViewModel: ObservableObject {
 
     private let rememberedAccountsKey = "com.im.remembered_accounts"
 
-    public var rememberedAccounts: [String] {
-        UserDefaults.standard.stringArray(forKey: rememberedAccountsKey) ?? []
+    @Published public var rememberedAccounts: [String] = []
+
+    public func loadRememberedAccounts() {
+        rememberedAccounts = UserDefaults.standard.stringArray(forKey: rememberedAccountsKey) ?? []
     }
 
     public func saveRememberedAccount() {
         guard !account.isEmpty else { return }
-        var accounts = rememberedAccounts
-        if !accounts.contains(account) {
-            accounts.append(account)
+        if !rememberedAccounts.contains(account) {
+            rememberedAccounts.append(account)
         }
-        UserDefaults.standard.set(accounts, forKey: rememberedAccountsKey)
+        UserDefaults.standard.set(rememberedAccounts, forKey: rememberedAccountsKey)
     }
 
     public func removeRememberedAccount(_ account: String) {
-        var accounts = rememberedAccounts
-        accounts.removeAll { $0 == account }
-        UserDefaults.standard.set(accounts, forKey: rememberedAccountsKey)
+        rememberedAccounts.removeAll { $0 == account }
+        UserDefaults.standard.set(rememberedAccounts, forKey: rememberedAccountsKey)
     }
 
     public func selectAccount(_ account: String) {
@@ -45,6 +45,7 @@ public class LoginViewModel: ObservableObject {
     }
 
     public init() {
+        loadRememberedAccounts()
         NotificationCenter.default.addObserver(
             forName: .init("kicked"),
             object: nil,

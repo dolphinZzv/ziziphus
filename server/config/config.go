@@ -26,8 +26,8 @@ type ServerConfig struct {
 }
 
 type PostgresConfig struct {
-	DSN       string `yaml:"dsn"`
-	MaxConns  int    `yaml:"max_conns"`
+	DSN        string `yaml:"dsn"`
+	MaxConns   int    `yaml:"max_conns"`
 	Migrations string `yaml:"migrations"`
 }
 
@@ -38,20 +38,20 @@ type RedisConfig struct {
 }
 
 type JWTConfig struct {
-	Secret              string `yaml:"secret"`
-	ExpireHours         int    `yaml:"expire_hours"`
-	RefreshExpireHours  int    `yaml:"refresh_expire_hours"`
+	Secret             string `yaml:"secret"`
+	ExpireHours        int    `yaml:"expire_hours"`
+	RefreshExpireHours int    `yaml:"refresh_expire_hours"`
 }
 
 type SnowflakeConfig struct {
-	WorkerID    int64  `yaml:"worker_id"`
-	StartTime   string `yaml:"start_time"`
+	WorkerID  int64  `yaml:"worker_id"`
+	StartTime string `yaml:"start_time"`
 }
 
 type RateLimitConfig struct {
-	MsgPerSec    int   `yaml:"msg_per_sec"`
-	MaxBodyBytes int   `yaml:"max_body_bytes"`
-	BurstSize    int   `yaml:"burst_size"`
+	MsgPerSec    int `yaml:"msg_per_sec"`
+	MaxBodyBytes int `yaml:"max_body_bytes"`
+	BurstSize    int `yaml:"burst_size"`
 }
 
 func Load(path string) (*Config, error) {

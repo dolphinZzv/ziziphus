@@ -17,15 +17,15 @@ type MsgSendAckPayload struct {
 }
 
 type MsgPushPayload struct {
-	MsgID     int64    `json:"msg_id"`
-	ConvID    string   `json:"conv_id"`
-	SenderID  string   `json:"sender_id"`
-	ContentType int    `json:"content_type"`
-	Body      string   `json:"body"`
-	ReplyTo   int64    `json:"reply_to"`
-	Mention   []string `json:"mention,omitempty"`
-	Timestamp int64    `json:"timestamp"`
-	ConvSeq   int64    `json:"conv_seq"`
+	MsgID       int64    `json:"msg_id"`
+	ConvID      string   `json:"conv_id"`
+	SenderID    string   `json:"sender_id"`
+	ContentType int      `json:"content_type"`
+	Body        string   `json:"body"`
+	ReplyTo     int64    `json:"reply_to"`
+	Mention     []string `json:"mention,omitempty"`
+	Timestamp   int64    `json:"timestamp"`
+	ConvSeq     int64    `json:"conv_seq"`
 }
 
 type MsgReceivedPayload struct {
@@ -41,12 +41,12 @@ type SyncReqPayload struct {
 }
 
 type SyncMessage struct {
-	MsgID     int64  `json:"msg_id"`
-	SenderID  string `json:"sender_id"`
-	ContentType int   `json:"content_type"`
-	Body      string `json:"body"`
-	Timestamp int64  `json:"timestamp"`
-	ConvSeq   int64  `json:"conv_seq"`
+	MsgID       int64  `json:"msg_id"`
+	SenderID    string `json:"sender_id"`
+	ContentType int    `json:"content_type"`
+	Body        string `json:"body"`
+	Timestamp   int64  `json:"timestamp"`
+	ConvSeq     int64  `json:"conv_seq"`
 }
 
 type SyncResPayload struct {

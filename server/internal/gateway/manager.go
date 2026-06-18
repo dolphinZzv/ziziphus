@@ -13,9 +13,9 @@ import (
 
 type Manager struct {
 	mu        sync.RWMutex
-	conns     map[string]*Connection          // connID -> Connection
+	conns     map[string]*Connection            // connID -> Connection
 	userConns map[string]map[string]*Connection // userID -> connID -> Connection
-	sessConns map[string]*Connection          // sessionID -> Connection
+	sessConns map[string]*Connection            // sessionID -> Connection
 }
 
 func NewManager() *Manager {

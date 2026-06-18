@@ -22,20 +22,20 @@ type Claims struct {
 
 // refreshTokenClaims contains the claims for refresh tokens (opaque, stored in Redis).
 type refreshTokenData struct {
-	UserID     string `json:"uid"`
-	TokenID    string `json:"tid"`
-	ExpiresAt  int64  `json:"exp"`
+	UserID    string `json:"uid"`
+	TokenID   string `json:"tid"`
+	ExpiresAt int64  `json:"exp"`
 }
 
 // Service handles authentication, including password hashing, JWT access tokens,
 // and refresh tokens stored in Redis.
 type Service struct {
-	jwtSecret      []byte
-	accessExpire   time.Duration
-	refreshExpire  time.Duration
-	userRepo       userRepository
-	rdb            redis.UniversalClient
-	idGen          func() int64
+	jwtSecret     []byte
+	accessExpire  time.Duration
+	refreshExpire time.Duration
+	userRepo      userRepository
+	rdb           redis.UniversalClient
+	idGen         func() int64
 }
 
 type userRepository interface {
@@ -53,12 +53,12 @@ const (
 // If rdb is nil, refresh token and blacklist features are disabled.
 func NewService(jwtSecret string, accessExpireHours, refreshExpireHours int, userRepo userRepository, rdb redis.UniversalClient, idGen func() int64) *Service {
 	return &Service{
-		jwtSecret:      []byte(jwtSecret),
-		accessExpire:   time.Duration(accessExpireHours) * time.Hour,
-		refreshExpire:  time.Duration(refreshExpireHours) * time.Hour,
-		userRepo:       userRepo,
-		rdb:            rdb,
-		idGen:          idGen,
+		jwtSecret:     []byte(jwtSecret),
+		accessExpire:  time.Duration(accessExpireHours) * time.Hour,
+		refreshExpire: time.Duration(refreshExpireHours) * time.Hour,
+		userRepo:      userRepo,
+		rdb:           rdb,
+		idGen:         idGen,
 	}
 }
 

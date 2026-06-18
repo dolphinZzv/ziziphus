@@ -11,12 +11,12 @@ struct ContentView: View {
                     .ignoresSafeArea()
             } else if loginVM.isLoggedIn {
                 MainTabView()
+            } else if loginVM.isRegistering {
+                RegisterView()
+            } else if !loginVM.rememberedAccounts.isEmpty {
+                AccountSelectView()
             } else {
-                if loginVM.isRegistering {
-                    RegisterView()
-                } else {
-                    LoginView()
-                }
+                LoginView()
             }
         }
         .task {

@@ -94,6 +94,12 @@ struct ProfileView: View {
             // Settings
             Section {
                 NavigationLink {
+                    AgentManageView()
+                } label: {
+                    Label(loc("agent.manage"), systemImage: "brain")
+                }
+
+                NavigationLink {
                     AppSettingsView()
                         .environmentObject(appSettings)
                         .environmentObject(themeManager)
@@ -215,5 +221,245 @@ struct ProfileView: View {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
         return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+    }
+}
+
+// MARK: - Agent Manage View
+
+struct AgentManageView: View {
+    @State private var agents: [User] = []
+    @State private var isLoading = true
+    @State private var showCreateSheet = false
+    @State private var editingAgent: User?
+
+    var body: some View {
+        List {
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            }
+
+            ForEach(agents) { agent in
+                Button {
+                    editingAgent = agent
+                } label: {
+                    HStack(spacing: 12) {
+                        AvatarView(name: agent.name, url: agent.avatar, size: 40)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(agent.name)
+                                .fontWeight(.medium)
+                            Text(loc("agent.type_label"))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        if !agent.apiKey.isEmpty {
+                            Image(systemName: "key.fill")
+                                .font(.caption2)
+                                .foregroundColor(.green)
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .onDelete { indexSet in
+                for idx in indexSet { deleteAgent(agents[idx]) }
+            }
+
+            if agents.count < 10 && !isLoading {
+                Section {
+                    Button {
+                        showCreateSheet = true
+                    } label: {
+                        Label(loc("agent.create"), systemImage: "plus")
+                    }
+                }
+            } else if agents.count >= 10 {
+                Section {
+                    HStack {
+                        Spacer()
+                        Text(loc("agent.limit_reached"))
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(loc("agent.manage"))
+        .toolbar {
+            if agents.count < 10 && !isLoading {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { showCreateSheet = true } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showCreateSheet) {
+            AgentEditView(onSave: { name, avatar, wakeMode in
+                showCreateSheet = false
+                createAgent(name: name, avatar: avatar, wakeMode: wakeMode)
+            })
+        }
+        .sheet(item: $editingAgent) { agent in
+            AgentEditView(
+                initialName: agent.name,
+                initialAvatar: agent.avatar,
+                initialWakeMode: agent.wakeMode,
+                initialApiKey: agent.apiKey,
+                onSave: { name, avatar, wakeMode in
+                    editingAgent = nil
+                    updateAgent(agent, name: name, avatar: avatar, wakeMode: wakeMode)
+                },
+                onRegenerate: { [agent] in
+                    do {
+                        let newKey = try await AuthService.shared.regenerateAgentKey(agentID: agent.userID)
+                        // reload agent to get updated apiKey
+                        editingAgent = nil
+                        loadAgents()
+                    } catch {}
+                }
+            )
+        }
+        .onAppear { loadAgents() }
+    }
+
+    private func loadAgents() {
+        isLoading = true
+        Task {
+            do { agents = try await AuthService.shared.listAgents() } catch { agents = [] }
+            isLoading = false
+        }
+    }
+
+    private func createAgent(name: String, avatar: String, wakeMode: Int) {
+        Task {
+            do {
+                _ = try await AuthService.shared.createAgent(name: name, avatar: avatar, wakeMode: wakeMode)
+                loadAgents()
+            } catch {}
+        }
+    }
+
+    private func updateAgent(_ agent: User, name: String, avatar: String, wakeMode: Int) {
+        Task {
+            do {
+                try await AuthService.shared.updateAgent(agentID: agent.userID, name: name, avatar: avatar, wakeMode: wakeMode)
+                loadAgents()
+            } catch {}
+        }
+    }
+
+    private func deleteAgent(_ agent: User) {
+        Task {
+            do {
+                try await AuthService.shared.deleteAgent(agentID: agent.userID)
+                loadAgents()
+            } catch {}
+        }
+    }
+}
+
+// MARK: - Agent Edit View
+
+private struct AgentEditView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String
+    @State private var avatar: String
+    @State private var wakeMode: Int
+    @State private var apiKey: String
+    @State private var showRegenerateAlert = false
+
+    var onSave: (String, String, Int) -> Void
+    var onRegenerate: (() async -> Void)?
+
+    init(initialName: String = "", initialAvatar: String = "", initialWakeMode: Int = 0,
+         initialApiKey: String = "",
+         onSave: @escaping (String, String, Int) -> Void,
+         onRegenerate: (() async -> Void)? = nil) {
+        _name = State(initialValue: initialName)
+        _avatar = State(initialValue: initialAvatar)
+        _wakeMode = State(initialValue: initialWakeMode)
+        _apiKey = State(initialValue: initialApiKey)
+        self.onSave = onSave
+        self.onRegenerate = onRegenerate
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack(spacing: 12) {
+                        AvatarView(name: name, url: avatar, size: 60)
+                        VStack {
+                            TextField(loc("agent.name_placeholder"), text: $name)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section(loc("agent.wake_mode")) {
+                    Picker(loc("agent.wake_mode"), selection: $wakeMode) {
+                        Text(loc("agent.wake_all")).tag(0)
+                        Text(loc("agent.wake_mention")).tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                if !apiKey.isEmpty {
+                    Section(loc("agent.api_key")) {
+                        HStack {
+                            Text(apiKey)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .textSelection(.enabled)
+                            Spacer()
+                            Button {
+                                UIPasteboard.general.string = apiKey
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.caption)
+                            }
+                        }
+                        Button(role: .destructive) {
+                            showRegenerateAlert = true
+                        } label: {
+                            Label(loc("agent.api_key_regenerate"), systemImage: "arrow.triangle.2.circlepath")
+                                .font(.caption)
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle(name.isEmpty ? loc("agent.create") : loc("agent.edit"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(loc("common.cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(loc("common.save")) {
+                        dismiss()
+                        onSave(name, avatar, wakeMode)
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .alert(loc("agent.api_key_regenerate"), isPresented: $showRegenerateAlert) {
+            Button(loc("common.cancel"), role: .cancel) {}
+            Button(loc("agent.api_key_regenerate"), role: .destructive) {
+                Task { await onRegenerate?() }
+            }
+        } message: {
+            Text(loc("agent.api_key_regenerate_confirm"))
+        }
     }
 }

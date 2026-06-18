@@ -9,6 +9,8 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "login.register_button": [.zhHans: "注册", .en: "Register"],
     "login.switch_to_register": [.zhHans: "没有账户？注册", .en: "No account? Register"],
     "login.switch_to_login": [.zhHans: "已有账户？登录", .en: "Have an account? Login"],
+    "login.select_account": [.zhHans: "选择账号", .en: "Select Account"],
+    "login.other_account": [.zhHans: "使用其他账号", .en: "Use Another Account"],
     "login.remember_account": [.zhHans: "记住账号", .en: "Remember Account"],
     "login.switch_account": [.zhHans: "切换账号", .en: "Switch Account"],
     "login.account_password_required": [.zhHans: "请输入账户和密码", .en: "Please enter account and password"],
@@ -41,6 +43,8 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "chat.message_too_long": [.zhHans: "消息过长（最多10KB）", .en: "Message too long (max 10KB)"],
     "chat.send_failed": [.zhHans: "发送失败", .en: "Send failed"],
     "chat.retry": [.zhHans: "重试", .en: "Retry"],
+    "chat.image": [.zhHans: "图片", .en: "Image"],
+    "chat.file": [.zhHans: "文件", .en: "File"],
 
     // MARK: - Contacts
     "contact.title": [.zhHans: "通讯录", .en: "Contacts"],
@@ -153,6 +157,7 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "common.empty": [.zhHans: "暂无内容", .en: "No content"],
     "common.online": [.zhHans: "在线", .en: "Online"],
     "common.offline": [.zhHans: "离线", .en: "Offline"],
+    "common.busy": [.zhHans: "忙碌", .en: "Busy"],
     "common.unknown": [.zhHans: "未知", .en: "Unknown"],
     "common.retry": [.zhHans: "重试", .en: "Retry"],
 
@@ -165,6 +170,32 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "history.filter_month": [.zhHans: "月", .en: "Month"],
     "history.filter_day": [.zhHans: "日", .en: "Day"],
     "history.filter_clear": [.zhHans: "清除筛选", .en: "Clear Filters"],
+
+    // MARK: - Agent Management
+    "agent.manage": [.zhHans: "Agent 管理", .en: "Agent Management"],
+    "agent.create": [.zhHans: "创建 Agent", .en: "Create Agent"],
+    "agent.edit": [.zhHans: "编辑 Agent", .en: "Edit Agent"],
+    "agent.delete": [.zhHans: "删除 Agent", .en: "Delete Agent"],
+    "agent.delete_confirm": [.zhHans: "确定要删除此 Agent？", .en: "Delete this agent?"],
+    "agent.limit_reached": [.zhHans: "最多创建 10 个 Agent", .en: "Max 10 agents reached"],
+    "agent.name_placeholder": [.zhHans: "Agent 名称", .en: "Agent name"],
+    "agent.type_label": [.zhHans: "类型", .en: "Type"],
+    "agent.wake_mode": [.zhHans: "唤醒方式", .en: "Wake Mode"],
+    "agent.wake_all": [.zhHans: "全部消息", .en: "All Messages"],
+    "agent.wake_mention": [.zhHans: "仅 @唤醒", .en: "@Mention Only"],
+    "agent.api_key": [.zhHans: "API Key", .en: "API Key"],
+    "agent.api_key_copy": [.zhHans: "已复制", .en: "Copied"],
+    "agent.api_key_regenerate": [.zhHans: "重新生成", .en: "Regenerate"],
+    "agent.api_key_regenerate_confirm": [.zhHans: "重新生成后旧 Key 将失效，确定？", .en: "The old key will be invalidated. Continue?"],
+
+    // MARK: - Agent Timeline
+    "agent.thinking": [.zhHans: "思考中...", .en: "Thinking..."],
+    "agent.tool_call": [.zhHans: "工具调用", .en: "Tool call"],
+    "agent.tool_result": [.zhHans: "执行结果", .en: "Result"],
+    "agent.completed": [.zhHans: "已完成", .en: "Completed"],
+    "agent.running": [.zhHans: "运行中", .en: "Running..."],
+    "agent.error": [.zhHans: "错误", .en: "Error"],
+    "agent.preview": [.zhHans: "Agent 消息", .en: "Agent"],
 
     // MARK: - Reply
     "chat.reply": [.zhHans: "回复", .en: "Reply"],

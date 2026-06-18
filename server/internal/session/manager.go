@@ -11,9 +11,9 @@ import (
 )
 
 type Manager struct {
-	mu         sync.RWMutex
-	registry   map[string]*model.Session // sessionID -> Session
-	userSess   map[string]map[string]struct{} // userID -> set of sessionIDs
+	mu       sync.RWMutex
+	registry map[string]*model.Session      // sessionID -> Session
+	userSess map[string]map[string]struct{} // userID -> set of sessionIDs
 
 	sessionCache sessionCache
 	sessionRepo  sessionRepo

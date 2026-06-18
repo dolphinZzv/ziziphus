@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-
 	"siciv.space/agent/panda_ai/pkg/model"
 )
 

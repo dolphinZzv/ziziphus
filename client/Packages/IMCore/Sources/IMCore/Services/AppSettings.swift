@@ -18,14 +18,14 @@ public class AppSettings: ObservableObject {
     }
 
     nonisolated public static func serverBaseURL() -> String {
-        UserDefaults.standard.string(forKey: "server_url") ?? "http://192.168.2.111:8080"
+        UserDefaults.standard.string(forKey: "server_url") ?? "http://47.95.200.101:10011"
     }
 
     private init() {
         let hex = UserDefaults.standard.string(forKey: "bubble_color") ?? "#d5e3f8"
         bubbleColorHex = hex
         let saved = UserDefaults.standard.string(forKey: "server_url")
-        serverURL = saved ?? "http://192.168.2.111:8080"
+        serverURL = saved ?? "http://47.95.200.101:10011"
         APIClient.shared.baseURL = serverURL
     }
 }

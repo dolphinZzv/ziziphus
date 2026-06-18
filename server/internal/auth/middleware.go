@@ -27,7 +27,16 @@ type tokenParser interface {
 	ParseToken(tokenStr string) (*Claims, error)
 }
 
+// apiKeyLookup is satisfied by *db.UserRepo.
+type apiKeyLookup interface {
+	GetByAPIKey(ctx context.Context, apiKey string) (*model.User, error)
+}
+
 func AuthMiddleware(service tokenParser) func(http.Handler) http.Handler {
+	return AuthMiddlewareWithAPIKey(service, nil)
+}
+
+func AuthMiddlewareWithAPIKey(service tokenParser, keyLookup apiKeyLookup) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tokenStr := extractBearerToken(r)
@@ -37,6 +46,15 @@ func AuthMiddleware(service tokenParser) func(http.Handler) http.Handler {
 			}
 			claims, err := service.ParseToken(tokenStr)
 			if err != nil {
+				// JWT failed, try API key lookup
+				if keyLookup != nil && strings.HasPrefix(tokenStr, "sk-") {
+					user, lookupErr := keyLookup.GetByAPIKey(r.Context(), tokenStr)
+					if lookupErr == nil && user != nil {
+						ctx := context.WithValue(r.Context(), CtxKeyUserID, user.ID)
+						next.ServeHTTP(w, r.WithContext(ctx))
+						return
+					}
+				}
 				writeAuthError(w, r)
 				return
 			}

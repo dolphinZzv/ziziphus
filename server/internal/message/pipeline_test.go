@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"siciv.space/agent/panda_ai/pkg/model"
 	pgx "github.com/jackc/pgx/v5"
+	"siciv.space/agent/panda_ai/pkg/model"
 	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
@@ -214,7 +214,7 @@ type mockConvManager struct {
 	mu    sync.Mutex
 	convs map[string]*model.Conversation
 	// members indexed by convID
-	members       map[string][]*model.ConvMember
+	members          map[string][]*model.ConvMember
 	getOrCreateCalls []struct{ userA, userB string }
 }
 
@@ -459,8 +459,7 @@ func TestParseP2PCounterpart(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestIngest_Success(t *testing.T) {
-	ing, store, idGen, seqCache, convMgr, sessGtr, connReg, receiptW, _ :=
-		newIngestFixture(100, 100, 100000, 100)
+	ing, store, idGen, seqCache, convMgr, sessGtr, connReg, receiptW, _ := newIngestFixture(100, 100, 100000, 100)
 
 	// Set up a P2P conversation that already exists.
 	convMgr.convs = map[string]*model.Conversation{
@@ -598,8 +597,7 @@ func TestIngest_BodyTooLarge(t *testing.T) {
 }
 
 func TestIngest_Duplicate(t *testing.T) {
-	ing, store, _, _, convMgr, _, _, _, _ :=
-		newIngestFixture(100, 100, 100000, 200)
+	ing, store, _, _, convMgr, _, _, _, _ := newIngestFixture(100, 100, 100000, 200)
 
 	convMgr.convs = map[string]*model.Conversation{
 		"user_a:user_b": {ConvID: "user_a:user_b", Type: model.ConvP2P},
@@ -648,8 +646,7 @@ func TestIngest_Duplicate(t *testing.T) {
 }
 
 func TestIngest_AutoCreateP2P(t *testing.T) {
-	ing, store, _, _, convMgr, sessGtr, connReg, receiptW, _ :=
-		newIngestFixture(100, 100, 100000, 100)
+	ing, store, _, _, convMgr, sessGtr, connReg, receiptW, _ := newIngestFixture(100, 100, 100000, 100)
 
 	// NO pre-existing conversation - Get will return ErrConvNotFound.
 	// convID "user_a:user_b" will pass IsP2PConvID.
@@ -709,8 +706,7 @@ func TestIngest_AutoCreateP2P(t *testing.T) {
 }
 
 func TestIngest_AutoCreateP2P_EmptyOtherID(t *testing.T) {
-	ing, _, _, _, _, _, _, _, _ :=
-		newIngestFixture(100, 100, 100000, 100)
+	ing, _, _, _, _, _, _, _, _ := newIngestFixture(100, 100, 100000, 100)
 
 	// Using an invalid P2P convID that still passes IsP2PConvID but
 	// has no counterpart (empty after ":").
@@ -730,8 +726,7 @@ func TestIngest_AutoCreateP2P_EmptyOtherID(t *testing.T) {
 }
 
 func TestIngest_GroupConvNotFound(t *testing.T) {
-	ing, _, _, _, _, _, _, _, _ :=
-		newIngestFixture(100, 100, 100000, 100)
+	ing, _, _, _, _, _, _, _, _ := newIngestFixture(100, 100, 100000, 100)
 
 	payload := protocol.MsgSendPayload{
 		ConvID:      "group_999",
@@ -749,8 +744,7 @@ func TestIngest_GroupConvNotFound(t *testing.T) {
 }
 
 func TestIngest_InsertError(t *testing.T) {
-	ing, store, _, _, convMgr, _, _, _, _ :=
-		newIngestFixture(100, 100, 100000, 100)
+	ing, store, _, _, convMgr, _, _, _, _ := newIngestFixture(100, 100, 100000, 100)
 
 	convMgr.convs = map[string]*model.Conversation{
 		"user_a:user_b": {ConvID: "user_a:user_b", Type: model.ConvP2P},
@@ -773,8 +767,7 @@ func TestIngest_InsertError(t *testing.T) {
 }
 
 func TestSendSystemMessage(t *testing.T) {
-	ing, store, idGen, seqCache, convMgr, sessGtr, connReg, receiptW, _ :=
-		newIngestFixture(100, 100, 100000, 100)
+	ing, store, idGen, seqCache, convMgr, sessGtr, connReg, receiptW, _ := newIngestFixture(100, 100, 100000, 100)
 
 	// Provide routing support so the system message gets pushed.
 	convMgr.convs = map[string]*model.Conversation{
@@ -859,8 +852,7 @@ func TestSendSystemMessage(t *testing.T) {
 }
 
 func TestSendSystemMessage_InsertError(t *testing.T) {
-	ing, store, _, _, _, _, _, _, _ :=
-		newIngestFixture(100, 100, 100000, 100)
+	ing, store, _, _, _, _, _, _, _ := newIngestFixture(100, 100, 100000, 100)
 	store.insertErr = errors.New("db error")
 
 	_, err := ing.SendSystemMessage(context.Background(), "conv_sys", "body")
@@ -1217,10 +1209,10 @@ func TestMarkRead_Success(t *testing.T) {
 		MsgID:    200,
 		ConvID:   "conv_x",
 		SenderID: "user_b",
-			ConvSeq: 50,
+		ConvSeq:  50,
 	}
 	store.messages = map[int64]*model.Message{200: msg}
-	
+
 	// Sender has connections.
 	senderConn := &mockConn{}
 	connReg.byUserID = map[string][]any{"user_b": {senderConn}}
@@ -1350,9 +1342,11 @@ type errSeqCache struct{ err error }
 func (e *errSeqCache) SetUserSeq(_ context.Context, _, _ string, _ int64) error {
 	return e.err
 }
+
 func (e *errSeqCache) GetUserSeq(_ context.Context, _, _ string) (int64, error) {
 	return 0, e.err
 }
+
 func (e *errSeqCache) GetAndIncrementConvSeq(_ context.Context, _ string) (int64, error) {
 	return 0, e.err
 }

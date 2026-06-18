@@ -18,20 +18,20 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:   4096,
-	WriteBufferSize:  4096,
+	ReadBufferSize:  4096,
+	WriteBufferSize: 4096,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
 
 type WSHandler struct {
-	authMW   func(ctx context.Context, token string) (context.Context, error)
-	sessMgr  sessionManager
-	connMgr  *gateway.Manager
-	ingest   messageIngester
-	sync     syncHandler
-	receipt  readReceiptHandler
+	authMW  func(ctx context.Context, token string) (context.Context, error)
+	sessMgr sessionManager
+	connMgr *gateway.Manager
+	ingest  messageIngester
+	sync    syncHandler
+	receipt readReceiptHandler
 }
 
 type sessionManager interface {

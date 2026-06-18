@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"siciv.space/agent/panda_ai/internal/auth"
 	"siciv.space/agent/panda_ai/pkg/i18n"
 	"siciv.space/agent/panda_ai/pkg/logger"
 	"siciv.space/agent/panda_ai/pkg/model"
-	"github.com/go-chi/chi/v5"
 )
 
 type contactStorage interface {
@@ -54,7 +54,7 @@ func (h *ContactHandler) List(w http.ResponseWriter, r *http.Request) {
 	contacts, total, err := h.contactRepo.List(r.Context(), userID, page, size)
 	if err != nil {
 		logger.Error("list contacts failed", "user_id", userID, "error", err)
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (h *ContactHandler) Add(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.contactRepo.Add(r.Context(), contact); err != nil {
 		logger.Error("add contact failed", "user_id", userID, "contact_id", req.UserID, "error", err)
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{"user_id": req.UserID, "nickname": req.Nickname})
@@ -123,7 +123,7 @@ func (h *ContactHandler) Remove(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.contactRepo.Remove(r.Context(), userID, contactID); err != nil {
 		logger.Error("remove contact failed", "user_id", userID, "contact_id", contactID, "error", err)
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{"user_id": contactID})
@@ -144,7 +144,7 @@ func (h *ContactHandler) UpdateNickname(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.contactRepo.UpdateNickname(r.Context(), userID, contactID, req.Nickname); err != nil {
 		logger.Error("update contact nickname failed", "user_id", userID, "contact_id", contactID, "error", err)
-		Error(w, r,http.StatusInternalServerError, model.ErrInternalServer)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{"user_id": contactID, "nickname": req.Nickname})

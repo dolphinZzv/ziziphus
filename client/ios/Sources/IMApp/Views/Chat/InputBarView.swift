@@ -10,7 +10,11 @@ struct InputBarView: View {
     var replyingToMsg: Message?
     var replyingToSender: String?
     var onCancelReply: (() -> Void)?
-    @State private var showEmojiPicker = false
+    var members: [ConvMember] = []
+    var senderInfo: [String: User] = [:]
+    @FocusState private var isInputFocused
+    @State private var showMentionSheet = false
+    @State private var selectedMemberIDs: Set<String> = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,96 +47,164 @@ struct InputBarView: View {
             }
 
             HStack(spacing: 0) {
-            ZStack(alignment: .bottomTrailing) {
-                TextField(loc("chat.placeholder"), text: $text, axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .font(.body)
-                    .lineLimit(1...5)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .padding(.trailing, 60)
-                    .background(Color(.systemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color(.separator), lineWidth: 0.5)
-                    )
-                    .onChange(of: text) { _, _ in
-                        onTyping()
-                    }
-
-                HStack(spacing: 2) {
-                    Menu {
-                        Button(action: onPickImage) {
-                            Label("图片", systemImage: "photo")
+                ZStack(alignment: .bottomTrailing) {
+                    TextField(loc("chat.placeholder"), text: $text, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                        .lineLimit(1...5)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .padding(.trailing, 60)
+                        .background(Color(.systemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color(.separator), lineWidth: 0.5)
+                        )
+                        .focused($isInputFocused)
+                        .onChange(of: text) { _, _ in
+                            onTyping()
                         }
-                        Button(action: onPickFile) {
-                            Label("文件", systemImage: "doc")
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button(loc("common.done")) {
+                                    isInputFocused = false
+                                }
+                            }
                         }
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.blue)
-                    }
 
-                    Button(action: {
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        showEmojiPicker = true
-                    }) {
-                        Image(systemName: "face.smiling.fill")
-                            .font(.title2)
-                            .foregroundColor(.blue)
-                    }
-                    .popover(isPresented: $showEmojiPicker) {
-                        EmojiPickerView { emoji in
-                            text.append(emoji)
-                            showEmojiPicker = false
+                    HStack(spacing: 2) {
+                        Button(action: { showMentionSheet = true }) {
+                            Text("@")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.blue)
+                                .frame(width: 28, height: 28)
                         }
-                        .presentationCompactAdaptation(.popover)
-                    }
+                        .disabled(members.isEmpty)
 
-                    Button(action: onSend) {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.blue)
+                        Menu {
+                            Button(action: onPickImage) {
+                                Label(loc("chat.image"), systemImage: "photo")
+                            }
+                            Button(action: onPickFile) {
+                                Label(loc("chat.file"), systemImage: "doc")
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                        }
+
+                        Button(action: onSend) {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                        }
+                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .offset(x: -6, y: -6)
                 }
-                .offset(x: -6, y: -6)
+            }
+            .padding(12)
+            .background(Color(.systemGray6))
+            .sheet(isPresented: $showMentionSheet) {
+                MentionPickerView(
+                    members: members,
+                    senderInfo: senderInfo,
+                    selectedIDs: $selectedMemberIDs,
+                    onDone: {
+                        insertMentions()
+                        showMentionSheet = false
+                    }
+                )
             }
         }
-        .padding(12)
-        .background(Color(.systemGray6))
+    }
+
+    private func insertMentions() {
+        guard !selectedMemberIDs.isEmpty else { return }
+        var mentionTexts: [String] = []
+        for id in selectedMemberIDs {
+            let name = members.first(where: { $0.userID == id })?.nickname
+                ?? senderInfo[id]?.name
+                ?? id
+            mentionTexts.append("@\(name)")
+        }
+        let mentionStr = mentionTexts.joined(separator: " ") + " "
+        if text.isEmpty {
+            text = mentionStr
+        } else {
+            text = text + " " + mentionStr
+        }
+        selectedMemberIDs = []
     }
 }
-}
 
-// MARK: - Emoji Picker
-private struct EmojiPickerView: View {
-    let onSelect: (String) -> Void
+// MARK: - Mention Picker
+
+private struct MentionPickerView: View {
+    let members: [ConvMember]
+    let senderInfo: [String: User]
+    @Binding var selectedIDs: Set<String>
+    let onDone: () -> Void
     @Environment(\.dismiss) private var dismiss
 
-    private let emojiRows: [[String]] = [
-        ["😊", "😂", "🥰", "😍", "😘", "😜", "😎", "🤗"],
-        ["😢", "😡", "🥺", "😴", "🤔", "🙄", "😏", "😅"],
-        ["👍", "👎", "👌", "✌️", "🤞", "💪", "🤝", "👏"],
-        ["🎉", "🎊", "🎈", "🔥", "⭐", "💯", "✅", "❌"],
-        ["❤️", "💔", "💖", "💕", "💗", "💙", "💚", "💜"],
-    ]
-
     var body: some View {
-        VStack(spacing: 8) {
-            ForEach(emojiRows, id: \.self) { row in
-                HStack(spacing: 12) {
-                    ForEach(row, id: \.self) { emoji in
-                        Button(action: { onSelect(emoji) }) {
-                            Text(emoji).font(.system(size: 28))
+        NavigationStack {
+            List {
+                ForEach(members, id: \.userID) { member in
+                    let name = member.nickname ?? senderInfo[member.userID]?.name ?? member.userID
+                    Button(action: {
+                        if selectedIDs.contains(member.userID) {
+                            selectedIDs.remove(member.userID)
+                        } else {
+                            selectedIDs.insert(member.userID)
                         }
-                        .buttonStyle(.plain)
+                    }) {
+                        HStack {
+                            AvatarView(name: name, url: "", size: 36)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(name)
+                                    .font(.body)
+                                    .foregroundColor(.primary)
+                                Text(member.userID)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            if selectedIDs.contains(member.userID) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.blue)
+                                    .font(.title3)
+                            } else {
+                                Image(systemName: "circle")
+                                    .foregroundColor(.secondary)
+                                    .font(.title3)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
+                }
+            }
+            .listStyle(.plain)
+            .navigationTitle("@ " + loc("group.members"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(loc("common.cancel")) {
+                        selectedIDs = []
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(loc("common.done")) {
+                        onDone()
+                    }
+                    .disabled(selectedIDs.isEmpty)
                 }
             }
         }
-        .padding()
     }
 }

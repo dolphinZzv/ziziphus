@@ -3,19 +3,19 @@ package message
 import (
 	"context"
 
-	"siciv.space/agent/panda_ai/pkg/model"
 	"siciv.space/agent/panda_ai/pkg/logger"
+	"siciv.space/agent/panda_ai/pkg/model"
 )
 
 type RouteTarget struct {
-	UserID    string
+	UserID     string
 	SessionIDs []string
 }
 
 type Router struct {
-	sessManager  sessionGetter
-	convManager  convProvider
-	gateway      connBySessionID
+	sessManager sessionGetter
+	convManager convProvider
+	gateway     connBySessionID
 }
 
 type sessionGetter interface {
@@ -56,6 +56,12 @@ func (r *Router) Route(ctx context.Context, msg *model.Message) []RouteTarget {
 func (r *Router) route(ctx context.Context, msg *model.Message, members []*model.ConvMember) []RouteTarget {
 	var targets []RouteTarget
 	for _, m := range members {
+		// Agent with wake_mode = mention only: skip unless @mentioned
+		if m.UserType == model.UserAgent && m.WakeMode == model.WakeModeMention {
+			if !contains(msg.Mention, m.UserID) {
+				continue
+			}
+		}
 		sessionIDs := r.sessManager.GetUserSessionIDs(ctx, m.UserID)
 		if len(sessionIDs) == 0 {
 			continue
@@ -79,6 +85,15 @@ func (r *Router) route(ctx context.Context, msg *model.Message, members []*model
 		}
 	}
 	return targets
+}
+
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Router) routeP2P(ctx context.Context, msg *model.Message, conv *model.Conversation) []RouteTarget {

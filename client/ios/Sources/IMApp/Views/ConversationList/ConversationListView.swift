@@ -15,6 +15,13 @@ struct ConversationListView: View {
     @State private var showJoinGroup = false
     @State private var showProfile = false
     @State private var navigateToChat: ChatDestination?
+    @State private var searchText = ""
+
+    private var filteredConversations: [ConvListItem] {
+        let q = searchText.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return vm.conversations }
+        return vm.conversations.filter { $0.name.localizedCaseInsensitiveContains(q) }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -62,18 +69,14 @@ struct ConversationListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
-                    ForEach(vm.conversations) { conv in
-                        NavigationLink {
-                            ChatView(convID: conv.convID, convName: conv.name, convType: conv.type)
+                    ForEach(filteredConversations) { conv in
+                        Button {
+                            navigateToChat = ChatDestination(convID: conv.convID, name: conv.name, type: conv.type)
                         } label: {
                             ConversationRowView(conv: conv)
                         }
                         .listRowSeparator(.hidden)
-                        .overlay(alignment: .bottom) {
-                            Rectangle()
-                                .fill(Color(.separator))
-                                .frame(height: 0.5)
-                        }
+                        .listRowInsets(EdgeInsets())
                     }
                 }
                 .listStyle(.plain)
@@ -135,6 +138,7 @@ struct ConversationListView: View {
                 ProfileView()
             }
         }
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic))
         .onAppear {
             vm.loadConversations()
             vm.connectWebSocket()

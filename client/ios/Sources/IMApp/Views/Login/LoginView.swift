@@ -33,21 +33,6 @@ struct LoginView: View {
                 .fontWeight(.bold)
 
             VStack(spacing: 16) {
-                if !loginVM.rememberedAccounts.isEmpty {
-                    HStack(spacing: 12) {
-                        ForEach(loginVM.rememberedAccounts, id: \.self) { acct in
-                            AvatarCircle(account: acct, isSelected: acct == loginVM.account)
-                                .onTapGesture { loginVM.selectAccount(acct) }
-                                .contextMenu {
-                                    Button(loc("common.delete"), role: .destructive) {
-                                        loginVM.removeRememberedAccount(acct)
-                                    }
-                                }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                }
-
                 CapsuleTextField(placeholder: loc("login.account_placeholder"), text: $loginVM.account)
 
                 ZStack(alignment: .trailing) {
@@ -113,46 +98,6 @@ struct LoginView: View {
 #Preview {
     LoginView()
         .environmentObject(LoginViewModel())
-}
-
-// MARK: - Account avatar circle
-
-struct AvatarCircle: View {
-    let account: String
-    var isSelected: Bool = false
-
-    private static let avatarColors: [Color] = [
-        .red, .orange, .yellow, .green, .mint, .teal, .cyan,
-        .blue, .indigo, .purple, .pink, .brown
-    ]
-
-    private var color: Color {
-        let index = abs(account.hash) % Self.avatarColors.count
-        return Self.avatarColors[index]
-    }
-
-    private var initial: String {
-        String(account.prefix(1)).uppercased()
-    }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(color)
-                .frame(width: 40, height: 40)
-
-            Text(initial)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-
-            if isSelected {
-                Circle()
-                    .stroke(Color.blue, lineWidth: 2.5)
-                    .frame(width: 40, height: 40)
-            }
-        }
-        .frame(width: 44, height: 44)
-    }
 }
 
 // MARK: - Capsule-style text fields matching macOS style

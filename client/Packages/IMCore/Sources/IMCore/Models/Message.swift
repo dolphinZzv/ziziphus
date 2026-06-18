@@ -10,6 +10,7 @@ public enum ContentType: Int, Codable, Sendable {
     case recall = 6
     case edit = 7
     case custom = 8
+    case agentTimeline = 9
 }
 
 public enum MsgStatus: Int, Codable, Sendable {

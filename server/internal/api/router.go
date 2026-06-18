@@ -55,6 +55,11 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/users/batch", h.User.BatchGet)
 		r.Put("/api/v1/users/me", h.User.UpdateMe)
 		r.Get("/api/v1/users/search", h.User.Search)
+		r.Get("/api/v1/users/me/agents", h.User.ListMyAgents)
+		r.Post("/api/v1/users/me/agents", h.User.CreateAgent)
+		r.Put("/api/v1/users/me/agents/{agent_id}", h.User.UpdateAgent)
+		r.Delete("/api/v1/users/me/agents/{agent_id}", h.User.DeleteAgent)
+		r.Put("/api/v1/users/me/agents/{agent_id}/regenerate-key", h.User.RegenerateAgentKey)
 		r.Get("/api/v1/groups/search", h.Conversation.SearchGroups)
 
 		r.Get("/api/v1/conversations", h.Conversation.List)

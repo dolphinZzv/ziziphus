@@ -15,6 +15,10 @@ server/handler_cov.out
 server/config/rsa_key.pem
 server/config/config.yaml
 .venv
+.env
 .omo
 data
 panda_ai
+deps/textual/
+
+

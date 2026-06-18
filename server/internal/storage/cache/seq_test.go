@@ -26,7 +26,7 @@ func TestNewSeqCache(t *testing.T) {
 }
 
 func TestGetAndIncrementConvSeq(t *testing.T) {
-	_, sc := 	setupSeqCache(t)
+	_, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	seq, err := sc.GetAndIncrementConvSeq(ctx, "conv_1")
@@ -47,7 +47,7 @@ func TestGetAndIncrementConvSeq(t *testing.T) {
 }
 
 func TestGetAndIncrementConvSeq_DifferentKeys(t *testing.T) {
-	_, sc := 	setupSeqCache(t)
+	_, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	s1, _ := sc.GetAndIncrementConvSeq(ctx, "conv_a")
@@ -58,7 +58,7 @@ func TestGetAndIncrementConvSeq_DifferentKeys(t *testing.T) {
 }
 
 func TestSetGetUserSeq(t *testing.T) {
-	_, sc := 	setupSeqCache(t)
+	_, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	err := sc.SetUserSeq(ctx, "user_1", "conv_1", 42)
@@ -86,7 +86,7 @@ func TestGetUserSeq_NotExists(t *testing.T) {
 }
 
 func TestSetGetSessionSeq(t *testing.T) {
-	_, sc := 	setupSeqCache(t)
+	_, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	err := sc.SetSessionSeq(ctx, "session_1", "conv_1", 77)
@@ -104,7 +104,7 @@ func TestSetGetSessionSeq(t *testing.T) {
 }
 
 func TestMarkRead_ReturnsUnreadCount(t *testing.T) {
-	mr, sc := 	setupSeqCache(t)
+	mr, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	// Set conv seq to 10
@@ -120,7 +120,7 @@ func TestMarkRead_ReturnsUnreadCount(t *testing.T) {
 }
 
 func TestMarkRead_ClampsNegatives(t *testing.T) {
-	mr, sc := 	setupSeqCache(t)
+	mr, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	mr.Set("conv:seq:conv_x", "5")
@@ -151,7 +151,7 @@ func TestMarkRead_NoConvSeq(t *testing.T) {
 }
 
 func TestGetUnreadCount(t *testing.T) {
-	mr, sc := 	setupSeqCache(t)
+	mr, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	mr.Set("conv:seq:conv_x", "100")
@@ -167,7 +167,7 @@ func TestGetUnreadCount(t *testing.T) {
 }
 
 func TestGetUnreadCount_NoUserSeq(t *testing.T) {
-	mr, sc := 	setupSeqCache(t)
+	mr, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	mr.Set("conv:seq:conv_x", "50")
@@ -182,7 +182,7 @@ func TestGetUnreadCount_NoUserSeq(t *testing.T) {
 }
 
 func TestGetUnreadCount_NoConvSeq(t *testing.T) {
-	_, sc := 	setupSeqCache(t)
+	_, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	count, err := sc.GetUnreadCount(ctx, "u1", "conv_noexist")
@@ -195,7 +195,7 @@ func TestGetUnreadCount_NoConvSeq(t *testing.T) {
 }
 
 func TestGetUnreadCount_NoOverflow(t *testing.T) {
-	mr, sc := 	setupSeqCache(t)
+	mr, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	mr.Set("conv:seq:conv_x", "5")
@@ -211,7 +211,7 @@ func TestGetUnreadCount_NoOverflow(t *testing.T) {
 }
 
 func TestSetRecentMsg(t *testing.T) {
-	_, sc := 	setupSeqCache(t)
+	_, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	err := sc.SetRecentMsg(ctx, "conv_x", 100, 1000.0)
@@ -226,7 +226,7 @@ func TestSetRecentMsg(t *testing.T) {
 }
 
 func TestInitConvSeq(t *testing.T) {
-	_, sc := 	setupSeqCache(t)
+	_, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	err := sc.InitConvSeq(ctx, "conv_new", 50)
@@ -244,7 +244,7 @@ func TestInitConvSeq(t *testing.T) {
 }
 
 func TestInitConvSeq_AlreadyExists(t *testing.T) {
-	mr, sc := 	setupSeqCache(t)
+	mr, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	mr.Set("conv:seq:conv_existing", "30")
@@ -262,7 +262,7 @@ func TestInitConvSeq_AlreadyExists(t *testing.T) {
 }
 
 func TestInitConvSeq_UpdateHigher(t *testing.T) {
-	mr, sc := 	setupSeqCache(t)
+	mr, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	mr.Set("conv:seq:conv_existing", "10")
@@ -280,7 +280,7 @@ func TestInitConvSeq_UpdateHigher(t *testing.T) {
 }
 
 func TestRecoverConvSeq_DelegatesToInit(t *testing.T) {
-	_, sc := 	setupSeqCache(t)
+	_, sc := setupSeqCache(t)
 	ctx := context.Background()
 
 	err := sc.RecoverConvSeq(ctx, "conv_recover", 100)

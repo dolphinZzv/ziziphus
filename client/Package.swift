@@ -5,14 +5,14 @@ let package = Package(
     name: "IM",
     platforms: [
         .macOS(.v15),
-        .iOS(.v17),
+        .iOS(.v18),
     ],
     products: [
         .executable(name: "IMApp-macOS", targets: ["IMApp-macOS"]),
         .library(name: "IMCore", targets: ["IMCore"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.0"),
+        .package(path: "../deps/textual"),
     ],
     targets: [
         .target(
@@ -21,9 +21,14 @@ let package = Package(
         ),
         .executableTarget(
             name: "IMApp-macOS",
-            dependencies: ["IMCore", .product(name: "MarkdownUI", package: "swift-markdown-ui")],
+            dependencies: ["IMCore", .product(name: "Textual", package: "textual")],
             path: "macOS/Sources/IMApp",
             resources: []
+        ),
+        .testTarget(
+            name: "IMCoreUnitTests",
+            dependencies: ["IMCore"],
+            path: "Packages/IMCore/Tests/IMCoreUnitTests"
         ),
         .testTarget(
             name: "IMCoreE2ETests",

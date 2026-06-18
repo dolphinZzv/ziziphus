@@ -10,10 +10,22 @@ struct ConversationRowView: View {
         HStack(spacing: AppleDesign.Spacing.xs) {
             // Avatar
             AvatarView(name: conv.name, url: conv.avatar, size: 36)
+                .overlay(alignment: .bottomTrailing) {
+                    if conv.type == .p2p && conv.partnerType == 1 {
+                        Image(systemName: "cpu.fill")
+                            .font(.system(size: 8))
+                            .foregroundColor(.white)
+                            .padding(2)
+                            .background(Color.purple)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color(.controlBackgroundColor), lineWidth: 1.5))
+                            .offset(x: 2, y: 2)
+                    }
+                }
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Text(conv.type == .p2p ? String(format: loc("chat.session_title"), conv.name) : conv.name)
+                    Text(conv.name)
                         .font(.system(size: AppleDesign.Typography.captionSize, weight: .semibold))
                         .foregroundColor(AppleDesign.Colors.ink)
                         .lineLimit(1)
@@ -48,6 +60,11 @@ struct ConversationRowView: View {
                         }
                         if last.contentType == 1, let url = last.imageFileURL {
                             LastImageThumbnailView(url: url)
+                        } else if last.contentType == 9 {
+                            Text(agentPreviewBody(last.body))
+                                .font(.system(size: AppleDesign.Typography.captionSize))
+                                .foregroundColor(AppleDesign.Colors.inkMuted)
+                                .lineLimit(1)
                         } else {
                             Text(last.body)
                                 .font(.system(size: AppleDesign.Typography.captionSize))
@@ -83,6 +100,27 @@ struct ConversationRowView: View {
             }
         }
         .padding(.vertical, 8)
+    }
+
+    private func agentPreviewBody(_ body: String) -> String {
+        guard let data = body.data(using: .utf8),
+              let timeline = try? JSONDecoder().decode(AgentTimelineBody.self, from: data) else {
+            return loc("agent.preview")
+        }
+        if let title = timeline.title {
+            return title
+        }
+        // Append message without title — try to resolve from parent
+        if timeline.parentMsgID > 0 {
+            let msgs = MessageCache.shared.getMessages(convID: conv.convID)
+            if let parent = msgs.first(where: { $0.msgID == timeline.parentMsgID }),
+               let parentData = parent.body.data(using: .utf8),
+               let parentTimeline = try? JSONDecoder().decode(AgentTimelineBody.self, from: parentData),
+               let title = parentTimeline.title {
+                return title
+            }
+        }
+        return loc("agent.preview")
     }
 
     private func formatTime(_ timestamp: Int64) -> String {

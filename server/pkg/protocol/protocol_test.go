@@ -11,9 +11,9 @@ import (
 
 func TestMessageType_Constants(t *testing.T) {
 	tests := []struct {
-		name  string
-		got   MessageType
-		want  MessageType
+		name string
+		got  MessageType
+		want MessageType
 	}{
 		{"MsgSend", MsgSend, 1},
 		{"MsgSendAck", MsgSendAck, 2},

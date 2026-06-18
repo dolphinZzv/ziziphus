@@ -7,6 +7,11 @@ struct AppSettingsView: View {
     @EnvironmentObject private var localizationManager: LocalizationManager
     @Environment(\.dismiss) private var dismiss
 
+    @State private var serverInfo: ConversationService.ServerVersionInfo?
+    @State private var isLoadingServerInfo = true
+
+    private let convService = ConversationService.shared
+
     var body: some View {
         NavigationStack {
             Form {
@@ -54,11 +59,38 @@ struct AppSettingsView: View {
                     }
                 }
 
-                Section {
-                    NavigationLink {
-                        AppInfoView()
-                    } label: {
-                        Label(loc("settings.app_info"), systemImage: "info.circle")
+                Section(loc("settings.app_info")) {
+                    HStack {
+                        Text(loc("settings.client_version"))
+                        Spacer()
+                        Text("\(convService.clientVersion) (\(convService.clientBuild))")
+                            .foregroundColor(.secondary)
+                    }
+                    HStack {
+                        Text(loc("settings.build"))
+                        Spacer()
+                        Text(convService.clientGitHash)
+                            .foregroundColor(.secondary)
+                    }
+                    HStack {
+                        Text(loc("settings.server_version"))
+                        Spacer()
+                        if isLoadingServerInfo {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Text(serverInfo?.version ?? loc("common.unknown"))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    HStack {
+                        Text(loc("settings.server_build"))
+                        Spacer()
+                        if isLoadingServerInfo {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Text(serverInfo?.gitCommit ?? loc("common.unknown"))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
             }
@@ -68,6 +100,14 @@ struct AppSettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(loc("common.done")) { dismiss() }
                 }
+            }
+            .task {
+                do {
+                    serverInfo = try await convService.fetchServerVersion()
+                } catch {
+                    serverInfo = nil
+                }
+                isLoadingServerInfo = false
             }
         }
     }

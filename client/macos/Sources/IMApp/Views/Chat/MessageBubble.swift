@@ -1,6 +1,6 @@
 import SwiftUI
 import IMCore
-import MarkdownUI
+import Textual
 import UniformTypeIdentifiers
 
 struct MessageBubble: View {
@@ -13,6 +13,12 @@ struct MessageBubble: View {
     var isFirstInGroup = true
     var isLastInGroup = true
     var uploadProgress: Double?
+    var isHighlighted = false
+
+    private var serverBaseURL: URL? { URL(string: AppSettings.shared.serverURL) }
+
+    @State private var imageViewerImages: [URL] = []
+    @State private var imageViewerIndex: Int = 0
 
     private var isMine: Bool {
         message.senderID == AuthManager.shared.currentUser?.userID
@@ -30,9 +36,14 @@ struct MessageBubble: View {
         return try? JSONDecoder().decode(FileMessageBody.self, from: data)
     }
 
+    private var agentTimelineBody: AgentTimelineBody? {
+        guard let data = message.body.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(AgentTimelineBody.self, from: data)
+    }
+
     var body: some View {
         HStack {
-            if isMine { Spacer(minLength: 60) }
+            if isMine { Spacer(minLength: 40) }
 
             VStack(alignment: isMine ? .trailing : .leading, spacing: 3) {
                 if convType == .group && isFirstInGroup {
@@ -50,6 +61,8 @@ struct MessageBubble: View {
                         imageBubble
                     } else if message.contentType == .file {
                         fileBubble
+                    } else if message.contentType == .agentTimeline {
+                        agentTimelineBubble
                     } else {
                         textBubble
                     }
@@ -70,9 +83,42 @@ struct MessageBubble: View {
                 }
             }
 
-            if !isMine { Spacer(minLength: 60) }
+            if !isMine { Spacer() }
         }
         .padding(.vertical, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isHighlighted ? Color.yellow.opacity(0.3) : .clear)
+                .animation(.easeOut(duration: 0.8), value: isHighlighted)
+        )
+        .environment(\.openURL, OpenURLAction { url in
+            // only handle non-image URLs now; image taps come via notification
+            guard url.absoluteString.isImageURL else {
+                NSWorkspace.shared.open(url)
+                return .handled
+            }
+            return .handled
+        })
+        .textual.imageAttachmentLoader(.tappableImage(relativeTo: serverBaseURL))
+        .sheet(isPresented: Binding(
+            get: { !imageViewerImages.isEmpty },
+            set: { if !$0 { imageViewerImages = [] } }
+        )) {
+            ImageViewer(images: imageViewerImages, initialIndex: imageViewerIndex)
+                .frame(minWidth: 600, minHeight: 400)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .textualImageTapped)) { notif in
+            guard let url = notif.object as? URL else { return }
+            let resolved = URL(string: url.absoluteString, relativeTo: serverBaseURL)?.absoluteURL ?? url
+            let urls = message.body.extractImageURLs(baseURL: serverBaseURL)
+            if urls.isEmpty {
+                imageViewerImages = [resolved]
+                imageViewerIndex = 0
+            } else {
+                imageViewerImages = urls
+                imageViewerIndex = urls.firstIndex(of: resolved) ?? 0
+            }
+        }
     }
 
     // MARK: - Text Bubble
@@ -81,10 +127,8 @@ struct MessageBubble: View {
             if let repliedMessage {
                 replyQuoteView(for: repliedMessage)
             }
-            Markdown(message.body)
-                .markdownTextStyle {
-                    ForegroundColor(isMine ? .primary : AppleDesign.Colors.ink)
-                }
+            InlineText(markdown: message.body, baseURL: serverBaseURL)
+                .foregroundColor(isMine ? .primary : AppleDesign.Colors.ink)
         }
         .font(.system(size: AppleDesign.Typography.bodySize))
         .padding(.horizontal, 14)
@@ -92,6 +136,7 @@ struct MessageBubble: View {
         .background(isMine ? bubbleMine : AppleDesign.Colors.chatGray)
         .clipShape(bubbleShape)
         .textSelection(.enabled)
+        .textual.textSelection(.enabled)
         .contextMenu {
             Button(loc("common.copy")) {
                 NSPasteboard.general.clearContents()
@@ -188,6 +233,21 @@ struct MessageBubble: View {
         }
     }
 
+    // MARK: - Agent Timeline Bubble
+    private var agentTimelineBubble: some View {
+        Group {
+            if let timeline = agentTimelineBody {
+                AgentTimelineView(timeline: timeline, isMine: isMine)
+            } else {
+                textBubble
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isMine ? bubbleMine : AppleDesign.Colors.chatGray)
+        .clipShape(bubbleShape)
+    }
+
     // MARK: - Failed Bubble
     private var failedBubble: some View {
         Button {
@@ -197,7 +257,7 @@ struct MessageBubble: View {
                 Image(systemName: "exclamationmark.circle.fill")
                     .font(.system(size: 11))
                     .foregroundColor(.red)
-                Markdown(message.body)
+                InlineText(markdown:message.body, baseURL: serverBaseURL)
                     .font(.system(size: AppleDesign.Typography.bodySize))
                     .foregroundColor(.red)
                     .padding(.horizontal, 14)
@@ -271,6 +331,11 @@ struct MessageBubble: View {
            let data = msg.body.data(using: .utf8),
            let fileBody = try? JSONDecoder().decode(FileMessageBody.self, from: data) {
             return fileBody.name
+        }
+        if msg.contentType == .agentTimeline,
+           let data = msg.body.data(using: .utf8),
+           let timeline = try? JSONDecoder().decode(AgentTimelineBody.self, from: data) {
+            return timeline.title ?? loc("agent.preview")
         }
         return msg.body
     }

@@ -120,7 +120,7 @@ func main() {
 	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL)
 
 	// HTTP API handlers
-	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr)
+	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, userRepo, sessMgr)
@@ -137,7 +137,7 @@ func main() {
 	}
 
 	// Auth middleware
-	authMW := auth.AuthMiddleware(authSvc)
+	authMW := auth.AuthMiddlewareWithAPIKey(authSvc, userRepo)
 	wsAuthMW := auth.WSAuthMiddleware(authSvc)
 
 	// WS handler

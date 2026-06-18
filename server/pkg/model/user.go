@@ -7,6 +7,13 @@ const (
 	UserAgent UserType = 1
 )
 
+type WakeMode int
+
+const (
+	WakeModeAll     WakeMode = 0
+	WakeModeMention WakeMode = 1
+)
+
 type UserStatus int
 
 const (
@@ -23,9 +30,12 @@ type User struct {
 	Avatar         string         `json:"avatar"`
 	Status         UserStatus     `json:"status"`
 	Password       string         `json:"-"`
+	UID            string         `json:"uid"`
 	PrimaryColor   string         `json:"primary_color"`
 	SecondaryColor string         `json:"secondary_color"`
 	ExtMeta        map[string]any `json:"ext_meta,omitempty"`
+	WakeMode       WakeMode       `json:"wake_mode"`
+	APIKey         string         `json:"api_key"`
 	CreatedAt      int64          `json:"created_at"`
 }
 

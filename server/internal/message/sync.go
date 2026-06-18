@@ -8,7 +8,7 @@ import (
 )
 
 type SyncHandler struct {
-	msgRepo syncMsgRepo
+	msgRepo  syncMsgRepo
 	seqCache syncSeqCache
 }
 
@@ -22,7 +22,7 @@ type syncSeqCache interface {
 
 func NewSyncHandler(msgRepo syncMsgRepo, seqCache syncSeqCache) *SyncHandler {
 	return &SyncHandler{
-		msgRepo: msgRepo,
+		msgRepo:  msgRepo,
 		seqCache: seqCache,
 	}
 }

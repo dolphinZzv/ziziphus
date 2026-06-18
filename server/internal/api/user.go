@@ -2,9 +2,12 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"siciv.space/agent/panda_ai/internal/auth"
@@ -17,6 +20,7 @@ type UserHandler struct {
 	authSvc  *auth.Service
 	userRepo userRepo
 	sessMgr  sessionChecker
+	idGen    func() int64
 }
 
 type userRepo interface {
@@ -25,6 +29,12 @@ type userRepo interface {
 	GetByIDs(ctx context.Context, ids []string) (map[string]*model.User, error)
 	Search(ctx context.Context, q string, page, size int) ([]*model.User, int, error)
 	Update(ctx context.Context, id, name, avatar, primaryColor, secondaryColor string) error
+	CountAgents(ctx context.Context, uid string) (int, error)
+	ListAgents(ctx context.Context, uid string) ([]*model.User, error)
+	UpdateAgent(ctx context.Context, agentID, uid, name, avatar, primaryColor, secondaryColor string, wakeMode model.WakeMode) error
+	DeleteAgent(ctx context.Context, agentID, uid string) error
+	GetByAPIKey(ctx context.Context, apiKey string) (*model.User, error)
+	UpdateAgentAPIKey(ctx context.Context, agentID, uid, apiKey string) error
 }
 
 type sessionChecker interface {
@@ -32,8 +42,8 @@ type sessionChecker interface {
 	GetUserSessionIDs(ctx context.Context, userID string) []string
 }
 
-func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker) *UserHandler {
-	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr}
+func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64) *UserHandler {
+	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen}
 }
 
 type registerReq struct {
@@ -202,6 +212,7 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 			"avatar":          u.Avatar,
 			"type":            u.Type,
 			"status":          u.Status,
+			"uid":             u.UID,
 			"primary_color":   u.PrimaryColor,
 			"secondary_color": u.SecondaryColor,
 		}
@@ -264,9 +275,147 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 			"avatar":          u.Avatar,
 			"type":            u.Type,
 			"status":          u.Status,
+			"uid":             u.UID,
 			"primary_color":   u.PrimaryColor,
 			"secondary_color": u.SecondaryColor,
 		})
 	}
 	Paginated(w, items, total, page, size)
+}
+
+// Agent requests
+type createAgentReq struct {
+	Name           string `json:"name"`
+	Avatar         string `json:"avatar"`
+	PrimaryColor   string `json:"primary_color"`
+	SecondaryColor string `json:"secondary_color"`
+	WakeMode       int    `json:"wake_mode"`
+}
+
+func (h *UserHandler) ListMyAgents(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	agents, err := h.userRepo.ListAgents(r.Context(), userID)
+	if err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	if agents == nil {
+		agents = []*model.User{}
+	}
+	JSON(w, agents)
+}
+
+func (h *UserHandler) CreateAgent(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	var req createAgentReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+	if req.Name == "" {
+		BadRequest(w, r, i18n.T(r.Context(), "err.name_password_required"))
+		return
+	}
+
+	// Check limit
+	count, err := h.userRepo.CountAgents(r.Context(), userID)
+	if err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	if count >= 10 {
+		Error(w, r, http.StatusBadRequest, &model.AppError{Code: model.ErrBadMessage, Message: "agent limit reached", Key: "err.agent_limit"})
+		return
+	}
+
+	agentID := model.GenerateUserID(h.idGen)
+	now := time.Now().UnixMilli()
+	u := &model.User{
+		ID:             agentID,
+		Type:           model.UserAgent,
+		Name:           req.Name,
+		Avatar:         req.Avatar,
+		Status:         model.UserOffline,
+		UID:            userID,
+		PrimaryColor:   req.PrimaryColor,
+		SecondaryColor: req.SecondaryColor,
+		WakeMode:       model.WakeMode(req.WakeMode),
+		CreatedAt:      now,
+	}
+	if err := h.userRepo.Create(r.Context(), u); err != nil {
+		logger.Error("create agent failed", "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, u)
+}
+
+func (h *UserHandler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	agentID := chi.URLParam(r, "agent_id")
+	if agentID == "" {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+	var req createAgentReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+	if err := h.userRepo.UpdateAgent(r.Context(), agentID, userID, req.Name, req.Avatar, req.PrimaryColor, req.SecondaryColor, model.WakeMode(req.WakeMode)); err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]string{"status": "ok"})
+}
+
+// RegenerateAgentKey regenerates the api_key for an agent.
+func (h *UserHandler) RegenerateAgentKey(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	agentID := chi.URLParam(r, "agent_id")
+	if agentID == "" {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+
+	// Verify agent belongs to user
+	agents, err := h.userRepo.ListAgents(r.Context(), userID)
+	if err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	found := false
+	for _, a := range agents {
+		if a.ID == agentID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		NotFound(w, r)
+		return
+	}
+
+	apiKeyBytes := make([]byte, 16)
+	rand.Read(apiKeyBytes)
+	apiKey := "sk-" + hex.EncodeToString(apiKeyBytes)
+	if err := h.userRepo.UpdateAgentAPIKey(r.Context(), agentID, userID, apiKey); err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]string{"api_key": apiKey})
+}
+
+func (h *UserHandler) DeleteAgent(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	agentID := chi.URLParam(r, "agent_id")
+	if agentID == "" {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+	if err := h.userRepo.DeleteAgent(r.Context(), agentID, userID); err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]string{"status": "ok"})
 }

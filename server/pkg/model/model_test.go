@@ -86,6 +86,11 @@ func TestConstants_ContentType(t *testing.T) {
 			t.Errorf("ContentSystem = %d, want 5", ContentSystem)
 		}
 	})
+	t.Run("ContentAgentTimeline is 9", func(t *testing.T) {
+		if ContentAgentTimeline != 9 {
+			t.Errorf("ContentAgentTimeline = %d, want 9", ContentAgentTimeline)
+		}
+	})
 }
 
 func TestConstants_MsgStatus(t *testing.T) {
