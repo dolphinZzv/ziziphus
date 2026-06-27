@@ -21,6 +21,10 @@ type userGetter interface {
 type convDataRepo interface {
 	GetUserConvs(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
 	UpdateNameAvatar(ctx context.Context, convID, name, avatar string) error
+	UpdateNotice(ctx context.Context, convID, notice string) error
+	Pin(ctx context.Context, userID, convID string) error
+	Unpin(ctx context.Context, userID, convID string) error
+	Clone(ctx context.Context, srcConvID, newConvID, ownerID string, name string, idGen func() int64) error
 	SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
 }
 
@@ -124,6 +128,7 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 		"name":         conv.Name,
 		"owner_id":     conv.OwnerID,
 		"avatar":       conv.Avatar,
+		"notice":       conv.Notice,
 		"members":      members,
 		"unread_count": unread,
 		"created_at":   conv.CreatedAt,
@@ -133,6 +138,7 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 type updateGroupReq struct {
 	Name   *string `json:"name"`
 	Avatar *string `json:"avatar"`
+	Notice *string `json:"notice"`
 }
 
 func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
@@ -172,6 +178,18 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	avatar := conv.Avatar
 	if req.Avatar != nil {
 		avatar = *req.Avatar
+	}
+	// Notice can only be changed by the group owner
+	if req.Notice != nil {
+		if role != model.ConvRoleOwner {
+			Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.owner_only")})
+			return
+		}
+		if err := h.convRepo.UpdateNotice(r.Context(), convID, *req.Notice); err != nil {
+			logger.Error("update notice failed", "conv_id", convID, "error", err)
+			Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+			return
+		}
 	}
 
 	if err := h.convRepo.UpdateNameAvatar(r.Context(), convID, name, avatar); err != nil {
@@ -487,4 +505,63 @@ func (h *ConvHandler) UnreadTotal(w http.ResponseWriter, r *http.Request) {
 		totalUnread += item.UnreadCount
 	}
 	JSON(w, map[string]interface{}{"total": totalUnread})
+}
+
+func (h *ConvHandler) Pin(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	convID := chi.URLParam(r, "conv_id")
+	if err := h.convRepo.Pin(r.Context(), userID, convID); err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]interface{}{"conv_id": convID, "pinned": true})
+}
+
+func (h *ConvHandler) Unpin(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	convID := chi.URLParam(r, "conv_id")
+	if err := h.convRepo.Unpin(r.Context(), userID, convID); err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]interface{}{"conv_id": convID, "pinned": false})
+}
+
+type cloneGroupReq struct {
+	Name string `json:"name"`
+}
+
+func (h *ConvHandler) Clone(w http.ResponseWriter, r *http.Request) {
+	var req cloneGroupReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+	convID := chi.URLParam(r, "conv_id")
+	userID := auth.UserFromCtx(r.Context())
+
+	conv, err := h.convMgr.Get(r.Context(), convID)
+	if err != nil || conv.Type != model.ConvGroup {
+		NotFound(w, r)
+		return
+	}
+
+	role, _ := h.convMgr.GetMemberRole(r.Context(), convID, userID)
+	if role != model.ConvRoleOwner {
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
+		return
+	}
+
+	name := conv.Name + " (副本)"
+	if req.Name != "" {
+		name = req.Name
+	}
+
+	newID := "group_" + strconv.FormatInt(h.idGen(), 10)
+	if err := h.convRepo.Clone(r.Context(), convID, newID, userID, name, h.idGen); err != nil {
+		logger.Error("clone group failed", "conv_id", convID, "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]interface{}{"conv_id": newID, "name": name})
 }

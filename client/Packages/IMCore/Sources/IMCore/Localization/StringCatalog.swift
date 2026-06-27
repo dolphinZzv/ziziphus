@@ -149,6 +149,7 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "common.save": [.zhHans: "保存", .en: "Save"],
     "common.edit": [.zhHans: "编辑", .en: "Edit"],
     "common.delete": [.zhHans: "删除", .en: "Delete"],
+    "common.download": [.zhHans: "下载", .en: "Download"],
     "common.done": [.zhHans: "完成", .en: "Done"],
     "common.back": [.zhHans: "返回", .en: "Back"],
     "common.copy": [.zhHans: "复制", .en: "Copy"],

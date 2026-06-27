@@ -42,6 +42,7 @@ func (p *Pusher) Push(ctx context.Context, msg *model.Message, targets []RouteTa
 		MsgID:       msg.MsgID,
 		ConvID:      msg.ConvID,
 		SenderID:    msg.SenderID,
+		SenderName:  msg.SenderName,
 		ContentType: int(msg.ContentType),
 		Body:        msg.Body,
 		ReplyTo:     msg.ReplyTo,

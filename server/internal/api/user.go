@@ -334,6 +334,7 @@ func (h *UserHandler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		ID:             agentID,
 		Type:           model.UserAgent,
 		Name:           req.Name,
+		Account:        "agent_" + agentID,
 		Avatar:         req.Avatar,
 		Status:         model.UserOffline,
 		UID:            userID,

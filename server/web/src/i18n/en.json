@@ -1,0 +1,170 @@
+{
+  "app": {
+    "name": "Panda AI",
+    "tagline": "Smart Instant Messaging"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "account": "Account",
+    "password": "Password",
+    "name": "Nickname",
+    "confirmPassword": "Confirm Password",
+    "rememberAccount": "Remember Account",
+    "switchToRegister": "Create an account",
+    "switchToLogin": "Already have an account? Login",
+    "loginError": "Login failed",
+    "registerError": "Registration failed",
+    "passwordMismatch": "Passwords do not match",
+    "loggingIn": "Logging in...",
+    "registering": "Registering..."
+  },
+  "chat": {
+    "inputPlaceholder": "Type a message...",
+    "send": "Send",
+    "online": "Online",
+    "offline": "Offline",
+    "typing": "typing...",
+    "reply": "Reply",
+    "copy": "Copy",
+    "retry": "Retry",
+    "uploadImage": "Upload Image",
+    "uploadFile": "Upload File",
+    "selectFile": "Select File",
+    "messageFailed": "Message send failed",
+    "draft": "Draft",
+    "newMessage": "New Message"
+  },
+  "conversation": {
+    "title": "Messages",
+    "newChat": "New Chat",
+    "createGroup": "Create Group",
+    "joinGroup": "Join Group",
+    "searchUsers": "Search users...",
+    "searchGroups": "Search groups...",
+    "groupName": "Group Name",
+    "noConversations": "No conversations yet",
+    "selectChat": "Select a conversation to start chatting",
+    "members": "Members",
+    "you": "You",
+    "mentionYou": "@You"
+  },
+  "group": {
+    "detail": "Group Info",
+    "members": "Members",
+    "memberCount": "{{count}} members",
+    "addMember": "Add Member",
+    "removeMember": "Remove",
+    "leave": "Leave Group",
+    "leaveConfirm": "Are you sure you want to leave this group?",
+    "joinRequests": "Join Requests",
+    "approve": "Approve",
+    "reject": "Reject",
+    "noRequests": "No pending requests",
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member",
+    "avatarUpload": "Change Avatar"
+  },
+  "contact": {
+    "title": "Contacts",
+    "add": "Add Contact",
+    "remove": "Delete",
+    "removeConfirm": "Remove this contact?",
+    "editNickname": "Edit Nickname",
+    "noContacts": "No contacts yet",
+    "online": "Online",
+    "offline": "Offline"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "messages": "Search Messages",
+    "noResults": "No results found",
+    "users": "Users",
+    "groups": "Groups"
+  },
+  "history": {
+    "title": "Message History",
+    "keyword": "Keyword",
+    "dateRange": "Date Range",
+    "all": "All"
+  },
+  "profile": {
+    "title": "Profile",
+    "edit": "Edit",
+    "save": "Save",
+    "userID": "User ID",
+    "account": "Account",
+    "primaryColor": "Primary Color",
+    "secondaryColor": "Secondary Color",
+    "logout": "Logout",
+    "logoutConfirm": "Are you sure you want to logout?"
+  },
+  "settings": {
+    "title": "Settings",
+    "server": "Server URL",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "language": "Language",
+    "languageZH": "中文",
+    "languageEN": "English",
+    "bubbleColor": "Bubble Color",
+    "deviceID": "Device ID",
+    "sessionID": "Session ID",
+    "appInfo": "App Info"
+  },
+  "agent": {
+    "title": "Agent Management",
+    "create": "Create Agent",
+    "edit": "Edit Agent",
+    "name": "Agent Name",
+    "avatar": "Avatar URL",
+    "apiKey": "API Key",
+    "regenerateKey": "Regenerate Key",
+    "wakeMode": "Wake Mode",
+    "wakeAll": "All Messages",
+    "wakeMention": "Mentions Only",
+    "deleteConfirm": "Delete this agent?",
+    "maxReached": "Maximum 10 agents reached",
+    "copyKey": "Copy Key",
+    "keyCopied": "API Key copied!"
+  },
+  "session": {
+    "title": "Device Sessions",
+    "current": "Current",
+    "endSession": "End Session",
+    "phone": "Phone",
+    "desktop": "Desktop",
+    "web": "Web",
+    "tablet": "Tablet",
+    "noSessions": "No other sessions"
+  },
+  "connection": {
+    "connected": "Connected",
+    "connecting": "Connecting...",
+    "disconnected": "Disconnected"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "save": "Save",
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "more": "More",
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minuteAgo": "{{n}}m ago",
+    "hourAgo": "{{n}}h ago",
+    "dayAgo": "{{n}}d ago"
+  }
+}

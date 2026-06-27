@@ -1,19 +1,26 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"image"
+	"image/draw"
+	"image/jpeg"
+	"image/png"
+	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	xdraw "golang.org/x/image/draw"
 	"siciv.space/agent/panda_ai/internal/auth"
 	"siciv.space/agent/panda_ai/internal/storage/file"
 	"siciv.space/agent/panda_ai/pkg/i18n"
@@ -53,23 +60,23 @@ type uploadResp struct {
 
 // Upload handles POST /api/v1/files/upload (multipart/form-data).
 func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 10<<20) // 10MB max
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		BadRequest(w, r, i18n.T(r.Context(), "err.file_too_large"))
 		return
 	}
 
-	fileType := 1 // default: file
+	fileType := 1
 	switch r.FormValue("file_type") {
 	case "0":
-		fileType = 0 // image
+		fileType = 0
 	case "1":
-		fileType = 1 // file
+		fileType = 1
 	case "2":
-		fileType = 2 // audio
+		fileType = 2
 	case "3":
-		fileType = 3 // video
+		fileType = 3
 	}
 
 	uploadedFile, header, err := r.FormFile("file")
@@ -96,9 +103,8 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := h.baseURL + "/" + savePath
+	fileURL := h.baseURL + "/" + savePath
 
-	// Image dimension detection
 	var width, height int
 	if fileType == 0 {
 		w, h, err := decodeImageDimensions(data)
@@ -108,12 +114,11 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Store metadata
 	userID := auth.UserFromCtx(r.Context())
 	now := time.Now().UnixMilli()
 	finfo := &model.FileInfo{
 		FileID:      fileID,
-		URL:         url,
+		URL:         fileURL,
 		Size:        int64(len(data)),
 		Name:        header.Filename,
 		ContentType: fileType,
@@ -128,7 +133,7 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	JSON(w, uploadResp{
 		FileID: fileID,
-		URL:    url,
+		URL:    fileURL,
 		Size:   finfo.Size,
 		Name:   finfo.Name,
 		Width:  width,
@@ -156,6 +161,7 @@ func (h *FileHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // ServeFile serves stored files via HTTP (GET /files/*).
+// Supports ?w=xxx&h=xxx for on-the-fly image resizing with center crop.
 func (h *FileHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 	filePath := chi.URLParam(r, "*")
 	rc, err := h.store.Open(r.Context(), filePath)
@@ -169,33 +175,138 @@ func (h *FileHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rc.Close()
 
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
 	ext := strings.ToLower(filepath.Ext(filePath))
+
+	// Check for resize params
+	wStr := r.URL.Query().Get("w")
+	hStr := r.URL.Query().Get("h")
+	if (wStr != "" || hStr != "") && isImageExt(ext) {
+		tw, _ := strconv.Atoi(wStr)
+		th, _ := strconv.Atoi(hStr)
+		if tw > 0 || th > 0 {
+			if resized, ct, err := resizeImage(data, tw, th, ext); err == nil {
+				w.Header().Set("Content-Type", ct)
+				w.Header().Set("Cache-Control", "public, max-age=2592000")
+				w.Write(resized)
+				return
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", contentTypeByExt(ext))
+	w.Header().Set("Cache-Control", "public, max-age=2592000")
+	w.Write(data)
+}
+
+func contentTypeByExt(ext string) string {
 	switch ext {
 	case ".png":
-		w.Header().Set("Content-Type", "image/png")
+		return "image/png"
 	case ".jpg", ".jpeg":
-		w.Header().Set("Content-Type", "image/jpeg")
+		return "image/jpeg"
 	case ".gif":
-		w.Header().Set("Content-Type", "image/gif")
+		return "image/gif"
 	case ".webp":
-		w.Header().Set("Content-Type", "image/webp")
+		return "image/webp"
 	case ".mp4":
-		w.Header().Set("Content-Type", "video/mp4")
+		return "video/mp4"
 	case ".mp3":
-		w.Header().Set("Content-Type", "audio/mpeg")
+		return "audio/mpeg"
 	case ".pdf":
-		w.Header().Set("Content-Type", "application/pdf")
+		return "application/pdf"
 	default:
-		w.Header().Set("Content-Type", "application/octet-stream")
+		return "application/octet-stream"
 	}
-	w.Header().Set("Cache-Control", "public, max-age=86400")
-	io.Copy(w, rc)
+}
+
+func isImageExt(ext string) bool {
+	switch ext {
+	case ".png", ".jpg", ".jpeg", ".gif":
+		return true
+	}
+	return false
 }
 
 func decodeImageDimensions(data []byte) (int, int, error) {
-	cfg, _, err := image.DecodeConfig(strings.NewReader(string(data)))
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
 		return 0, 0, err
 	}
 	return cfg.Width, cfg.Height, nil
+}
+
+// resizeImage resizes/crops data to target w×h.
+// If only one dimension is given, the other scales proportionally.
+// If both are given and aspect ratios differ, center-crop then scale.
+func resizeImage(data []byte, tw, th int, ext string) ([]byte, string, error) {
+	src, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, "", err
+	}
+
+	sb := src.Bounds()
+	sw, sh := sb.Dx(), sb.Dy()
+	if sw == 0 || sh == 0 {
+		return data, contentTypeByExt(ext), nil
+	}
+
+	// Determine crop rect
+	crop := sb
+	if tw > 0 && th > 0 {
+		sr := float64(sw) / float64(sh)
+		dr := float64(tw) / float64(th)
+		if sr > dr {
+			cw := int(float64(sh) * dr)
+			crop = image.Rect((sw-cw)/2, 0, (sw-cw)/2+cw, sh)
+		} else if sr < dr {
+			ch := int(float64(sw) / dr)
+			crop = image.Rect(0, (sh-ch)/2, sw, (sh-ch)/2+ch)
+		}
+	} else if tw > 0 {
+		th = int(float64(tw) * float64(sh) / float64(sw))
+	} else if th > 0 {
+		tw = int(float64(th) * float64(sw) / float64(sh))
+	}
+
+	// Crop
+	var cropped image.Image
+	if crop != sb {
+		if sub, ok := src.(interface {
+			SubImage(r image.Rectangle) image.Image
+		}); ok {
+			cropped = sub.SubImage(crop)
+		} else {
+			tmp := image.NewRGBA(image.Rect(0, 0, crop.Dx(), crop.Dy()))
+			for y := 0; y < crop.Dy(); y++ {
+				for x := 0; x < crop.Dx(); x++ {
+					tmp.Set(x, y, src.At(crop.Min.X+x, crop.Min.Y+y))
+				}
+			}
+			cropped = tmp
+		}
+	} else {
+		cropped = src
+	}
+
+	// Scale
+	dst := image.NewRGBA(image.Rect(0, 0, tw, th))
+	xdraw.CatmullRom.Scale(dst, dst.Bounds(), cropped, cropped.Bounds(), draw.Src, nil)
+
+	var buf bytes.Buffer
+	if ext == ".png" || ext == ".gif" {
+		if err := png.Encode(&buf, dst); err != nil {
+			return nil, "", err
+		}
+		return buf.Bytes(), "image/png", nil
+	}
+	if err := jpeg.Encode(&buf, dst, &jpeg.Options{Quality: 85}); err != nil {
+		return nil, "", err
+	}
+	return buf.Bytes(), "image/jpeg", nil
 }

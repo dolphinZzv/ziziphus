@@ -21,6 +21,7 @@ type Conversation struct {
 	Name       string   `json:"name"`
 	OwnerID    string   `json:"owner_id"`
 	Avatar     string   `json:"avatar,omitempty"`
+	Notice     string   `json:"notice,omitempty"`
 	MaxMembers int      `json:"max_members,omitempty"`
 	LastMsgID  int64    `json:"last_msg_id,omitempty"`
 	LastMsgAt  int64    `json:"last_msg_at,omitempty"`
@@ -36,6 +37,7 @@ type ConvMember struct {
 	JoinedAt int64    `json:"joined_at"`
 	UserType UserType `json:"user_type"`
 	WakeMode WakeMode `json:"wake_mode"`
+	Pinned   bool     `json:"pinned"`
 }
 
 type JoinRequestStatus int

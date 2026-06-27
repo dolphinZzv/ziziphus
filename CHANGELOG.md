@@ -42,6 +42,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Makefile` 顶部支持 `-include .env` 注入部署变量。
   - `.gitignore`：新增 `.env` 忽略。
 
+- **Web 前端 SPA**
+  - 新增 `server/web/` 目录，基于 React/TypeScript/Vite 构建 Web 前端。
+  - 新增 `server/webembed/embed.go`，将前端构建产物嵌入 Go 二进制，通过 SPA fallback 路由提供前端服务。
+  - 新增 Playwright E2E 测试覆盖 auth、chat-ui、conversation-dialogs、layout、routing 等场景。
+  - `Makefile server` 目标：启动后端前自动构建 web 前端（`cd server/web && npm run build`）。
+  - `.gitignore`：忽略 `server/web/dist/`、`server/internal/webembed/dist/` 构建产物。
+- **会话置顶**
+  - 数据库迁移 `012_add_pin.sql`：`conv_members` 表新增 `pinned` 列。
+  - 新增 `POST /api/v1/conversations/{conv_id}/pin` 与 `POST /api/v1/conversations/{conv_id}/unpin` 接口。
+  - 会话列表查询按 `cm.pinned DESC` 排序，置顶会话优先展示。
+  - `ConvListItem` 与 `ConvMember` 模型新增 `Pinned` 字段。
+- **群公告**
+  - 数据库迁移 `011_add_notice.sql`：`conversations` 表新增 `notice` 列。
+  - `UpdateGroup` 接口支持 `notice` 字段更新（仅群主可操作）。
+  - `GetDetail` 响应新增 `notice` 字段。
+- **群组克隆**
+  - 新增 `POST /api/v1/conversations/{conv_id}/clone` 接口，复制群组结构及成员（克隆者设为群主）。
+- **图片即时缩放**
+  - `GET /files/*` 端点支持 `?w=xxx&h=xxx` 查询参数，按指定尺寸 center-crop 缩放图片。
+  - 引入 `golang.org/x/image` 依赖用于高质量缩放。
+- **macOS @mention 提及**
+  - `ChatTextView`：新增 `onMentionChanged` 回调，检测 `@` 输入并提取查询文本。
+  - `InputBarView`：新增 `@` 按钮与内联提及弹出面板，支持按昵称/ID 过滤成员。
+  - `ChatView`：透传群成员列表至 `InputBarView`，`onAppear` 时调用 `loadMembers()`。
+- **macOS 图片缓存**
+  - `AvatarView`：新增 `ImageCache` 单例，支持内存+磁盘两级缓存，SHA256 哈希磁盘路径，自动缩放至 256pt。
+- **WebSocket 设备类型扩展**
+  - `handler/ws.go`：新增 `web`、`android`、`windows` 设备类型识别。
+- **推送载荷增强**
+  - `MsgPushPayload` 新增 `SenderName` 字段，推送时携带发送者名称。
+- **Agent 创建增强**
+  - `CreateAgent` 自动设置 `Account` 为 `"agent_" + agentID`。
+- **i18n**
+  - `StringCatalog`：新增 `common.download` 本地化条目。
+- **macOS 对话列表 UI**
+  - `CreateGroupView`、`JoinGroupView`、`NewChatView`：统一 padding 为 `horizontal(16)` + `vertical(10)`。
+  - Xcode 项目从自动生成 `Info.plist` 改为使用自定义 `macos/Resources/Info.plist`。
+
 ### Changed
 
 - `pkg/model.Message` / `Conversation` / `Session` / `Snowflake` / `errors.go` 等多个结构体按 gofmt 对齐字段。
@@ -62,6 +100,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 集成已有但未推送的提交：
   - `9ac2084` feat: security fixes, file upload, group name editing, UI improvements
   - `3d49077` fix: restore menu with gear icon in macOS chat toolbar
+
+- `internal/api/file.go`：
+  - 重构 `ServeFile`：先读入内存再响应，支持缩放后设置 `Cache-Control: public, max-age=2592000`（30天）。
+  - 提取 `contentTypeByExt()` / `isImageExt()` / `resizeImage()` 辅助函数。
+  - 移除多余注释与变量重命名（`url` -> `fileURL`）。
+- `Makefile deploy` 目标：
+  - 部署前 `systemctl stop panda_ai`，部署后 `systemctl start panda_ai`（替代 restart）。
+  - service 文件直接写入 `/etc/systemd/system/`。
+  - 新增 `chmod +x` 远程二进制权限设置。
+- `CLAUDE.md`：新增"web 所有用户反馈都需要补充 e2e 测试防止问题回归"。
 
 ### Removed
 

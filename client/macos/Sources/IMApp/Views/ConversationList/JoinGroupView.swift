@@ -27,7 +27,8 @@ struct JoinGroupView: View {
                     .fill(.clear)
                     .frame(width: 40)
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
 
             Divider()
 

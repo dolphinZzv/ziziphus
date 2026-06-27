@@ -20,6 +20,7 @@ type MsgPushPayload struct {
 	MsgID       int64    `json:"msg_id"`
 	ConvID      string   `json:"conv_id"`
 	SenderID    string   `json:"sender_id"`
+	SenderName  string   `json:"sender_name"`
 	ContentType int      `json:"content_type"`
 	Body        string   `json:"body"`
 	ReplyTo     int64    `json:"reply_to"`

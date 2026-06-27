@@ -1,0 +1,254 @@
+import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
+import { chatStore } from '@/stores/chat-store'
+import { fileService } from '@/services/file-service'
+import { conversationService } from '@/services/conversation-service'
+import { userService } from '@/services/user-service'
+import { ContentType } from '@/types/message'
+import type { ConvMember } from '@/types/conversation'
+import type { User } from '@/types/user'
+import { cn } from '@/lib/cn'
+import { Send, Paperclip, Image, X, AtSign } from 'lucide-react'
+import MarkdownInput from './markdown-input'
+
+interface Props { convId: string }
+
+export default function InputBar({ convId }: Props) {
+  const [text, setText] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [members, setMembers] = useState<Array<{ id: string; name: string }>>([])
+  const [showMention, setShowMention] = useState(false)
+  const [mentionFilter, setMentionFilter] = useState('')
+  const [showAttachMenu, setShowAttachMenu] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const draft = useSyncExternalStore(chatStore.subscribe, () => chatStore.getDraft(convId))
+  const replyTo = useSyncExternalStore(chatStore.subscribe, () => chatStore.getReplyTo(convId))
+
+  // Load members for @mention
+  useEffect(() => {
+    conversationService.getDetail(convId).then(d => {
+      const ids = d.members.map(m => m.user_id)
+      if (ids.length > 1) {
+        userService.batchGet(ids).then(users => {
+          setMembers(Object.entries(users).map(([id, u]) => ({ id, name: u.name || id })))
+        }).catch(() => {})
+      }
+    }).catch(() => {})
+  }, [convId])
+
+  const handleSend = () => {
+    const trimmed = text.trim()
+    if (!trimmed || uploading) return
+    // Extract @mentions from text
+    const mentionIds: string[] = []
+    const atMatches = trimmed.match(/@(\S+)/g)
+    if (atMatches) {
+      atMatches.forEach(m => {
+        const name = m.slice(1)
+        const member = members.find(mm => mm.name === name || mm.id === name)
+        if (member) mentionIds.push(member.id)
+      })
+    }
+    chatStore.sendMessage(convId, trimmed, ContentType.Text, replyTo?.msg_id || 0, mentionIds)
+    chatStore.setDraft(convId, '')
+    chatStore.setReplyTo(convId, null)
+    setText('')
+  }
+
+  const handleChange = (v: string) => { setText(v); chatStore.setDraft(convId, v) }
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'file') => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setShowAttachMenu(false)
+    try {
+      const result = await fileService.upload(file, file.name, type === 'image' ? 0 : 1)
+      const body = JSON.stringify({ url: result.url, name: file.name, size: file.size, file_id: result.file_id })
+      chatStore.sendMessage(convId, body, type === 'image' ? ContentType.Image : ContentType.File)
+    } catch { /* ignore */ }
+    setUploading(false)
+    if (e.target) e.target.value = ''
+  }
+
+  // Handle paste event for images
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault()
+        const file = items[i].getAsFile()
+        if (file) await uploadFile(file, 'image')
+        return
+      }
+    }
+  }
+
+  // Handle drag-drop
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true) }
+  const handleDragLeave = () => setDragOver(false)
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer?.files?.[0]
+    if (!file) return
+    const type = file.type.startsWith('image/') ? 'image' : 'file'
+    await uploadFile(file, type)
+  }
+
+  const uploadFile = async (file: File, type: 'image' | 'file') => {
+    setUploading(true)
+    try {
+      const result = await fileService.upload(file, file.name, type === 'image' ? 0 : 1)
+      const body = JSON.stringify({ url: result.url, name: file.name, size: file.size, file_id: result.file_id })
+      chatStore.sendMessage(convId, body, type === 'image' ? ContentType.Image : ContentType.File)
+    } catch { /* ignore */ }
+    setUploading(false)
+  }
+
+  // Insert @mention into text
+  const insertMention = (name: string) => {
+    const before = text.slice(0, text.lastIndexOf('@'))
+    setText(before + `@${name} `)
+    setShowMention(false)
+    setMentionFilter('')
+  }
+
+  // Listen for @ in text changes
+  const handleMentionChange = (v: string) => {
+    handleChange(v)
+    const cursorPos = v.length
+    const atIdx = v.lastIndexOf('@', cursorPos)
+    if (atIdx >= 0 && (atIdx === 0 || /\s/.test(v[atIdx - 1]))) {
+      const afterAt = v.slice(atIdx + 1, cursorPos)
+      if (!afterAt.includes(' ')) {
+        setMentionFilter(afterAt.toLowerCase())
+        setShowMention(true)
+        return
+      }
+    }
+    setShowMention(false)
+  }
+
+  const filtered = mentionFilter
+    ? members.filter(m => m.name.toLowerCase().includes(mentionFilter) || m.id.toLowerCase().includes(mentionFilter)).slice(0, 5)
+    : members.slice(0, 5)
+
+  return (
+    <div className="flex-shrink-0 border-t border-[var(--color-hairline)] bg-[var(--color-surface-card)] relative"
+      onPaste={handlePaste}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}>
+      {/* Reply preview */}
+      {replyTo && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-soft)] border-b border-[var(--color-hairline)]">
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] text-[var(--color-accent)] font-medium">回复 {replyTo.sender_name}</div>
+            <div className="text-xs text-[var(--color-muted)] truncate">{replyTo.body?.slice(0, 80)}</div>
+          </div>
+          <button onClick={() => chatStore.setReplyTo(convId, null)} className="p-1 rounded hover:bg-[var(--color-hairline)] text-[var(--color-muted)]"><X size={14} /></button>
+        </div>
+      )}
+
+      {/* Mention popup */}
+      {showMention && members.length > 0 && (
+        <div className="relative">
+          <div className="absolute bottom-0 left-4 right-4 z-10 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg mb-1 max-h-[160px] overflow-y-auto"
+            style={{ boxShadow: 'var(--shadow-md)' }}>
+            {filtered.length > 0 ? filtered.map(m => (
+              <button key={m.id} type="button"
+                onClick={() => insertMention(m.name)}
+                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[var(--color-surface-soft)] text-sm text-[var(--color-ink)]">
+                <div className="w-6 h-6 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-xs font-semibold">
+                  {m.name.charAt(0)}
+                </div>
+                <span>{m.name}</span>
+              </button>
+            )) : (
+              <div className="px-3 py-2 text-xs text-[var(--color-muted)]">无匹配成员</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Input area — macOS style: buttons at bottom-right */}
+      <div className="px-4 pt-3 pb-3">
+        <div className="relative">
+          <MarkdownInput
+            value={text}
+            onChange={handleMentionChange}
+            onSend={handleSend}
+            placeholder="输入消息... @用户名 提及"
+            disabled={uploading}
+          />
+
+          {/* Bottom-right action buttons */}
+          <div className="flex items-center gap-1 absolute bottom-2 right-2">
+            {/* @mention button */}
+            <button type="button"
+              onClick={() => { setMentionFilter(''); setShowMention(!showMention) }}
+              className="p-1.5 rounded-md hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+              title="@提及">
+              <AtSign size={17} />
+            </button>
+
+            {/* Attachment button + popover */}
+            <div className="relative">
+              <button type="button"
+                onClick={() => setShowAttachMenu(!showAttachMenu)}
+                className="p-1.5 rounded-md hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+                title="附件">
+                <Paperclip size={17} />
+              </button>
+              {showAttachMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowAttachMenu(false)} />
+                  <div className="absolute bottom-full right-0 mb-1 w-36 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-20 py-1"
+                    style={{ boxShadow: 'var(--shadow-md)' }}>
+                    <button type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                      <Image size={15} /> 图片
+                    </button>
+                    <button type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                      <Paperclip size={15} /> 文件
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Send button */}
+            <button
+              onClick={handleSend}
+              disabled={!text.trim() || uploading}
+              className={cn(
+                'p-1.5 rounded-md transition-colors',
+                text.trim()
+                  ? 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'
+                  : 'text-[var(--color-muted-soft)] cursor-default'
+              )}
+              title="发送">
+              <Send size={17} />
+            </button>
+          </div>
+        </div>
+
+        <input ref={imageInputRef} type="file" accept="image/*" onChange={e => handleFileSelect(e, 'image')} className="hidden" />
+        <input ref={fileInputRef} type="file" multiple onChange={e => handleFileSelect(e, 'file')} className="hidden" />
+      </div>
+
+        {/* Drag overlay */}
+        {dragOver && (
+          <div className="absolute inset-0 z-50 bg-[var(--color-primary)]/10 border-2 border-dashed border-[var(--color-primary)] rounded-lg flex items-center justify-center pointer-events-none">
+            <span className="text-sm text-[var(--color-primary)] font-medium">释放以上传文件</span>
+          </div>
+        )}
+    </div>
+  )
+}

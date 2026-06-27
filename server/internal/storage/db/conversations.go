@@ -30,9 +30,9 @@ func (r *ConvRepo) Get(ctx context.Context, convID string) (*model.Conversation,
 	var lastMsgAt *time.Time
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT conv_id, type, name, owner_id, avatar, max_members, last_msg_id, last_msg_at, created_at
+		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at
 		 FROM conversations WHERE conv_id = $1`, convID).
-		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt)
+		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt)
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +61,7 @@ type ConvListItem struct {
 	Mute        bool             `json:"mute"`
 	MentionMe   bool             `json:"mention_me"`
 	PartnerType int              `json:"partner_type"`
+	Pinned      bool             `json:"pinned"`
 }
 
 type LastMessageInfo struct {
@@ -85,13 +86,13 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 		`SELECT c.conv_id, c.type, c.name, c.avatar,
 		        COALESCE(m.msg_id, 0), COALESCE(m.sender_id, ''), COALESCE(u.name, ''), COALESCE(m.body, ''), COALESCE(m.content_type, 0), COALESCE(m.timestamp, 0), COALESCE(m.status, 0),
 		        c.last_msg_at,
-		        cm.role, cm.mute
+		        cm.role, cm.mute, cm.pinned
 		 FROM conv_members cm
 		 JOIN conversations c ON c.conv_id = cm.conv_id
 			 LEFT JOIN messages m ON m.msg_id = c.last_msg_id
 			 LEFT JOIN users u ON u.id = m.sender_id
 		 WHERE cm.user_id = $1
-		 ORDER BY c.last_msg_at DESC NULLS LAST
+		 ORDER BY cm.pinned DESC, c.last_msg_at DESC NULLS LAST
 		 LIMIT $2 OFFSET $3`, userID, size, offset)
 	if err != nil {
 		return nil, 0, err
@@ -111,7 +112,7 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 		var lastMsgAt *time.Time
 		if err := rows.Scan(&item.ConvID, &item.Type, &item.Name, &item.Avatar,
 			&lastMsgID, &lastMsgSenderID, &lastMsgSenderName, &lastMsgBody, &lastMsgContentType, &lastMsgTimestamp, &lastMsgStatus,
-			&lastMsgAt, &item.Role, &item.Mute); err != nil {
+			&lastMsgAt, &item.Role, &item.Mute, &item.Pinned); err != nil {
 			return nil, 0, err
 		}
 		if lastMsgID > 0 {
@@ -289,4 +290,51 @@ func (r *ConvRepo) UpdateNameAvatar(ctx context.Context, convID, name, avatar st
 	_, err := r.pool.Exec(ctx,
 		`UPDATE conversations SET name = $1, avatar = $2 WHERE conv_id = $3`, name, avatar, convID)
 	return err
+}
+
+func (r *ConvRepo) UpdateNotice(ctx context.Context, convID, notice string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conversations SET notice = $1 WHERE conv_id = $2`, notice, convID)
+	return err
+}
+
+func (r *ConvRepo) Pin(ctx context.Context, userID, convID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conv_members SET pinned = TRUE WHERE conv_id = $1 AND user_id = $2`, convID, userID)
+	return err
+}
+
+func (r *ConvRepo) Unpin(ctx context.Context, userID, convID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conv_members SET pinned = FALSE WHERE conv_id = $1 AND user_id = $2`, convID, userID)
+	return err
+}
+
+func (r *ConvRepo) Clone(ctx context.Context, srcConvID, newConvID, ownerID string, name string, idGen func() int64) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// Insert new conversation (copy avatar from source)
+	_, err = tx.Exec(ctx,
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, notice, max_members, created_at)
+		 SELECT $1, type, $2, $3, avatar, notice, max_members, NOW() FROM conversations WHERE conv_id = $4`,
+		newConvID, name, ownerID, srcConvID)
+	if err != nil {
+		return err
+	}
+
+	// Copy members: owner gets Owner role, others get Member role
+	_, err = tx.Exec(ctx,
+		`INSERT INTO conv_members (conv_id, user_id, role, nickname, mute, pinned, joined_at)
+		 SELECT $1, user_id, CASE WHEN user_id = $2 THEN 2 ELSE 0 END, nickname, mute, FALSE, NOW()
+		 FROM conv_members WHERE conv_id = $3`,
+		newConvID, ownerID, srcConvID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }

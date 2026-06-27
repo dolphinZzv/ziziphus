@@ -92,6 +92,15 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "ipados":
 		deviceType = model.DeviceTablet
 		deviceName = "iPadOS"
+	case "web":
+		deviceType = model.DeviceWeb
+		deviceName = "Web"
+	case "android":
+		deviceType = model.DevicePhone
+		deviceName = "Android"
+	case "windows":
+		deviceType = model.DeviceDesktop
+		deviceName = "Windows"
 	}
 
 	deviceID := r.URL.Query().Get("device_id")

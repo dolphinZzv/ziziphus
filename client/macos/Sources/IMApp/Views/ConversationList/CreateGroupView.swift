@@ -25,7 +25,8 @@ struct CreateGroupView: View {
                 Button(loc("group.create_button")) { createGroup() }
                     .disabled(groupName.isEmpty || selectedUsers.isEmpty || isCreating)
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
 
             Divider()
 

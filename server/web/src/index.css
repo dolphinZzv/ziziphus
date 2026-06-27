@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Plus Jakarta Sans", sans-serif;
+  --font-sans: "DM Sans", sans-serif;
+  --font-mono: "Fira Code", monospace;
+}
+
+/* ===== Verdana Health Design System ===== */
+
+:root {
+  /* Primary */
+  --color-primary: #0F172A;
+  --color-primary-hover: #020617;
+  --color-primary-disabled: #0F172A66;
+  /* Accent / Sage */
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  /* Surface */
+  --color-canvas: #F8FAFC;
+  --color-surface-card: #FFFFFF;
+  --color-surface-soft: #F1F5F9;
+  /* Text */
+  --color-ink: #0F172A;
+  --color-body-strong: #1E293B;
+  --color-body: #475569;
+  --color-muted: #64748B;
+  --color-muted-soft: #94A3B8;
+  /* Borders */
+  --color-hairline: #E2E8F0;
+  --color-hairline-soft: #F1F5F9;
+  /* Chat bubbles */
+  --bubble-self: #0F172A;
+  --bubble-self-text: #FFFFFF;
+  --bubble-other: #FFFFFF;
+  --bubble-other-text: #0F172A;
+  --bubble-other-border: #E2E8F0;
+  /* Semantic */
+  --destructive: #EF4444;
+  --destructive-hover: #DC2626;
+  --success: #22C55E;
+  --warning: #EAB308;
+  --info: #0EA5E9;
+  /* Shadows */
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.03);
+  --shadow-default: 0 2px 6px 0 rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 16px 0 rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 8px 32px 0 rgba(15, 23, 42, 0.10);
+}
+
+.dark {
+  --color-primary: #1E293B;
+  --color-primary-hover: #334155;
+  --color-canvas: #0F172A;
+  --color-surface-card: #1E293B;
+  --color-surface-soft: #1E293B;
+  --color-ink: #F8FAFC;
+  --color-body-strong: #E2E8F0;
+  --color-body: #94A3B8;
+  --color-muted: #64748B;
+  --color-muted-soft: #475569;
+  --color-hairline: #334155;
+  --color-hairline-soft: #1E293B;
+  --bubble-self: #3B82F6;
+  --bubble-self-text: #FFFFFF;
+  --bubble-other: #1E293B;
+  --bubble-other-text: #F8FAFC;
+  --bubble-other-border: #334155;
+  --destructive: #EF4444;
+  --destructive-hover: #DC2626;
+  --success: #22C55E;
+  --warning: #EAB308;
+  --info: #0EA5E9;
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+  --shadow-default: 0 2px 6px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px 0 rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; width: 100%; overflow: hidden; }
+
+body {
+  font-family: "DM Sans", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-body);
+  background: var(--color-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 { font-family: "Plus Jakarta Sans", sans-serif; }
+
+code, pre { font-family: "Fira Code", monospace; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-hairline); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }

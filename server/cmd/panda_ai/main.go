@@ -18,6 +18,7 @@ import (
 	"siciv.space/agent/panda_ai/internal/conversation"
 	"siciv.space/agent/panda_ai/internal/gateway"
 	"siciv.space/agent/panda_ai/internal/handler"
+	"siciv.space/agent/panda_ai/internal/webembed"
 	"siciv.space/agent/panda_ai/internal/message"
 	"siciv.space/agent/panda_ai/internal/session"
 	"siciv.space/agent/panda_ai/internal/storage/cache"
@@ -146,6 +147,9 @@ func main() {
 	// Router
 	r := api.NewRouter(handlers, authMW)
 	r.Handle("/ws", wsHandler)
+
+	// SPA fallback for embedded web frontend
+	r.NotFound(webembed.Handler().ServeHTTP)
 
 	// Heartbeat
 	hbCfg := gateway.DefaultHeartbeatConfig()

@@ -1,0 +1,169 @@
+{
+  "app": {
+    "name": "Panda AI",
+    "tagline": "智能即时通讯"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "account": "账号",
+    "password": "密码",
+    "name": "昵称",
+    "confirmPassword": "确认密码",
+    "rememberAccount": "记住账号",
+    "switchToRegister": "创建新账号",
+    "switchToLogin": "已有账号？去登录",
+    "loginError": "登录失败",
+    "registerError": "注册失败",
+    "passwordMismatch": "两次密码不一致",
+    "loggingIn": "登录中...",
+    "registering": "注册中..."
+  },
+  "chat": {
+    "inputPlaceholder": "输入消息...",
+    "send": "发送",
+    "online": "在线",
+    "offline": "离线",
+    "typing": "正在输入...",
+    "reply": "回复",
+    "copy": "复制",
+    "retry": "重试",
+    "uploadImage": "上传图片",
+    "uploadFile": "上传文件",
+    "selectFile": "选择文件",
+    "messageFailed": "消息发送失败",
+    "draft": "草稿",
+    "newMessage": "新消息"
+  },
+  "conversation": {
+    "title": "消息",
+    "newChat": "新建聊天",
+    "createGroup": "创建群组",
+    "joinGroup": "加入群组",
+    "searchUsers": "搜索用户...",
+    "searchGroups": "搜索群组...",
+    "groupName": "群组名称",
+    "noConversations": "暂无会话",
+    "selectChat": "选择一个会话开始聊天",
+    "members": "成员",
+    "you": "你",
+    "mentionYou": "@了你"
+  },
+  "group": {
+    "detail": "群组信息",
+    "members": "成员",
+    "memberCount": "{{count}} 名成员",
+    "addMember": "添加成员",
+    "removeMember": "移出群组",
+    "leave": "退出群组",
+    "leaveConfirm": "确定要退出该群组？",
+    "joinRequests": "入群申请",
+    "approve": "同意",
+    "reject": "拒绝",
+    "noRequests": "暂无待处理的申请",
+    "owner": "群主",
+    "admin": "管理员",
+    "member": "成员",
+    "avatarUpload": "更换头像"
+  },
+  "contact": {
+    "title": "联系人",
+    "add": "添加联系人",
+    "remove": "删除",
+    "removeConfirm": "确定删除该联系人？",
+    "editNickname": "修改备注",
+    "noContacts": "暂无联系人",
+    "online": "在线",
+    "offline": "离线"
+  },
+  "search": {
+    "placeholder": "搜索...",
+    "messages": "搜索消息",
+    "noResults": "未找到结果",
+    "users": "用户",
+    "groups": "群组"
+  },
+  "history": {
+    "title": "消息记录",
+    "keyword": "关键词",
+    "dateRange": "日期范围",
+    "all": "全部"
+  },
+  "profile": {
+    "title": "个人信息",
+    "edit": "编辑",
+    "save": "保存",
+    "userID": "用户 ID",
+    "account": "账号",
+    "primaryColor": "主色调",
+    "secondaryColor": "辅色调",
+    "logout": "退出登录",
+    "logoutConfirm": "确定退出登录？"
+  },
+  "settings": {
+    "title": "设置",
+    "server": "服务器地址",
+    "theme": "主题",
+    "themeLight": "浅色",
+    "themeDark": "深色",
+    "themeSystem": "跟随系统",
+    "language": "语言",
+    "languageZH": "中文",
+    "languageEN": "English",
+    "bubbleColor": "气泡颜色",
+    "deviceID": "设备 ID",
+    "sessionID": "会话 ID",
+    "appInfo": "应用信息"
+  },
+  "agent": {
+    "title": "Agent 管理",
+    "create": "创建 Agent",
+    "edit": "编辑 Agent",
+    "name": "Agent 名称",
+    "avatar": "头像链接",
+    "apiKey": "API Key",
+    "regenerateKey": "重新生成",
+    "wakeMode": "唤醒模式",
+    "wakeAll": "全部消息",
+    "wakeMention": "仅被@提及",
+    "deleteConfirm": "确定删除该 Agent？",
+    "maxReached": "最多创建 10 个 Agent",
+    "copyKey": "复制 Key",
+    "keyCopied": "API Key 已复制！"
+  },
+  "session": {
+    "title": "设备管理",
+    "current": "当前设备",
+    "endSession": "下线",
+    "phone": "手机",
+    "desktop": "电脑",
+    "web": "网页",
+    "tablet": "平板",
+    "noSessions": "暂无其他设备"
+  },
+  "connection": {
+    "connected": "已连接",
+    "connecting": "连接中...",
+    "disconnected": "连接已断开"
+  },
+  "common": {
+    "cancel": "取消",
+    "confirm": "确定",
+    "delete": "删除",
+    "save": "保存",
+    "close": "关闭",
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "copy": "复制",
+    "copied": "已复制！",
+    "more": "更多",
+    "today": "今天",
+    "yesterday": "昨天"
+  },
+  "time": {
+    "justNow": "刚刚",
+    "minuteAgo": "{{n}}分钟前",
+    "hourAgo": "{{n}}小时前"
+  }
+}

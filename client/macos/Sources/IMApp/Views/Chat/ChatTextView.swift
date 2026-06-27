@@ -22,6 +22,7 @@ struct ChatTextView: NSViewRepresentable {
     let placeholder: String
     let onTyping: () -> Void
     let onSend: () -> Void
+    var onMentionChanged: ((String, Int) -> Void)?
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSScrollView()
@@ -61,6 +62,7 @@ struct ChatTextView: NSViewRepresentable {
         Coordinator(parent: self)
     }
 
+    @MainActor
     class Coordinator: NSObject, NSTextViewDelegate {
         let parent: ChatTextView
 
@@ -72,6 +74,54 @@ struct ChatTextView: NSViewRepresentable {
             guard let textView = notification.object as? NSTextView else { return }
             parent.text = textView.string
             parent.onTyping()
+            detectMention(in: textView)
+        }
+
+        private func detectMention(in textView: NSTextView) {
+            guard let callback = parent.onMentionChanged else { return }
+            let nsString = textView.string as NSString
+            let cursorPos = textView.selectedRange().location
+
+            guard cursorPos > 0 else {
+                callback("", -1)
+                return
+            }
+
+            var atPos = -1
+            let searchEnd = min(cursorPos - 1, nsString.length - 1)
+            for i in stride(from: searchEnd, through: 0, by: -1) {
+                let char = nsString.character(at: i)
+                if char == UInt16(UnicodeScalar("@").value) {
+                    if i == 0 {
+                        atPos = i
+                        break
+                    }
+                    let prev = nsString.character(at: i - 1)
+                    if prev == UInt16(UnicodeScalar(" ").value)
+                        || prev == UInt16(UnicodeScalar("\n").value)
+                        || prev == UInt16(UnicodeScalar("\u{2028}").value)
+                        || prev == UInt16(UnicodeScalar("\u{2029}").value) {
+                        atPos = i
+                        break
+                    }
+                    break
+                } else if char == UInt16(UnicodeScalar(" ").value)
+                    || char == UInt16(UnicodeScalar("\n").value)
+                    || char == UInt16(UnicodeScalar("\u{2028}").value)
+                    || char == UInt16(UnicodeScalar("\u{2029}").value) {
+                    break
+                }
+            }
+
+            if atPos >= 0 {
+                let queryLength = cursorPos - atPos - 1
+                let query = queryLength > 0
+                    ? nsString.substring(with: NSRange(location: atPos + 1, length: queryLength))
+                    : ""
+                callback(query, atPos)
+            } else {
+                callback("", -1)
+            }
         }
 
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {

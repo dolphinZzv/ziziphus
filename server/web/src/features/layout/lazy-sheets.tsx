@@ -1,0 +1,40 @@
+import { lazy, Suspense } from 'react'
+
+// Lazy-load all modal/sheet components for code splitting
+const NewChatDialog = lazy(() => import('@/features/conversation-list/new-chat-dialog'))
+const CreateGroupDialog = lazy(() => import('@/features/conversation-list/create-group-dialog'))
+const JoinGroupDialog = lazy(() => import('@/features/conversation-list/join-group-dialog'))
+const ProfileView = lazy(() => import('@/features/profile/profile-view'))
+const SettingsView = lazy(() => import('@/features/settings/settings-view'))
+const AgentList = lazy(() => import('@/features/agents/agent-list'))
+const SessionList = lazy(() => import('@/features/sessions/session-list'))
+const ContactList = lazy(() => import('@/features/contacts/contact-list'))
+
+const SheetFallback = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+    <div className="p-6 text-[var(--color-muted)]">加载中...</div>
+  </div>
+)
+
+interface SheetWrapperProps {
+  name: string
+  activeSheet: string | null
+  onClose: () => void
+}
+
+export function SheetWrapper({ name, activeSheet, onClose }: SheetWrapperProps) {
+  if (activeSheet !== name) return null
+
+  return (
+    <Suspense fallback={<SheetFallback />}>
+      {name === 'newChat' && <NewChatDialog onClose={onClose} />}
+      {name === 'createGroup' && <CreateGroupDialog onClose={onClose} />}
+      {name === 'joinGroup' && <JoinGroupDialog onClose={onClose} />}
+      {name === 'profile' && <ProfileView onClose={onClose} />}
+      {name === 'settings' && <SettingsView onClose={onClose} />}
+      {name === 'agents' && <AgentList onClose={onClose} />}
+      {name === 'sessions' && <SessionList onClose={onClose} />}
+      {name === 'contacts' && <ContactList onClose={onClose} />}
+    </Suspense>
+  )
+}

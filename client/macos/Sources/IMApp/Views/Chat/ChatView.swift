@@ -1,5 +1,6 @@
 import SwiftUI
 import IMCore
+import Textual
 import UniformTypeIdentifiers
 
 struct ChatView: View {
@@ -194,7 +195,7 @@ struct ChatView: View {
                     : vm.senderInfo[msg.senderID]?.name ?? msg.senderID
             }, onCancelReply: {
                 vm.replyingToMsg = nil
-            })
+            }, members: vm.members, senderInfo: vm.senderInfo)
             .environmentObject(localizationManager)
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -241,6 +242,7 @@ struct ChatView: View {
         }
         .onAppear {
             vm.loadInitialMessages()
+            vm.loadMembers()
             vm.markAsReadIfActive()
             vm.inputText = UserDefaults.standard.string(forKey: "draft_\(convID)") ?? ""
         }

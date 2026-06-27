@@ -75,6 +75,9 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Get("/api/v1/conversations/{conv_id}/join-requests", h.Conversation.ListJoinRequests)
 		r.Post("/api/v1/conversations/{conv_id}/join-requests/{user_id}/approve", h.Conversation.ApproveJoinRequest)
 		r.Post("/api/v1/conversations/{conv_id}/join-requests/{user_id}/reject", h.Conversation.RejectJoinRequest)
+			r.Post("/api/v1/conversations/{conv_id}/pin", h.Conversation.Pin)
+			r.Post("/api/v1/conversations/{conv_id}/unpin", h.Conversation.Unpin)
+			r.Post("/api/v1/conversations/{conv_id}/clone", h.Conversation.Clone)
 		r.Get("/api/v1/conversations/unread/total", h.Conversation.UnreadTotal)
 
 		r.Get("/api/v1/conversations/{conv_id}/messages", h.Message.GetHistory)

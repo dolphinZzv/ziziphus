@@ -290,6 +290,7 @@ func (m *mockSysMsgSender) SendSystemMessage(ctx context.Context, convID, body s
 type mockConvDataRepo struct {
 	getUserConvsFunc     func(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
 	updateNameAvatarFunc func(ctx context.Context, convID, name, avatar string) error
+	updateNoticeFunc     func(ctx context.Context, convID, notice string) error
 	searchByNameFunc     func(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
 }
 
@@ -306,6 +307,15 @@ func (m *mockConvDataRepo) UpdateNameAvatar(ctx context.Context, convID, name, a
 	}
 	return nil
 }
+
+func (m *mockConvDataRepo) UpdateNotice(ctx context.Context, convID, notice string) error {
+	if m.updateNoticeFunc != nil { return m.updateNoticeFunc(ctx, convID, notice) }
+	return nil
+}
+
+func (m *mockConvDataRepo) Pin(ctx context.Context, userID, convID string) error { return nil }
+func (m *mockConvDataRepo) Unpin(ctx context.Context, userID, convID string) error { return nil }
+func (m *mockConvDataRepo) Clone(ctx context.Context, src, dst, owner, name string, idGen func() int64) error { return nil }
 
 func (m *mockConvDataRepo) SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error) {
 	if m.searchByNameFunc != nil {

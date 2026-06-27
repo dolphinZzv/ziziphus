@@ -21,4 +21,9 @@ data
 panda_ai
 deps/textual/
 
+# Embedded web frontend build output
+server/internal/webembed/dist/
+server/web/dist/
+test-results
+
 
