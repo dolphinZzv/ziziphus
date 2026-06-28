@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/coverage'
 
 const AUTH_INIT = `
   localStorage.setItem('panda_ai_token', JSON.stringify('test-mock-token'));

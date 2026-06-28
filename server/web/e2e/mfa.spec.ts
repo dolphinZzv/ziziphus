@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/coverage'
 
 test('MFA TOTP section visible in user settings', async ({ page }) => {
   const ts = Date.now()

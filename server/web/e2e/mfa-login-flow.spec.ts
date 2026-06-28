@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/coverage'
 
 const API = 'http://localhost:8080'
 

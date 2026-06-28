@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/coverage'
 
 test('register page has email input', async ({ page }) => {
   await page.addInitScript(`localStorage.setItem('panda_ai_language', JSON.stringify('zh'));`)
