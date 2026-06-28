@@ -27,3 +27,5 @@ server/web/dist/
 test-results
 
 
+*.out
+*.tmp

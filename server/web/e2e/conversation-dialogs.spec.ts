@@ -5,7 +5,7 @@ const AUTH_INIT = `
   localStorage.setItem('panda_ai_user', JSON.stringify({
     user_id: 'user_001', account: 'testuser', name: '测试用户', avatar: '',
     type: 0, status: 1, uid: '', primary_color: '#0F172A', secondary_color: '#64748B',
-    wake_mode: 0, api_key: '', created_at: 1700000000,
+    wake_mode: 0, api_key: '', discoverable: true, allow_direct_chat: true, created_at: 1700000000,
   }));
   localStorage.setItem('panda_ai_theme', JSON.stringify('light'));
   localStorage.setItem('panda_ai_language', JSON.stringify('zh'));

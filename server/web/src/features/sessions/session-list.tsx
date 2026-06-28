@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { sessionService } from '@/services/session-service'
 import { authStore } from '@/stores/auth-store'
 import type { Session, DeviceType } from '@/types/session'
-import { X, Smartphone, Monitor, Tablet, Globe, LogOut } from 'lucide-react'
+import { X, Smartphone, Monitor, Tablet, Globe, LogOut, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 
-interface Props { onClose: () => void }
+interface Props { onClose: () => void; inline?: boolean }
 
-export default function SessionList({ onClose }: Props) {
+export default function SessionList({ onClose, inline }: Props) {
+  const { t } = useTranslation()
   const [sessions, setSessions] = useState<Session[]>([])
   const currentSessionId = authStore.state.sessionId
 
@@ -25,42 +27,46 @@ export default function SessionList({ onClose }: Props) {
     try { await sessionService.delete(sessionId); setSessions(s => s.filter(s => s.session_id !== sessionId)) } catch {}
   }
 
+  const inner = (
+    <div className={`${inline ? 'h-full' : 'w-[400px] max-h-[500px]'} bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6 flex flex-col overflow-hidden`}
+      style={inline ? {} : { boxShadow: 'var(--shadow-lg)' }} onClick={inline ? undefined : e => e.stopPropagation()}>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          {inline && (
+            <button onClick={onClose} className="p-1 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">
+              <ArrowLeft size={18} />
+            </button>
+          )}
+          <h3 className="font-headline text-lg font-semibold text-[var(--color-ink)]">{t('session.title')}</h3>
+        </div>
+        {!inline && <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>}
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-1">
+        {sessions.map(s => (
+          <div key={s.session_id} className={`flex items-center gap-3 px-3 h-12 rounded-xl hover:bg-[var(--color-surface-soft)] group ${s.session_id === currentSessionId ? 'bg-[var(--color-primary)]/5' : ''}`}>
+            {deviceIcon(s.device)}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-[var(--color-ink)] flex items-center gap-2">
+                {deviceLabel(s.device)} {s.device_name || ''}
+                {s.session_id === currentSessionId && <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-green-500/10 text-green-600 font-medium uppercase tracking-wider">{t('session.current')}</span>}
+              </div>
+              <div className="text-[11px] text-[var(--color-muted)]">{s.last_active ? format(new Date(s.last_active), 'yyyy/MM/dd HH:mm') : ''}</div>
+            </div>
+            {s.session_id !== currentSessionId && (
+              <button onClick={() => handleEndSession(s.session_id)} className="p-1.5 rounded-xl hover:bg-[var(--destructive)]/10 opacity-0 group-hover:opacity-100 text-[var(--destructive)] transition-all"><LogOut size={14} /></button>
+            )}
+          </div>
+        ))}
+        {sessions.length === 0 && <p className="text-sm text-[var(--color-muted)] text-center py-8">{t('session.noSessions')}</p>}
+      </div>
+    </div>
+  )
+
+  if (inline) return inner
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-[400px] max-h-[500px] bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg p-6 flex flex-col"
-        style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-headline text-lg font-semibold text-[var(--color-ink)]">设备管理</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto space-y-0.5">
-          {sessions.map(session => (
-            <div key={session.session_id} className="flex items-center gap-3 px-3 h-12 rounded-lg hover:bg-[var(--color-surface-soft)] group">
-              {deviceIcon(session.device)}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 text-sm text-[var(--color-ink)]">
-                  {session.device_name || deviceLabel(session.device)}
-                  {session.session_id === currentSessionId && (
-                    <span className="inline-flex px-1.5 py-0.5 rounded-sm bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] font-medium uppercase tracking-wider">当前</span>
-                  )}
-                  {session.status === 0 && <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />}
-                </div>
-                <div className="text-[11px] text-[var(--color-muted)]">
-                  {session.client_ip} · {session.login_at ? format(new Date(session.login_at * 1000), 'MM/dd HH:mm') : ''}
-                </div>
-              </div>
-              {session.session_id !== currentSessionId && (
-                <button onClick={() => handleEndSession(session.session_id)}
-                  className="p-1.5 rounded-lg hover:bg-[var(--destructive)]/10 opacity-0 group-hover:opacity-100 text-[var(--destructive)] transition-all"><LogOut size={14} /></button>
-              )}
-            </div>
-          ))}
-          {sessions.length === 0 && (
-            <p className="text-sm text-[var(--color-muted)] text-center py-8">暂无其他设备</p>
-          )}
-        </div>
-      </div>
+      {inner}
     </div>
   )
 }

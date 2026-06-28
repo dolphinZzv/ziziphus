@@ -1,9 +1,12 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,6 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"siciv.space/agent/panda_ai/internal/auth"
+	"siciv.space/agent/panda_ai/internal/gateway"
 	"siciv.space/agent/panda_ai/internal/storage/db"
 	"siciv.space/agent/panda_ai/pkg/model"
 )
@@ -62,11 +66,18 @@ func (r *testAuthUserRepo) GetByAccount(_ context.Context, account string) (*mod
 // ---------------------------------------------------------------------------
 
 type mockUserRepo struct {
-	createFunc   func(ctx context.Context, u *model.User) error
-	getByIDFunc  func(ctx context.Context, id string) (*model.User, error)
-	getByIDsFunc func(ctx context.Context, ids []string) (map[string]*model.User, error)
-	searchFunc   func(ctx context.Context, q string, page, size int) ([]*model.User, int, error)
-	updateFunc   func(ctx context.Context, id, name, avatar, primaryColor, secondaryColor string) error
+	createFunc          func(ctx context.Context, u *model.User) error
+	getByIDFunc         func(ctx context.Context, id string) (*model.User, error)
+	getByIDsFunc        func(ctx context.Context, ids []string) (map[string]*model.User, error)
+	searchFunc          func(ctx context.Context, q string, page, size int) ([]*model.User, int, error)
+	updateFunc          func(ctx context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error
+	countAgentsFunc     func(ctx context.Context, uid string) (int, error)
+	listAgentsFunc      func(ctx context.Context, uid string) ([]*model.User, error)
+	updateAgentFunc     func(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error
+	deleteAgentFunc     func(ctx context.Context, agentID, uid string) error
+	getByAPIKeyFunc     func(ctx context.Context, apiKey string) (*model.User, error)
+	updateAgentAPIKeyFunc func(ctx context.Context, agentID, uid, apiKey string) error
+	deleteAccountFunc   func(ctx context.Context, userID string) error
 }
 
 func (m *mockUserRepo) Create(ctx context.Context, u *model.User) error {
@@ -97,9 +108,58 @@ func (m *mockUserRepo) Search(ctx context.Context, q string, page, size int) ([]
 	return nil, 0, nil
 }
 
-func (m *mockUserRepo) Update(ctx context.Context, id, name, avatar, primaryColor, secondaryColor string) error {
+func (m *mockUserRepo) Update(ctx context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error {
 	if m.updateFunc != nil {
-		return m.updateFunc(ctx, id, name, avatar, primaryColor, secondaryColor)
+		return m.updateFunc(ctx, id, name, avatar, cover, email, primaryColor, secondaryColor, discoverable, allowDirectChat)
+	}
+	return nil
+}
+
+func (m *mockUserRepo) CountAgents(ctx context.Context, uid string) (int, error) {
+	if m.countAgentsFunc != nil {
+		return m.countAgentsFunc(ctx, uid)
+	}
+	return 0, nil
+}
+
+func (m *mockUserRepo) ListAgents(ctx context.Context, uid string) ([]*model.User, error) {
+	if m.listAgentsFunc != nil {
+		return m.listAgentsFunc(ctx, uid)
+	}
+	return nil, nil
+}
+
+func (m *mockUserRepo) UpdateAgent(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error {
+	if m.updateAgentFunc != nil {
+		return m.updateAgentFunc(ctx, agentID, uid, name, avatar, cover, primaryColor, secondaryColor, wakeMode, discoverable, allowDirectChat)
+	}
+	return nil
+}
+
+func (m *mockUserRepo) DeleteAgent(ctx context.Context, agentID, uid string) error {
+	if m.deleteAgentFunc != nil {
+		return m.deleteAgentFunc(ctx, agentID, uid)
+	}
+	return nil
+}
+
+func (m *mockUserRepo) GetByAPIKey(ctx context.Context, apiKey string) (*model.User, error) {
+	if m.getByAPIKeyFunc != nil {
+		return m.getByAPIKeyFunc(ctx, apiKey)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+func (m *mockUserRepo) UpdateAgentAPIKey(ctx context.Context, agentID, uid, apiKey string) error {
+	if m.updateAgentAPIKeyFunc != nil {
+		return m.updateAgentAPIKeyFunc(ctx, agentID, uid, apiKey)
+	}
+	return nil
+}
+
+func (m *mockUserRepo) DeleteAccount(ctx context.Context, userID string) error {
+	if m.deleteAccountFunc != nil {
+		return m.deleteAccountFunc(ctx, userID)
 	}
 	return nil
 }
@@ -293,6 +353,10 @@ type mockConvDataRepo struct {
 	updateNoticeFunc     func(ctx context.Context, convID, notice string) error
 	updateCoverFunc      func(ctx context.Context, convID, cover string) error
 	searchByNameFunc     func(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
+	pinFunc              func(ctx context.Context, userID, convID string) error
+	unpinFunc            func(ctx context.Context, userID, convID string) error
+	cloneFunc            func(ctx context.Context, src, dst, owner, name string, idGen func() int64) error
+	areContactsFunc      func(ctx context.Context, userA, userB string) (bool, error)
 }
 
 func (m *mockConvDataRepo) GetUserConvs(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error) {
@@ -319,11 +383,31 @@ func (m *mockConvDataRepo) UpdateCover(ctx context.Context, convID, cover string
 	return nil
 }
 
-func (m *mockConvDataRepo) Pin(ctx context.Context, userID, convID string) error { return nil }
-func (m *mockConvDataRepo) Unpin(ctx context.Context, userID, convID string) error { return nil }
-func (m *mockConvDataRepo) Clone(ctx context.Context, src, dst, owner, name string, idGen func() int64) error { return nil }
+func (m *mockConvDataRepo) Pin(ctx context.Context, userID, convID string) error {
+	if m.pinFunc != nil {
+		return m.pinFunc(ctx, userID, convID)
+	}
+	return nil
+}
+func (m *mockConvDataRepo) Unpin(ctx context.Context, userID, convID string) error {
+	if m.unpinFunc != nil {
+		return m.unpinFunc(ctx, userID, convID)
+	}
+	return nil
+}
+func (m *mockConvDataRepo) Clone(ctx context.Context, src, dst, owner, name string, idGen func() int64) error {
+	if m.cloneFunc != nil {
+		return m.cloneFunc(ctx, src, dst, owner, name, idGen)
+	}
+	return nil
+}
 
-func (m *mockConvDataRepo) AreContacts(ctx context.Context, userA, userB string) (bool, error) { return false, nil }
+func (m *mockConvDataRepo) AreContacts(ctx context.Context, userA, userB string) (bool, error) {
+	if m.areContactsFunc != nil {
+		return m.areContactsFunc(ctx, userA, userB)
+	}
+	return false, nil
+}
 
 func (m *mockConvDataRepo) SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error) {
 	if m.searchByNameFunc != nil {
@@ -401,31 +485,345 @@ func (m *mockUserQueryRepo) GetByIDs(ctx context.Context, ids []string) (map[str
 	return nil, nil
 }
 
-type mockContactRequestStorage struct{}
+// ---------------------------------------------------------------------------
+// Mock: userGetter (for ConvHandler)
+// ---------------------------------------------------------------------------
 
-func (m *mockContactRequestStorage) Insert(_ context.Context, _ *model.ContactRequest) (int64, error) { return 1, nil }
-func (m *mockContactRequestStorage) UpdateFormMsgID(_ context.Context, _, _ int64) error { return nil }
-func (m *mockContactRequestStorage) GetByID(_ context.Context, _ int64) (*model.ContactRequest, error) { return nil, nil }
-func (m *mockContactRequestStorage) GetByFormMsgID(_ context.Context, _ int64) (*model.ContactRequest, error) { return nil, nil }
-func (m *mockContactRequestStorage) GetByPair(_ context.Context, _, _ string) (*model.ContactRequest, error) { return nil, nil }
-func (m *mockContactRequestStorage) ListSent(_ context.Context, _ string, _, _ int) ([]*model.ContactRequest, int, error) { return nil, 0, nil }
-func (m *mockContactRequestStorage) ListReceived(_ context.Context, _ string, _ int, _, _ int) ([]*model.ContactRequest, int, error) { return nil, 0, nil }
-func (m *mockContactRequestStorage) Delete(_ context.Context, _ int64) error { return nil }
-func (m *mockContactRequestStorage) ExistsAnyDirection(_ context.Context, _, _ string) (bool, error) { return false, nil }
+type mockUserGetter struct {
+	getByIDFunc func(ctx context.Context, id string) (*model.User, error)
+}
 
-type mockFormMessageSender struct{}
+func (m *mockUserGetter) GetByID(ctx context.Context, id string) (*model.User, error) {
+	if m.getByIDFunc != nil {
+		return m.getByIDFunc(ctx, id)
+	}
+	return &model.User{ID: id, Name: id, Type: model.UserHuman}, nil
+}
 
-func (m *mockFormMessageSender) SendFormMessage(_ context.Context, _ string, _ *model.FormDefinitionBody) (*model.Message, error) {
+// ---------------------------------------------------------------------------
+// Mock: contactRequestStorage (for ContactHandler)
+// ---------------------------------------------------------------------------
+
+type mockContactRequestStorage struct {
+	insertFunc             func(ctx context.Context, req *model.ContactRequest) (int64, error)
+	updateFormMsgIDFunc    func(ctx context.Context, id, formMsgID int64) error
+	getByIDFunc            func(ctx context.Context, id int64) (*model.ContactRequest, error)
+	getByFormMsgIDFunc     func(ctx context.Context, formMsgID int64) (*model.ContactRequest, error)
+	getByPairFunc          func(ctx context.Context, fromUserID, toUserID string) (*model.ContactRequest, error)
+	listSentFunc           func(ctx context.Context, userID string, page, size int) ([]*model.ContactRequest, int, error)
+	listReceivedFunc        func(ctx context.Context, userID string, status int, page, size int) ([]*model.ContactRequest, int, error)
+	deleteFunc             func(ctx context.Context, id int64) error
+	existsAnyDirectionFunc func(ctx context.Context, userA, userB string) (bool, error)
+}
+
+func (m *mockContactRequestStorage) Insert(ctx context.Context, req *model.ContactRequest) (int64, error) {
+	if m.insertFunc != nil {
+		return m.insertFunc(ctx, req)
+	}
+	return 1, nil
+}
+func (m *mockContactRequestStorage) UpdateFormMsgID(ctx context.Context, id, formMsgID int64) error {
+	if m.updateFormMsgIDFunc != nil {
+		return m.updateFormMsgIDFunc(ctx, id, formMsgID)
+	}
+	return nil
+}
+func (m *mockContactRequestStorage) GetByID(ctx context.Context, id int64) (*model.ContactRequest, error) {
+	if m.getByIDFunc != nil {
+		return m.getByIDFunc(ctx, id)
+	}
+	return nil, nil
+}
+func (m *mockContactRequestStorage) GetByFormMsgID(ctx context.Context, formMsgID int64) (*model.ContactRequest, error) {
+	if m.getByFormMsgIDFunc != nil {
+		return m.getByFormMsgIDFunc(ctx, formMsgID)
+	}
+	return nil, nil
+}
+func (m *mockContactRequestStorage) GetByPair(ctx context.Context, fromUserID, toUserID string) (*model.ContactRequest, error) {
+	if m.getByPairFunc != nil {
+		return m.getByPairFunc(ctx, fromUserID, toUserID)
+	}
+	return nil, nil
+}
+func (m *mockContactRequestStorage) ListSent(ctx context.Context, userID string, page, size int) ([]*model.ContactRequest, int, error) {
+	if m.listSentFunc != nil {
+		return m.listSentFunc(ctx, userID, page, size)
+	}
+	return nil, 0, nil
+}
+func (m *mockContactRequestStorage) ListReceived(ctx context.Context, userID string, status int, page, size int) ([]*model.ContactRequest, int, error) {
+	if m.listReceivedFunc != nil {
+		return m.listReceivedFunc(ctx, userID, status, page, size)
+	}
+	return nil, 0, nil
+}
+func (m *mockContactRequestStorage) Delete(ctx context.Context, id int64) error {
+	if m.deleteFunc != nil {
+		return m.deleteFunc(ctx, id)
+	}
+	return nil
+}
+func (m *mockContactRequestStorage) ExistsAnyDirection(ctx context.Context, userA, userB string) (bool, error) {
+	if m.existsAnyDirectionFunc != nil {
+		return m.existsAnyDirectionFunc(ctx, userA, userB)
+	}
+	return false, nil
+}
+
+type mockFormMessageSender struct {
+	sendFormMessageFunc   func(ctx context.Context, convID string, body *model.FormDefinitionBody) (*model.Message, error)
+	sendSystemMessageFunc func(ctx context.Context, convID, body string, senderID ...string) (*model.Message, error)
+}
+
+func (m *mockFormMessageSender) SendFormMessage(ctx context.Context, convID string, body *model.FormDefinitionBody) (*model.Message, error) {
+	if m.sendFormMessageFunc != nil {
+		return m.sendFormMessageFunc(ctx, convID, body)
+	}
 	return &model.Message{MsgID: 1}, nil
 }
-func (m *mockFormMessageSender) SendSystemMessage(_ context.Context, _ string, _ string, _ ...string) (*model.Message, error) {
+func (m *mockFormMessageSender) SendSystemMessage(ctx context.Context, convID, body string, senderID ...string) (*model.Message, error) {
+	if m.sendSystemMessageFunc != nil {
+		return m.sendSystemMessageFunc(ctx, convID, body, senderID...)
+	}
 	return &model.Message{MsgID: 2}, nil
 }
 
-type mockSystemConvManager struct{}
+type mockSystemConvManager struct {
+	getOrCreateSystemConvFunc func(ctx context.Context, userID string) (*model.Conversation, error)
+	leaveFunc                 func(ctx context.Context, convID, userID string) error
+}
 
-func (m *mockSystemConvManager) GetOrCreateSystemConv(_ context.Context, _ string) (*model.Conversation, error) {
+func (m *mockSystemConvManager) GetOrCreateSystemConv(ctx context.Context, userID string) (*model.Conversation, error) {
+	if m.getOrCreateSystemConvFunc != nil {
+		return m.getOrCreateSystemConvFunc(ctx, userID)
+	}
 	return &model.Conversation{ConvID: "sys:test"}, nil
+}
+
+func (m *mockSystemConvManager) Leave(ctx context.Context, convID, userID string) error {
+	if m.leaveFunc != nil {
+		return m.leaveFunc(ctx, convID, userID)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Mock: sessionManager (for SessionHandler)
+// ---------------------------------------------------------------------------
+
+type mockSessionManager struct {
+	getUserSessionIDsFunc func(ctx context.Context, userID string) []string
+	getFunc               func(ctx context.Context, sessionID string) *model.Session
+	deleteFunc            func(ctx context.Context, sessionID string) error
+}
+
+func (m *mockSessionManager) GetUserSessionIDs(ctx context.Context, userID string) []string {
+	if m.getUserSessionIDsFunc != nil {
+		return m.getUserSessionIDsFunc(ctx, userID)
+	}
+	return nil
+}
+
+func (m *mockSessionManager) Get(ctx context.Context, sessionID string) *model.Session {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, sessionID)
+	}
+	return nil
+}
+
+func (m *mockSessionManager) Delete(ctx context.Context, sessionID string) error {
+	if m.deleteFunc != nil {
+		return m.deleteFunc(ctx, sessionID)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Mock: fileDB
+// ---------------------------------------------------------------------------
+
+type mockFileDB struct {
+	insertFunc          func(ctx context.Context, f *model.FileInfo) error
+	getByIDFunc         func(ctx context.Context, fileID string) (*model.FileInfo, error)
+	listByConvIDFunc    func(ctx context.Context, convID string, page, size int) ([]*model.FileInfo, int, error)
+	deleteByIDFunc      func(ctx context.Context, fileID, uploaderID string) error
+	createFolderFunc    func(ctx context.Context, folder *model.FileFolder) (int64, error)
+	listFoldersFunc     func(ctx context.Context, convID string, parentID int64) ([]*model.FileFolder, error)
+	listFilesInFolderFunc func(ctx context.Context, convID string, folderID int64, page, size int) ([]*model.FileInfo, int, error)
+	deleteFolderFunc    func(ctx context.Context, folderID int64) error
+	moveFileFunc        func(ctx context.Context, fileID string, folderID int64) error
+	moveFolderFunc      func(ctx context.Context, folderID, parentID int64) error
+	renameFolderFunc    func(ctx context.Context, folderID int64, name string) error
+}
+
+func (m *mockFileDB) Insert(ctx context.Context, f *model.FileInfo) error {
+	if m.insertFunc != nil {
+		return m.insertFunc(ctx, f)
+	}
+	return nil
+}
+
+func (m *mockFileDB) GetByID(ctx context.Context, fileID string) (*model.FileInfo, error) {
+	if m.getByIDFunc != nil {
+		return m.getByIDFunc(ctx, fileID)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+func (m *mockFileDB) ListByConvID(ctx context.Context, convID string, page, size int) ([]*model.FileInfo, int, error) {
+	if m.listByConvIDFunc != nil {
+		return m.listByConvIDFunc(ctx, convID, page, size)
+	}
+	return nil, 0, nil
+}
+
+func (m *mockFileDB) DeleteByID(ctx context.Context, fileID, uploaderID string) error {
+	if m.deleteByIDFunc != nil {
+		return m.deleteByIDFunc(ctx, fileID, uploaderID)
+	}
+	return nil
+}
+
+func (m *mockFileDB) CreateFolder(ctx context.Context, folder *model.FileFolder) (int64, error) {
+	if m.createFolderFunc != nil {
+		return m.createFolderFunc(ctx, folder)
+	}
+	return 0, nil
+}
+
+func (m *mockFileDB) ListFolders(ctx context.Context, convID string, parentID int64) ([]*model.FileFolder, error) {
+	if m.listFoldersFunc != nil {
+		return m.listFoldersFunc(ctx, convID, parentID)
+	}
+	return nil, nil
+}
+
+func (m *mockFileDB) ListFilesInFolder(ctx context.Context, convID string, folderID int64, page, size int) ([]*model.FileInfo, int, error) {
+	if m.listFilesInFolderFunc != nil {
+		return m.listFilesInFolderFunc(ctx, convID, folderID, page, size)
+	}
+	return nil, 0, nil
+}
+
+func (m *mockFileDB) DeleteFolder(ctx context.Context, folderID int64) error {
+	if m.deleteFolderFunc != nil {
+		return m.deleteFolderFunc(ctx, folderID)
+	}
+	return nil
+}
+
+func (m *mockFileDB) MoveFile(ctx context.Context, fileID string, folderID int64) error {
+	if m.moveFileFunc != nil {
+		return m.moveFileFunc(ctx, fileID, folderID)
+	}
+	return nil
+}
+
+func (m *mockFileDB) MoveFolder(ctx context.Context, folderID, parentID int64) error {
+	if m.moveFolderFunc != nil {
+		return m.moveFolderFunc(ctx, folderID, parentID)
+	}
+	return nil
+}
+
+func (m *mockFileDB) RenameFolder(ctx context.Context, folderID int64, name string) error {
+	if m.renameFolderFunc != nil {
+		return m.renameFolderFunc(ctx, folderID, name)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Mock: idGenerator
+// ---------------------------------------------------------------------------
+
+type mockIDGenerator struct {
+	nextIDFunc func() int64
+}
+
+func (m *mockIDGenerator) NextID() int64 {
+	if m.nextIDFunc != nil {
+		return m.nextIDFunc()
+	}
+	return 1
+}
+
+// ---------------------------------------------------------------------------
+// Mock: mfaStorage, emailVerifyHandler, emailSender
+// ---------------------------------------------------------------------------
+
+type mockMFAStorage struct {
+	getFunc     func(ctx context.Context, userID string) (*model.UserMFA, error)
+	upsertFunc  func(ctx context.Context, m *model.UserMFA) error
+	disableFunc func(ctx context.Context, userID string) error
+}
+
+func (m *mockMFAStorage) Get(ctx context.Context, userID string) (*model.UserMFA, error) {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, userID)
+	}
+	return nil, fmt.Errorf("mfa not found")
+}
+
+func (m *mockMFAStorage) Upsert(ctx context.Context, u *model.UserMFA) error {
+	if m.upsertFunc != nil {
+		return m.upsertFunc(ctx, u)
+	}
+	return nil
+}
+
+func (m *mockMFAStorage) Disable(ctx context.Context, userID string) error {
+	if m.disableFunc != nil {
+		return m.disableFunc(ctx, userID)
+	}
+	return nil
+}
+
+type mockEmailVerifyHandler struct {
+	upsertFunc func(ctx context.Context, ev *model.EmailVerify) error
+	getFunc    func(ctx context.Context, userID string) (*model.EmailVerify, error)
+	deleteFunc func(ctx context.Context, userID string) error
+}
+
+func (m *mockEmailVerifyHandler) Upsert(ctx context.Context, ev *model.EmailVerify) error {
+	if m.upsertFunc != nil {
+		return m.upsertFunc(ctx, ev)
+	}
+	return nil
+}
+
+func (m *mockEmailVerifyHandler) Get(ctx context.Context, userID string) (*model.EmailVerify, error) {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, userID)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+func (m *mockEmailVerifyHandler) Delete(ctx context.Context, userID string) error {
+	if m.deleteFunc != nil {
+		return m.deleteFunc(ctx, userID)
+	}
+	return nil
+}
+
+type mockEmailSender struct {
+	enabledFunc                  func() bool
+	sendVerificationCodeFunc     func(to, code string) error
+}
+
+func (m *mockEmailSender) Enabled() bool {
+	if m.enabledFunc != nil {
+		return m.enabledFunc()
+	}
+	return false
+}
+
+func (m *mockEmailSender) SendVerificationCode(to, code string) error {
+	if m.sendVerificationCodeFunc != nil {
+		return m.sendVerificationCodeFunc(to, code)
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -589,7 +987,7 @@ func newTestUserHandler(authUserRepo *testAuthUserRepo) (*UserHandler, *auth.Ser
 	authSvc := auth.NewService("test-jwt-secret", 24, 168, authUserRepo, nil, func() int64 { return time.Now().UnixNano() })
 	userRepo := &mockUserRepo{}
 	sessMgr := &mockSessionChecker{}
-	return NewUserHandler(authSvc, userRepo, sessMgr), authSvc, userRepo, sessMgr
+	return NewUserHandler(authSvc, userRepo, sessMgr, func() int64 { return time.Now().UnixNano() }, &mockMFAStorage{}, &mockEmailVerifyHandler{}, &mockEmailSender{}), authSvc, userRepo, sessMgr
 }
 
 func TestUserHandler_Register_Success(t *testing.T) {
@@ -862,8 +1260,8 @@ func TestUserHandler_Search(t *testing.T) {
 
 	userRepo.searchFunc = func(_ context.Context, q string, page, size int) ([]*model.User, int, error) {
 		return []*model.User{
-			{ID: "user_1", Name: "Alice", Type: model.UserHuman},
-			{ID: "user_2", Name: "Bob", Type: model.UserHuman},
+			{ID: "user_1", Name: "Alice", Type: model.UserHuman, Discoverable: true},
+			{ID: "user_2", Name: "Bob", Type: model.UserHuman, Discoverable: true},
 		}, 2, nil
 	}
 
@@ -955,13 +1353,18 @@ func TestUserHandler_UpdateMe(t *testing.T) {
 	authUserRepo := &testAuthUserRepo{}
 	handler, _, userRepo, _ := newTestUserHandler(authUserRepo)
 
-	var capturedID, capturedName, capturedAvatar, capturedPrimaryColor, capturedSecondaryColor string
-	userRepo.updateFunc = func(_ context.Context, id, name, avatar, primaryColor, secondaryColor string) error {
+	var capturedID, capturedName, capturedAvatar, capturedCover, capturedEmail, capturedPrimaryColor, capturedSecondaryColor string
+	var capturedDiscoverable, capturedAllowDirectChat bool
+	userRepo.updateFunc = func(_ context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error {
 		capturedID = id
 		capturedName = name
 		capturedAvatar = avatar
+		capturedCover = cover
+		capturedEmail = email
 		capturedPrimaryColor = primaryColor
 		capturedSecondaryColor = secondaryColor
+		capturedDiscoverable = discoverable
+		capturedAllowDirectChat = allowDirectChat
 		return nil
 	}
 
@@ -990,6 +1393,18 @@ func TestUserHandler_UpdateMe(t *testing.T) {
 	}
 	if capturedSecondaryColor != "#00FF00" {
 		t.Errorf("capturedSecondaryColor = %q, want %q", capturedSecondaryColor, "#00FF00")
+	}
+	if capturedCover != "" {
+		t.Errorf("capturedCover = %q, want %q", capturedCover, "")
+	}
+	if capturedDiscoverable != true {
+		t.Errorf("capturedDiscoverable = %v, want true", capturedDiscoverable)
+	}
+	if capturedAllowDirectChat != true {
+		t.Errorf("capturedAllowDirectChat = %v, want true", capturedAllowDirectChat)
+	}
+	if capturedEmail != "" {
+		t.Errorf("capturedEmail = %q, want %q", capturedEmail, "")
 	}
 }
 
@@ -1157,7 +1572,8 @@ func TestConvHandler_CreateGroup(t *testing.T) {
 				return nil, nil
 			},
 		},
-		idGen: func() int64 { return 1 },
+		userGetter: &mockUserGetter{},
+		idGen:      func() int64 { return 1 },
 	}
 
 	body := `{"name":"New Group","member_ids":["user_2","user_3"]}`
@@ -1222,6 +1638,7 @@ func TestConvHandler_AddMembers(t *testing.T) {
 				return nil, nil
 			},
 		},
+		userGetter: &mockUserGetter{},
 	}
 
 	body := `{"user_ids":["user_2","user_3"]}`
@@ -1277,6 +1694,7 @@ func TestConvHandler_AddMembers_DuplicateUserIDs(t *testing.T) {
 				return nil, nil
 			},
 		},
+		userGetter: &mockUserGetter{},
 	}
 
 	// user_2 appears twice, should only trigger AddMember once
@@ -1312,6 +1730,7 @@ func TestConvHandler_RemoveMember(t *testing.T) {
 				return nil, nil
 			},
 		},
+		userGetter: &mockUserGetter{},
 	}
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/conversations/{conv_id}/members/{user_id}", nil)
@@ -1368,6 +1787,7 @@ func TestConvHandler_Leave(t *testing.T) {
 				return nil, nil
 			},
 		},
+		userGetter: &mockUserGetter{},
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/leave", nil)
@@ -1459,6 +1879,9 @@ func TestConvHandler_UpdateGroup(t *testing.T) {
 					Type:   model.ConvGroup,
 				}, nil
 			},
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
+			},
 			getMemberRoleFunc: func(_ context.Context, convID, userID string) (model.ConvRole, error) {
 				return model.ConvRoleOwner, nil
 			},
@@ -1499,6 +1922,9 @@ func TestConvHandler_UpdateGroup_NotGroup(t *testing.T) {
 					ConvID: convID,
 					Type:   model.ConvP2P, // not a group
 				}, nil
+			},
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
 			},
 		},
 	}
@@ -1778,11 +2204,16 @@ func TestContactHandler_Add_Self(t *testing.T) {
 
 func TestContactHandler_Remove(t *testing.T) {
 	var capturedUserID, capturedContactID string
+	callCount := 0
 	handler := &ContactHandler{
 		contactRepo: &mockContactStorage{
 			removeFunc: func(_ context.Context, userID, contactID string) error {
-				capturedUserID = userID
-				capturedContactID = contactID
+				// First call is the forward direction; capture those params.
+				if callCount == 0 {
+					capturedUserID = userID
+					capturedContactID = contactID
+				}
+				callCount++
 				return nil
 			},
 		},
@@ -1998,5 +2429,1424 @@ func TestConvHandler_RejectJoinRequest(t *testing.T) {
 	}
 	if data["user_id"] != "bob" {
 		t.Errorf("user_id = %v, want %q", data["user_id"], "bob")
+	}
+}
+
+// =========================================================================
+// Tests: ConvHandler – CreateP2P
+// =========================================================================
+
+func TestConvHandler_CreateP2P(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			getOrCreateP2PFunc: func(_ context.Context, userA, userB string) (*model.Conversation, error) {
+				return &model.Conversation{ConvID: "p2p_1", Type: model.ConvP2P}, nil
+			},
+		},
+		userGetter: &mockUserGetter{
+			getByIDFunc: func(_ context.Context, id string) (*model.User, error) {
+				return &model.User{ID: id, Name: "Partner", Type: model.UserHuman, AllowDirectChat: true}, nil
+			},
+		},
+	}
+
+	body := `{"user_id":"u2"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/p2p", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.CreateP2P(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0: %s", resp.Code, resp.Msg)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["conv_id"] != "p2p_1" {
+		t.Errorf("conv_id = %v, want %q", data["conv_id"], "p2p_1")
+	}
+	if data["type"] != float64(model.ConvP2P) {
+		t.Errorf("type = %v, want %v", data["type"], model.ConvP2P)
+	}
+}
+
+func TestConvHandler_CreateP2P_EmptyUserID(t *testing.T) {
+	handler := &ConvHandler{}
+	body := `{"user_id":""}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/p2p", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.CreateP2P(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConvHandler_CreateP2P_Self(t *testing.T) {
+	handler := &ConvHandler{}
+	body := `{"user_id":"u1"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/p2p", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.CreateP2P(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestConvHandler_CreateP2P_DirectChatDisabled(t *testing.T) {
+	handler := &ConvHandler{
+		convRepo: &mockConvDataRepo{
+			areContactsFunc: func(_ context.Context, _, _ string) (bool, error) {
+				return false, nil
+			},
+		},
+		userGetter: &mockUserGetter{
+			getByIDFunc: func(_ context.Context, id string) (*model.User, error) {
+				return &model.User{ID: id, Name: "Partner", Type: model.UserHuman, AllowDirectChat: false}, nil
+			},
+		},
+	}
+
+	body := `{"user_id":"u2"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/p2p", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.CreateP2P(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNoPermission {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNoPermission)
+	}
+}
+
+// =========================================================================
+// Tests: ConvHandler – SearchGroups
+// =========================================================================
+
+func TestConvHandler_SearchGroups(t *testing.T) {
+	handler := &ConvHandler{
+		convRepo: &mockConvDataRepo{
+			searchByNameFunc: func(_ context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error) {
+				return []*db.GroupSearchItem{{ConvID: "g1", Name: "Test Group"}}, 1, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/search?q=test&page=1&size=20", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.SearchGroups(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+func TestConvHandler_SearchGroups_DefaultPagination(t *testing.T) {
+	handler := &ConvHandler{
+		convRepo: &mockConvDataRepo{
+			searchByNameFunc: func(_ context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error) {
+				if page != 1 || size != 20 {
+					t.Errorf("page=%d, size=%d want page=1 size=20", page, size)
+				}
+				return []*db.GroupSearchItem{}, 0, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/search", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.SearchGroups(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+// =========================================================================
+// Tests: ConvHandler – UnreadTotal
+// =========================================================================
+
+func TestConvHandler_UnreadTotal(t *testing.T) {
+	handler := &ConvHandler{
+		convRepo: &mockConvDataRepo{
+			getUserConvsFunc: func(_ context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error) {
+				return []*db.ConvListItem{
+					{ConvID: "c1", UnreadCount: 3},
+					{ConvID: "c2", UnreadCount: 5},
+				}, 2, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/unread/total", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.UnreadTotal(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["total"].(float64) != 8 {
+		t.Errorf("total = %v, want 8", data["total"])
+	}
+}
+
+// =========================================================================
+// Tests: ConvHandler – Pin / Unpin
+// =========================================================================
+
+func TestConvHandler_Pin(t *testing.T) {
+	handler := &ConvHandler{
+		convRepo: &mockConvDataRepo{
+			pinFunc: func(_ context.Context, _, _ string) error { return nil },
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/pin", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "c1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.Pin(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["pinned"] != true {
+		t.Errorf("pinned = %v, want true", data["pinned"])
+	}
+}
+
+func TestConvHandler_Unpin(t *testing.T) {
+	handler := &ConvHandler{
+		convRepo: &mockConvDataRepo{
+			unpinFunc: func(_ context.Context, _, _ string) error { return nil },
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/unpin", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "c1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.Unpin(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["pinned"] != false {
+		t.Errorf("pinned = %v, want false", data["pinned"])
+	}
+}
+
+// =========================================================================
+// Tests: ConvHandler – Clone
+// =========================================================================
+
+func TestConvHandler_Clone(t *testing.T) {
+	idGenCalls := 0
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			getFunc: func(_ context.Context, convID string) (*model.Conversation, error) {
+				return &model.Conversation{ConvID: convID, Type: model.ConvGroup, Name: "Original"}, nil
+			},
+			getMemberRoleFunc: func(_ context.Context, _, _ string) (model.ConvRole, error) {
+				return model.ConvRoleOwner, nil
+			},
+		},
+		convRepo: &mockConvDataRepo{
+			cloneFunc: func(_ context.Context, src, dst, owner, name string, idGen func() int64) error {
+				return nil
+			},
+		},
+		idGen: func() int64 {
+			idGenCalls++
+			return 100 + int64(idGenCalls)
+		},
+	}
+
+	body := `{"name":"Cloned Group"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/clone", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.Clone(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0: %s", resp.Code, resp.Msg)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["name"] != "Cloned Group" {
+		t.Errorf("name = %v, want %q", data["name"], "Cloned Group")
+	}
+}
+
+func TestConvHandler_Clone_NotGroup(t *testing.T) {
+	idGenCalls := 0
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			getFunc: func(_ context.Context, convID string) (*model.Conversation, error) {
+				return &model.Conversation{ConvID: convID, Type: model.ConvP2P}, nil
+			},
+		},
+		convRepo: &mockConvDataRepo{},
+		idGen: func() int64 {
+			idGenCalls++
+			return 100 + int64(idGenCalls)
+		},
+	}
+
+	body := `{}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/clone", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setChiURLParam(req, "conv_id", "p1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.Clone(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+}
+
+func TestConvHandler_Clone_NotOwner(t *testing.T) {
+	idGenCalls := 0
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			getFunc: func(_ context.Context, convID string) (*model.Conversation, error) {
+				return &model.Conversation{ConvID: convID, Type: model.ConvGroup}, nil
+			},
+			getMemberRoleFunc: func(_ context.Context, _, _ string) (model.ConvRole, error) {
+				return model.ConvRoleMember, nil
+			},
+		},
+		idGen: func() int64 {
+			idGenCalls++
+			return 100 + int64(idGenCalls)
+		},
+	}
+
+	body := `{}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/clone", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.Clone(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNoPermission {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNoPermission)
+	}
+}
+
+// =========================================================================
+// Tests: ContactHandler – RequestContact
+// =========================================================================
+
+func TestContactHandler_RequestContact_Success(t *testing.T) {
+	handler := &ContactHandler{
+		reqRepo: &mockContactRequestStorage{
+			existsAnyDirectionFunc: func(_ context.Context, _, _ string) (bool, error) {
+				return false, nil
+			},
+			getByPairFunc: func(_ context.Context, _, _ string) (*model.ContactRequest, error) {
+				return nil, nil
+			},
+			insertFunc: func(_ context.Context, req *model.ContactRequest) (int64, error) {
+				return 42, nil
+			},
+			updateFormMsgIDFunc: func(_ context.Context, _, _ int64) error {
+				return nil
+			},
+		},
+		userRepo: &mockUserQueryRepo{
+			getByIDsFunc: func(_ context.Context, ids []string) (map[string]*model.User, error) {
+				return map[string]*model.User{
+					ids[0]: {ID: ids[0], Name: "TargetUser"},
+				}, nil
+			},
+		},
+		ingest: &mockFormMessageSender{
+			sendFormMessageFunc: func(_ context.Context, _ string, _ *model.FormDefinitionBody) (*model.Message, error) {
+				return &model.Message{MsgID: 10}, nil
+			},
+			sendSystemMessageFunc: func(_ context.Context, _, _ string, _ ...string) (*model.Message, error) {
+				return &model.Message{MsgID: 20}, nil
+			},
+		},
+		convMgr: &mockSystemConvManager{
+			getOrCreateSystemConvFunc: func(_ context.Context, _ string) (*model.Conversation, error) {
+				return &model.Conversation{ConvID: "sys:test"}, nil
+			},
+		},
+	}
+
+	body := `{"user_id":"target1","message":"Hello!"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/contact-requests", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "sender1")
+	w := httptest.NewRecorder()
+	handler.RequestContact(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0: %s", resp.Code, resp.Msg)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["request_id"].(float64) != 42 {
+		t.Errorf("request_id = %v, want 42", data["request_id"])
+	}
+	if data["form_msg_id"].(float64) != 10 {
+		t.Errorf("form_msg_id = %v, want 10", data["form_msg_id"])
+	}
+}
+
+func TestContactHandler_RequestContact_EmptyTarget(t *testing.T) {
+	handler := &ContactHandler{}
+
+	body := `{"user_id":""}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/contact-requests", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "sender1")
+	w := httptest.NewRecorder()
+	handler.RequestContact(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestContactHandler_RequestContact_Self(t *testing.T) {
+	handler := &ContactHandler{}
+
+	body := `{"user_id":"sender1"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/contact-requests", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "sender1")
+	w := httptest.NewRecorder()
+	handler.RequestContact(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrContactRequestSelf.Code {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrContactRequestSelf.Code)
+	}
+}
+
+func TestContactHandler_RequestContact_UserNotFound(t *testing.T) {
+	handler := &ContactHandler{
+		userRepo: &mockUserQueryRepo{
+			getByIDsFunc: func(_ context.Context, ids []string) (map[string]*model.User, error) {
+				return map[string]*model.User{}, nil
+			},
+		},
+	}
+
+	body := `{"user_id":"nonexistent"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/contact-requests", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "sender1")
+	w := httptest.NewRecorder()
+	handler.RequestContact(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNotFound {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNotFound)
+	}
+}
+
+func TestContactHandler_RequestContact_AlreadyFriends(t *testing.T) {
+	handler := &ContactHandler{
+		reqRepo: &mockContactRequestStorage{
+			existsAnyDirectionFunc: func(_ context.Context, _, _ string) (bool, error) {
+				return true, nil
+			},
+		},
+		userRepo: &mockUserQueryRepo{
+			getByIDsFunc: func(_ context.Context, ids []string) (map[string]*model.User, error) {
+				return map[string]*model.User{
+					ids[0]: {ID: ids[0], Name: "ExistingFriend"},
+				}, nil
+			},
+		},
+	}
+
+	body := `{"user_id":"friend1"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/contact-requests", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "sender1")
+	w := httptest.NewRecorder()
+	handler.RequestContact(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrAlreadyFriends.Code {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrAlreadyFriends.Code)
+	}
+}
+
+func TestContactHandler_RequestContact_PendingRequest(t *testing.T) {
+	handler := &ContactHandler{
+		reqRepo: &mockContactRequestStorage{
+			existsAnyDirectionFunc: func(_ context.Context, _, _ string) (bool, error) {
+				return false, nil
+			},
+			getByPairFunc: func(_ context.Context, _, _ string) (*model.ContactRequest, error) {
+				return &model.ContactRequest{ID: 1, Status: model.ContactRequestPending}, nil
+			},
+		},
+		userRepo: &mockUserQueryRepo{
+			getByIDsFunc: func(_ context.Context, ids []string) (map[string]*model.User, error) {
+				return map[string]*model.User{
+					ids[0]: {ID: ids[0], Name: "TargetUser"},
+				}, nil
+			},
+		},
+	}
+
+	body := `{"user_id":"target1"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/contact-requests", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "sender1")
+	w := httptest.NewRecorder()
+	handler.RequestContact(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrContactRequestDuplicate.Code {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrContactRequestDuplicate.Code)
+	}
+}
+
+// =========================================================================
+// Tests: ContactHandler – ListSentRequests
+// =========================================================================
+
+func TestContactHandler_ListSentRequests(t *testing.T) {
+	handler := &ContactHandler{
+		reqRepo: &mockContactRequestStorage{
+			listSentFunc: func(_ context.Context, userID string, page, size int) ([]*model.ContactRequest, int, error) {
+				return []*model.ContactRequest{
+					{ID: 1, FromUserID: userID, ToUserID: "u2", Status: model.ContactRequestPending},
+				}, 1, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/contact-requests/sent?page=1&size=20", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.ListSentRequests(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+func TestContactHandler_ListSentRequests_DefaultPagination(t *testing.T) {
+	handler := &ContactHandler{
+		reqRepo: &mockContactRequestStorage{
+			listSentFunc: func(_ context.Context, userID string, page, size int) ([]*model.ContactRequest, int, error) {
+				if page != 1 || size != 20 {
+					t.Errorf("got page=%d size=%d, want page=1 size=20", page, size)
+				}
+				return []*model.ContactRequest{}, 0, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/contact-requests/sent", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.ListSentRequests(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+// =========================================================================
+// Tests: ContactHandler – ListReceivedRequests
+// =========================================================================
+
+func TestContactHandler_ListReceivedRequests(t *testing.T) {
+	handler := &ContactHandler{
+		reqRepo: &mockContactRequestStorage{
+			listReceivedFunc: func(_ context.Context, userID string, status int, page, size int) ([]*model.ContactRequest, int, error) {
+				return []*model.ContactRequest{
+					{ID: 1, FromUserID: "u2", ToUserID: userID, Status: model.ContactRequestPending},
+				}, 1, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/contact-requests/received?page=1&size=20", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.ListReceivedRequests(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+func TestContactHandler_ListReceivedRequests_WithStatus(t *testing.T) {
+	var capturedStatus int
+	handler := &ContactHandler{
+		reqRepo: &mockContactRequestStorage{
+			listReceivedFunc: func(_ context.Context, userID string, status int, page, size int) ([]*model.ContactRequest, int, error) {
+				capturedStatus = status
+				return []*model.ContactRequest{}, 0, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/contact-requests/received?page=1&size=20&status=1", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.ListReceivedRequests(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	if capturedStatus != 1 {
+		t.Errorf("status = %d, want 1", capturedStatus)
+	}
+}
+
+// =========================================================================
+// Tests: ContactHandler – GetRequestByFormMsgID
+// =========================================================================
+
+func TestContactHandler_GetRequestByFormMsgID(t *testing.T) {
+	handler := &ContactHandler{
+		reqRepo: &mockContactRequestStorage{
+			getByFormMsgIDFunc: func(_ context.Context, msgID int64) (*model.ContactRequest, error) {
+				return &model.ContactRequest{ID: 1, FromUserID: "u1", ToUserID: "u2", FormMsgID: msgID}, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/contact-requests/by-form/{msg_id}", nil)
+	req = setChiURLParam(req, "msg_id", "100")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.GetRequestByFormMsgID(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+func TestContactHandler_GetRequestByFormMsgID_NotFound(t *testing.T) {
+	handler := &ContactHandler{
+		reqRepo: &mockContactRequestStorage{
+			getByFormMsgIDFunc: func(_ context.Context, msgID int64) (*model.ContactRequest, error) {
+				return nil, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/contact-requests/by-form/{msg_id}", nil)
+	req = setChiURLParam(req, "msg_id", "999")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.GetRequestByFormMsgID(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrContactRequestNotFound.Code {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrContactRequestNotFound.Code)
+	}
+}
+
+func TestContactHandler_GetRequestByFormMsgID_InvalidID(t *testing.T) {
+	handler := &ContactHandler{}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/contact-requests/by-form/{msg_id}", nil)
+	req = setChiURLParam(req, "msg_id", "invalid")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.GetRequestByFormMsgID(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+// =========================================================================
+// Tests: FileHandler – GetInfo
+// =========================================================================
+
+func TestFileHandler_GetInfo(t *testing.T) {
+	handler := &FileHandler{
+		fileDB: &mockFileDB{
+			getByIDFunc: func(_ context.Context, fileID string) (*model.FileInfo, error) {
+				return &model.FileInfo{
+					FileID: fileID,
+					URL:    "http://example.com/file.txt",
+					Size:   1024,
+					Name:   "test.txt",
+				}, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/files/{file_id}", nil)
+	req = setChiURLParam(req, "file_id", "file_1")
+	w := httptest.NewRecorder()
+	handler.GetInfo(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["file_id"] != "file_1" {
+		t.Errorf("file_id = %v, want %q", data["file_id"], "file_1")
+	}
+}
+
+func TestFileHandler_GetInfo_NotFound(t *testing.T) {
+	handler := &FileHandler{
+		fileDB: &mockFileDB{
+			getByIDFunc: func(_ context.Context, fileID string) (*model.FileInfo, error) {
+				return nil, fmt.Errorf("not found")
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/files/{file_id}", nil)
+	req = setChiURLParam(req, "file_id", "nonexistent")
+	w := httptest.NewRecorder()
+	handler.GetInfo(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+}
+
+// =========================================================================
+// Tests: FileHandler – pure functions
+// =========================================================================
+
+func TestFileHandler_contentTypeByExt(t *testing.T) {
+	tests := []struct {
+		ext  string
+		want string
+	}{
+		{".png", "image/png"},
+		{".jpg", "image/jpeg"},
+		{".jpeg", "image/jpeg"},
+		{".gif", "image/gif"},
+		{".webp", "image/webp"},
+		{".mp4", "video/mp4"},
+		{".mp3", "audio/mpeg"},
+		{".pdf", "application/pdf"},
+		{".unknown", "application/octet-stream"},
+	}
+	for _, tc := range tests {
+		got := contentTypeByExt(tc.ext)
+		if got != tc.want {
+			t.Errorf("contentTypeByExt(%q) = %q, want %q", tc.ext, got, tc.want)
+		}
+	}
+}
+
+func TestFileHandler_isImageExt(t *testing.T) {
+	tests := []struct {
+		ext  string
+		want bool
+	}{
+		{".png", true},
+		{".jpg", true},
+		{".jpeg", true},
+		{".gif", true},
+		{".webp", false},
+		{".mp4", false},
+		{".txt", false},
+	}
+	for _, tc := range tests {
+		got := isImageExt(tc.ext)
+		if got != tc.want {
+			t.Errorf("isImageExt(%q) = %v, want %v", tc.ext, got, tc.want)
+		}
+	}
+}
+
+func TestFileHandler_decodeImageDimensions(t *testing.T) {
+	// Create a small 2x2 red PNG
+	var buf bytes.Buffer
+	img := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	png.Encode(&buf, img)
+
+	w, h, err := decodeImageDimensions(buf.Bytes())
+	if err != nil {
+		t.Fatalf("decodeImageDimensions error: %v", err)
+	}
+	if w != 2 || h != 2 {
+		t.Errorf("got %dx%d, want 2x2", w, h)
+	}
+}
+
+func TestFileHandler_decodeImageDimensions_Invalid(t *testing.T) {
+	_, _, err := decodeImageDimensions([]byte("not-an-image"))
+	if err == nil {
+		t.Error("expected error for invalid image data, got nil")
+	}
+}
+
+func TestFileHandler_resizeImage(t *testing.T) {
+	// Create a small 4x4 red PNG
+	var buf bytes.Buffer
+	img := image.NewRGBA(image.Rect(0, 0, 4, 4))
+	png.Encode(&buf, img)
+
+	// Resize to 2x2
+	result, ct, err := resizeImage(buf.Bytes(), 2, 2, ".png")
+	if err != nil {
+		t.Fatalf("resizeImage error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Error("resized image is empty")
+	}
+	if ct != "image/png" {
+		t.Errorf("content type = %q, want %q", ct, "image/png")
+	}
+}
+
+func TestFileHandler_resizeImage_JPG(t *testing.T) {
+	var buf bytes.Buffer
+	img := image.NewRGBA(image.Rect(0, 0, 4, 4))
+	png.Encode(&buf, img)
+
+	// Resize with only width
+	result, ct, err := resizeImage(buf.Bytes(), 2, 0, ".jpg")
+	if err != nil {
+		t.Fatalf("resizeImage error: %v", err)
+	}
+	if len(result) == 0 {
+		t.Error("resized image is empty")
+	}
+	if ct != "image/jpeg" {
+		t.Errorf("content type = %q, want %q", ct, "image/jpeg")
+	}
+}
+
+// =========================================================================
+// Tests: FileHandler – NewFileHandler
+// =========================================================================
+
+func TestNewFileHandler(t *testing.T) {
+	h := NewFileHandler(nil, nil, nil, "http://example.com")
+	if h == nil {
+		t.Fatal("NewFileHandler returned nil")
+	}
+	if h.baseURL != "http://example.com" {
+		t.Errorf("baseURL = %q, want %q", h.baseURL, "http://example.com")
+	}
+}
+
+// =========================================================================
+// Tests: SessionHandler
+// =========================================================================
+
+func TestNewSessionHandler(t *testing.T) {
+	h := NewSessionHandler(nil, nil)
+	if h == nil {
+		t.Fatal("NewSessionHandler returned nil")
+	}
+}
+
+func TestSessionHandler_ListSessions(t *testing.T) {
+	handler := &SessionHandler{
+		sessMgr: &mockSessionManager{
+			getUserSessionIDsFunc: func(_ context.Context, userID string) []string {
+				return []string{"s1", "s2"}
+			},
+			getFunc: func(_ context.Context, sessionID string) *model.Session {
+				return &model.Session{SessionID: sessionID, UserID: "u1"}
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/sessions", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.ListSessions(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	sessions, ok := resp.Data.([]interface{})
+	if !ok {
+		t.Fatal("expected array in data")
+	}
+	if len(sessions) != 2 {
+		t.Errorf("got %d sessions, want 2", len(sessions))
+	}
+}
+
+func TestSessionHandler_ListSessions_Empty(t *testing.T) {
+	handler := &SessionHandler{
+		sessMgr: &mockSessionManager{
+			getUserSessionIDsFunc: func(_ context.Context, userID string) []string {
+				return nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/sessions", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.ListSessions(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+// =========================================================================
+// Tests: UserHandler – Agents
+// =========================================================================
+
+func TestUserHandler_ListMyAgents(t *testing.T) {
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			listAgentsFunc: func(_ context.Context, uid string) ([]*model.User, error) {
+				return []*model.User{
+					{ID: "agent1", Name: "Agent 1"},
+				}, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/me/agents", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.ListMyAgents(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+func TestUserHandler_ListMyAgents_NilList(t *testing.T) {
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			listAgentsFunc: func(_ context.Context, uid string) ([]*model.User, error) {
+				return nil, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users/me/agents", nil)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.ListMyAgents(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+func TestUserHandler_CreateAgent(t *testing.T) {
+	idGenCalls := 0
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			countAgentsFunc: func(_ context.Context, uid string) (int, error) {
+				return 0, nil
+			},
+			createFunc: func(_ context.Context, u *model.User) error {
+				return nil
+			},
+		},
+		idGen: func() int64 {
+			idGenCalls++
+			return 100 + int64(idGenCalls)
+		},
+	}
+
+	body := `{"name":"My Agent"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/me/agents", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.CreateAgent(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0: %s", resp.Code, resp.Msg)
+	}
+}
+
+func TestUserHandler_CreateAgent_EmptyName(t *testing.T) {
+	handler := &UserHandler{}
+
+	body := `{"name":""}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/me/agents", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.CreateAgent(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestUserHandler_CreateAgent_LimitReached(t *testing.T) {
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			countAgentsFunc: func(_ context.Context, uid string) (int, error) {
+				return 10, nil
+			},
+		},
+	}
+
+	body := `{"name":"Another Agent"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/me/agents", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.CreateAgent(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrBadMessage {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrBadMessage)
+	}
+}
+
+func TestUserHandler_DeleteAgent(t *testing.T) {
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			deleteAgentFunc: func(_ context.Context, agentID, uid string) error {
+				return nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/users/me/agents/{agent_id}", http.NoBody)
+	req = setChiURLParam(req, "agent_id", "agent1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.DeleteAgent(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+}
+
+func TestUserHandler_DeleteAgent_EmptyID(t *testing.T) {
+	handler := &UserHandler{}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/users/me/agents/", http.NoBody)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.DeleteAgent(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestUserHandler_DeleteAccount(t *testing.T) {
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			deleteAccountFunc: func(_ context.Context, userID string) error {
+				return nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/users/me", http.NoBody)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.DeleteAccount(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0", resp.Code)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["user_id"] != "u1" {
+		t.Errorf("user_id = %v, want %q", data["user_id"], "u1")
+	}
+}
+
+func TestUserHandler_DeleteAccount_Error(t *testing.T) {
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			deleteAccountFunc: func(_ context.Context, userID string) error {
+				return fmt.Errorf("db error")
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/users/me", http.NoBody)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.DeleteAccount(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrInternalServer.Code {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrInternalServer.Code)
+	}
+}
+
+func TestUserHandler_UpdateAgent(t *testing.T) {
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			updateAgentFunc: func(_ context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error {
+				return nil
+			},
+		},
+	}
+
+	body := `{"name":"Updated Agent"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/users/me/agents/{agent_id}", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setChiURLParam(req, "agent_id", "agent1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.UpdateAgent(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0: %s", resp.Code, resp.Msg)
+	}
+}
+
+func TestUserHandler_UpdateAgent_EmptyID(t *testing.T) {
+	handler := &UserHandler{}
+
+	body := `{"name":"Updated"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/users/me/agents/", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.UpdateAgent(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestUserHandler_RegenerateAgentKey(t *testing.T) {
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			listAgentsFunc: func(_ context.Context, uid string) ([]*model.User, error) {
+				return []*model.User{{ID: "agent1"}, {ID: "agent2"}}, nil
+			},
+			updateAgentAPIKeyFunc: func(_ context.Context, agentID, uid, apiKey string) error {
+				return nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/users/me/agents/{agent_id}/regenerate-key", http.NoBody)
+	req = setChiURLParam(req, "agent_id", "agent1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.RegenerateAgentKey(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0: %s", resp.Code, resp.Msg)
+	}
+	data := resp.Data.(map[string]interface{})
+	key, ok := data["api_key"].(string)
+	if !ok || key == "" {
+		t.Errorf("api_key = %q, want non-empty", key)
+	}
+	if !strings.HasPrefix(key, "sk-") {
+		t.Errorf("api_key = %q, want sk- prefix", key)
+	}
+}
+
+func TestUserHandler_RegenerateAgentKey_EmptyID(t *testing.T) {
+	handler := &UserHandler{}
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/users/me/agents//regenerate-key", http.NoBody)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.RegenerateAgentKey(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestUserHandler_RegenerateAgentKey_NotFound(t *testing.T) {
+	handler := &UserHandler{
+		userRepo: &mockUserRepo{
+			listAgentsFunc: func(_ context.Context, uid string) ([]*model.User, error) {
+				return []*model.User{{ID: "other_agent"}}, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/users/me/agents/{agent_id}/regenerate-key", http.NoBody)
+	req = setChiURLParam(req, "agent_id", "nonexistent")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.RegenerateAgentKey(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+}
+
+// =========================================================================
+// Tests: SessionHandler – DeleteSession
+// =========================================================================
+
+func TestSessionHandler_DeleteSession_EmptyID(t *testing.T) {
+	handler := &SessionHandler{
+		gwMgr: gateway.NewManager(),
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/sessions/", http.NoBody)
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.DeleteSession(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestSessionHandler_DeleteSession_NotFound(t *testing.T) {
+	handler := &SessionHandler{
+		sessMgr: &mockSessionManager{
+			getFunc: func(_ context.Context, sessionID string) *model.Session {
+				return nil
+			},
+		},
+		gwMgr: gateway.NewManager(),
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/sessions/{session_id}", http.NoBody)
+	req = setChiURLParam(req, "session_id", "nonexistent")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.DeleteSession(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNotFound {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNotFound)
+	}
+}
+
+func TestSessionHandler_DeleteSession_WrongUser(t *testing.T) {
+	handler := &SessionHandler{
+		sessMgr: &mockSessionManager{
+			getFunc: func(_ context.Context, sessionID string) *model.Session {
+				return &model.Session{SessionID: sessionID, UserID: "other_user"}
+			},
+		},
+		gwMgr: gateway.NewManager(),
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/sessions/{session_id}", http.NoBody)
+	req = setChiURLParam(req, "session_id", "s1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.DeleteSession(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNotFound {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNotFound)
+	}
+}
+
+func TestSessionHandler_DeleteSession_Success(t *testing.T) {
+	handler := &SessionHandler{
+		sessMgr: &mockSessionManager{
+			getFunc: func(_ context.Context, sessionID string) *model.Session {
+				return &model.Session{SessionID: sessionID, UserID: "u1"}
+			},
+			deleteFunc: func(_ context.Context, sessionID string) error {
+				return nil
+			},
+		},
+		gwMgr: gateway.NewManager(),
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/sessions/{session_id}", http.NoBody)
+	req = setChiURLParam(req, "session_id", "s1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.DeleteSession(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != 0 {
+		t.Fatalf("code = %d, want 0: %s", resp.Code, resp.Msg)
+	}
+	data := resp.Data.(map[string]interface{})
+	if data["session_id"] != "s1" {
+		t.Errorf("session_id = %v, want %q", data["session_id"], "s1")
+	}
+}
+
+func TestSessionHandler_DeleteSession_DeleteError(t *testing.T) {
+	handler := &SessionHandler{
+		sessMgr: &mockSessionManager{
+			getFunc: func(_ context.Context, sessionID string) *model.Session {
+				return &model.Session{SessionID: sessionID, UserID: "u1"}
+			},
+			deleteFunc: func(_ context.Context, sessionID string) error {
+				return fmt.Errorf("delete failed")
+			},
+		},
+		gwMgr: gateway.NewManager(),
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/sessions/{session_id}", http.NoBody)
+	req = setChiURLParam(req, "session_id", "s1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.DeleteSession(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrInternalServer.Code {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrInternalServer.Code)
+	}
+}
+
+// =========================================================================
+// Tests: ConvHandler – JoinRequest error paths
+// =========================================================================
+
+func TestConvHandler_ListJoinRequests_AppError(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			listJoinRequestsFunc: func(_ context.Context, convID, operatorID string) ([]*model.JoinRequest, error) {
+				return nil, &model.AppError{Code: model.ErrNoPermission, Message: "forbidden"}
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/join-requests", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.ListJoinRequests(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNoPermission {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNoPermission)
+	}
+	if w.Code != http.StatusForbidden {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusForbidden)
+	}
+}
+
+func TestConvHandler_ListJoinRequests_GenericError(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			listJoinRequestsFunc: func(_ context.Context, convID, operatorID string) ([]*model.JoinRequest, error) {
+				return nil, fmt.Errorf("db error")
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/conversations/{conv_id}/join-requests", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.ListJoinRequests(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrInternalServer.Code {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrInternalServer.Code)
+	}
+}
+
+func TestConvHandler_ApproveJoinRequest_AppError(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			approveJoinRequestFunc: func(_ context.Context, convID, userID, operatorID string) error {
+				return &model.AppError{Code: model.ErrNoPermission, Message: "forbidden"}
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/join-requests/{user_id}/approve", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setChiURLParam(req, "user_id", "bob")
+	req = setAuthCtx(req, "admin")
+	w := httptest.NewRecorder()
+	handler.ApproveJoinRequest(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNoPermission {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNoPermission)
+	}
+}
+
+func TestConvHandler_RejectJoinRequest_AppError(t *testing.T) {
+	handler := &ConvHandler{
+		convMgr: &mockConvManager{
+			rejectJoinRequestFunc: func(_ context.Context, convID, userID, operatorID string) error {
+				return &model.AppError{Code: model.ErrNoPermission, Message: "forbidden"}
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/conversations/{conv_id}/join-requests/{user_id}/reject", http.NoBody)
+	req = setChiURLParam(req, "conv_id", "g1")
+	req = setChiURLParam(req, "user_id", "bob")
+	req = setAuthCtx(req, "admin")
+	w := httptest.NewRecorder()
+	handler.RejectJoinRequest(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNoPermission {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNoPermission)
+	}
+}
+
+func TestContactHandler_Remove_Error(t *testing.T) {
+	handler := &ContactHandler{
+		contactRepo: &mockContactStorage{
+			removeFunc: func(_ context.Context, userID, contactID string) error {
+				return fmt.Errorf("db error")
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/contacts/{user_id}", http.NoBody)
+	req = setChiURLParam(req, "user_id", "contact1")
+	req = setAuthCtx(req, "u1")
+	w := httptest.NewRecorder()
+	handler.Remove(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrInternalServer.Code {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrInternalServer.Code)
 	}
 }

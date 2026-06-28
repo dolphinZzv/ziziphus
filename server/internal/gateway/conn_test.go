@@ -113,6 +113,17 @@ func TestConnection_SendFrame_DelegatesToSendJSON(t *testing.T) {
 	}
 }
 
+func TestConnection_Close_NilConn_Safe(t *testing.T) {
+	c := NewConnection("c1", "u1", "s1", 1, nil)
+	err := c.Close()
+	if err != nil {
+		t.Errorf("Close with nil Conn should not error: %v", err)
+	}
+	if !c.closed {
+		t.Error("connection should be closed after Close()")
+	}
+}
+
 func TestConnection_MarshalJSON(t *testing.T) {
 	now := time.Now()
 	c := &Connection{

@@ -46,7 +46,7 @@ func e2eRouter(t *testing.T) (http.Handler, *testAuthUserRepo, *mockConvManager,
 		searchFunc: func(_ context.Context, q string, page, size int) ([]*model.User, int, error) {
 			return nil, 0, nil
 		},
-		updateFunc: func(_ context.Context, id, name, avatar, primaryColor, secondaryColor string) error {
+		updateFunc: func(_ context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error {
 			return nil
 		},
 	}
@@ -95,10 +95,10 @@ func e2eRouter(t *testing.T) (http.Handler, *testAuthUserRepo, *mockConvManager,
 
 	userQueryRepo := &mockUserQueryRepo{}
 
-	userHandler := NewUserHandler(authSvc, userRepo, sessMgr)
+	userHandler := NewUserHandler(authSvc, userRepo, sessMgr, func() int64 { return time.Now().UnixNano() }, nil, nil, nil)
 	convHandler := NewConvHandler(convMgr, convRepo, seqCache, readMarker, sysMsg, userRepo, func() int64 { return 1 })
 	msgHandler := NewMsgHandler(msgRepo, convMgr)
-	contactHandler := NewContactHandler(contactRepo, userQueryRepo, sessMgr)
+	contactHandler := NewContactHandler(contactRepo, &mockContactRequestStorage{}, userQueryRepo, sessMgr, &mockFormMessageSender{}, &mockSystemConvManager{})
 
 	handlers := &Handlers{
 		User:         userHandler,

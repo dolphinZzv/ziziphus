@@ -1,6 +1,6 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { authStore } from '@/stores/auth-store'
 import { getSavedAccounts, saveAccount, removeSavedAccount } from '@/lib/storage'
 import { X, Eye, EyeOff } from 'lucide-react'
@@ -8,14 +8,21 @@ import AuthFooter from './auth-footer'
 
 export default function LoginPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const isLoading = useSyncExternalStore(authStore.subscribe, () => authStore.state.isLoading)
   const error = useSyncExternalStore(authStore.subscribe, () => authStore.state.error)
+  const mfaChallenge = useSyncExternalStore(authStore.subscribe, () => authStore.state.mfaChallenge)
+  const isLoggedIn = useSyncExternalStore(authStore.subscribe, () => authStore.state.isLoggedIn)
 
   const [account, setAccount] = useState('')
   const [password, setPassword] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
   const [savedAccounts, setSavedAccounts] = useState(getSavedAccounts)
+
+  // Redirect when logged in
+  useEffect(() => { if (isLoggedIn) navigate('/chat', { replace: true }) }, [isLoggedIn, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,12 +34,53 @@ export default function LoginPage() {
     } catch { /* error handled by store */ }
   }
 
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!mfaCode.trim()) return
+    try {
+      await authStore.mfaVerify(mfaCode.trim())
+      if (isLoggedIn) navigate('/chat', { replace: true })
+    } catch { /* error handled by store */ }
+  }
+
   const fillAccount = (acc: string) => setAccount(acc)
   const deleteAccount = (acc: string, e: React.MouseEvent) => {
     e.stopPropagation(); removeSavedAccount(acc); setSavedAccounts(getSavedAccounts())
   }
 
-  const inputClass = 'w-full h-12 px-4 rounded-lg bg-[var(--color-surface-soft)] text-[var(--color-ink)] text-sm placeholder:text-[var(--color-muted)] outline-none border border-transparent focus:border-[var(--color-primary)]/40 focus:bg-[var(--color-surface-card)] transition-colors'
+  const inputClass = 'w-full h-12 px-4 rounded-xl bg-[var(--color-surface-soft)] text-[var(--color-ink)] text-sm placeholder:text-[var(--color-muted)] outline-none border border-transparent focus:border-[var(--color-primary)]/40 focus:bg-[var(--color-surface-card)] transition-colors'
+
+  // MFA verification step
+  if (mfaChallenge) {
+    const isTOTP = mfaChallenge.mfaType === 1
+    const mfaTypeLabel = isTOTP ? t('auth.mfaTOTPLabel') : t('auth.mfaEmailLabel')
+    const mfaHint = isTOTP
+      ? t('auth.mfaTOTPHint')
+      : t('auth.mfaEmailHint') + (mfaChallenge.maskedEmail ? ` (${mfaChallenge.maskedEmail})` : '')
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
+        <div className="text-center">
+          <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">Panda AI</h1>
+          <p className="text-sm text-[var(--color-muted)] mt-2">{t('auth.mfaTitle')}</p>
+          <div className="inline-block mt-2 px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-medium">
+            {mfaTypeLabel}
+          </div>
+          <p className="text-xs text-[var(--color-muted)] mt-3">{mfaHint}</p>
+        </div>
+        <form onSubmit={handleMfaVerify} className="w-full max-w-[320px] flex flex-col gap-4">
+          <input type="text" value={mfaCode} onChange={e => setMfaCode(e.target.value)}
+            placeholder={t('auth.mfaCode')} maxLength={6}
+            className={`${inputClass} text-center tracking-[6px] font-mono text-lg`} autoFocus />
+          {error && <span className="text-xs text-[var(--destructive)] text-center">{error}</span>}
+          <button type="submit" disabled={isLoading || !mfaCode.trim()}
+            className="w-full h-11 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40">
+            {isLoading ? t('auth.verifying') : t('auth.verify')}
+          </button>
+        </form>
+        <AuthFooter />
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
@@ -47,7 +95,7 @@ export default function LoginPage() {
           <input type="text" value={account} onChange={e => setAccount(e.target.value)}
             placeholder={t("auth.account")} className={inputClass} autoComplete="username" />
           {savedAccounts.length > 0 && !account && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-10 overflow-hidden"
+            <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl z-10 overflow-hidden"
               style={{ boxShadow: 'var(--shadow-md)' }}>
               {savedAccounts.map(acc => (
                 <button key={acc} type="button" onClick={() => fillAccount(acc)}
@@ -82,7 +130,7 @@ export default function LoginPage() {
 
         {/* Submit */}
         <button type="submit" disabled={isLoading}
-          className="w-full h-11 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40">
+          className="w-full h-11 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40">
           {isLoading ? t('auth.loggingIn') : t('auth.login')}
         </button>
       </form>

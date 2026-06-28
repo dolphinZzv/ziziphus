@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
 import { userService } from '@/services/user-service'
@@ -34,15 +35,15 @@ export default function CreateGroupDialog({ onClose }: Props) {
     setCreating(false)
   }
 
-  const inputClass = 'w-full h-[42px] px-3.5 rounded-lg bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'
+  const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-[420px] max-h-[520px] bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg p-6 flex flex-col"
+      <div className="w-[420px] max-h-[520px] bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6 flex flex-col"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-headline text-lg font-semibold text-[var(--color-ink)]">创建群组</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
         </div>
 
         <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="群组名称" className={cn(inputClass, 'mb-3')} />
@@ -61,13 +62,13 @@ export default function CreateGroupDialog({ onClose }: Props) {
         <div className="flex gap-2 mb-3">
           <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSearch() } }}
             placeholder="搜索成员..." className={cn(inputClass, 'flex-1')} />
-          <button onClick={handleSearch} className="h-[42px] px-4 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white transition-colors"><Search size={16} /></button>
+          <button onClick={handleSearch} className="h-[42px] px-4 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white transition-colors"><Search size={16} /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-0.5 mb-4">
           {results.map(user => (
             <button key={user.user_id} onClick={() => toggleUser(user)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--color-surface-soft)] transition-colors">
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-soft)] transition-colors">
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
                 {user.name?.charAt(0)?.toUpperCase() || '?'}
@@ -84,7 +85,7 @@ export default function CreateGroupDialog({ onClose }: Props) {
         </div>
 
         <button onClick={handleCreate} disabled={!groupName.trim() || selected.length === 0 || creating}
-          className="w-full h-[42px] rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          className="w-full h-[42px] rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           {creating ? t('common.loading') : `${t('conversation.createGroup')} (${selected.length})`}
         </button>
       </div>

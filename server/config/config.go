@@ -14,6 +14,15 @@ type Config struct {
 	Snowflake SnowflakeConfig `yaml:"snowflake"`
 	RateLimit RateLimitConfig `yaml:"ratelimit"`
 	Storage   StorageConfig   `yaml:"storage"`
+	SMTP      SMTPConfig      `yaml:"smtp"`
+}
+
+type SMTPConfig struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	From     string `yaml:"from"`
 }
 
 type StorageConfig struct {
@@ -97,5 +106,11 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.RateLimit.BurstSize == 0 {
 		cfg.RateLimit.BurstSize = 50
+	}
+	if cfg.SMTP.Port == "" {
+		cfg.SMTP.Port = "587"
+	}
+	if cfg.SMTP.From == "" {
+		cfg.SMTP.From = cfg.SMTP.User
 	}
 }

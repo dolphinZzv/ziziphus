@@ -221,6 +221,18 @@ func TestGetByUserID_NonExistent_ReturnsNil(t *testing.T) {
 	}
 }
 
+func TestDisconnectBySessionID_NonExistent_NoOp(t *testing.T) {
+	m := NewManager()
+	ctx := context.Background()
+
+	// Should not panic for non-existent session
+	m.DisconnectBySessionID(ctx, "non-existent")
+
+	if count := m.Count(); count != 0 {
+		t.Errorf("expected Count() == 0, got %d", count)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // 9) All returns all connections
 // ---------------------------------------------------------------------------

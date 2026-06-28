@@ -25,6 +25,12 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+type msgEditor interface {
+	Get(ctx context.Context, msgID int64) (*model.Message, error)
+	UpdateBody(ctx context.Context, msgID int64, newBody string) error
+	Recall(ctx context.Context, msgID int64) error
+}
+
 type WSHandler struct {
 	authMW  func(ctx context.Context, token string) (context.Context, error)
 	sessMgr sessionManager
@@ -32,6 +38,7 @@ type WSHandler struct {
 	ingest  messageIngester
 	sync    syncHandler
 	receipt readReceiptHandler
+	msgRepo msgEditor
 }
 
 type sessionManager interface {
@@ -61,6 +68,7 @@ func NewWSHandler(
 	ingest messageIngester,
 	sync syncHandler,
 	receipt readReceiptHandler,
+	msgRepo msgEditor,
 ) *WSHandler {
 	return &WSHandler{
 		authMW:  authMW,
@@ -69,6 +77,7 @@ func NewWSHandler(
 		ingest:  ingest,
 		sync:    sync,
 		receipt: receipt,
+		msgRepo: msgRepo,
 	}
 }
 
@@ -229,6 +238,48 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 			return err
 		}
 		return h.receipt.MarkRead(context.Background(), userID, payload.ConvID, payload.MsgID)
+
+	case protocol.MsgEdit:
+		var p protocol.MsgEditPayload
+		if err := json.Unmarshal(frame.Payload, &p); err != nil {
+			return err
+		}
+		msg, err := h.msgRepo.Get(context.Background(), p.MsgID)
+		if err != nil || msg.SenderID != userID {
+			return nil
+		}
+		if err := h.msgRepo.UpdateBody(context.Background(), p.MsgID, p.NewBody); err != nil {
+			return err
+		}
+		now := time.Now().UnixMilli()
+		push, _ := json.Marshal(protocol.MsgEditPushPayload{
+			ConvID: p.ConvID, MsgID: p.MsgID, SenderID: userID,
+			NewBody: p.NewBody, EditedAt: now, Timestamp: now,
+		})
+		for _, c := range h.connMgr.All() {
+			c.SendFrame(protocol.Frame{Type: protocol.MsgEdit, Payload: push})
+		}
+
+	case protocol.MsgRecall:
+		var p protocol.MsgRecallPayload
+		if err := json.Unmarshal(frame.Payload, &p); err != nil {
+			return err
+		}
+		m, err := h.msgRepo.Get(context.Background(), p.MsgID)
+		if err != nil || m.SenderID != userID {
+			return nil
+		}
+		if err := h.msgRepo.Recall(context.Background(), p.MsgID); err != nil {
+			return err
+		}
+		now := time.Now().UnixMilli()
+		push, _ := json.Marshal(protocol.MsgRecallPushPayload{
+			ConvID: p.ConvID, MsgID: p.MsgID, SenderID: userID,
+			RecalledAt: now, Timestamp: now,
+		})
+		for _, c := range h.connMgr.All() {
+			c.SendFrame(protocol.Frame{Type: protocol.MsgRecall, Payload: push})
+		}
 
 	case protocol.Typing:
 		var payload protocol.TypingPayload

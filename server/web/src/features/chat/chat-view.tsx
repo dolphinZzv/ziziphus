@@ -14,12 +14,16 @@ import MessageList from './message-list'
 import InputBar from './input-bar'
 import P2PDetail from './p2p-detail'
 import GroupDetail from '@/features/group/group-detail'
+import MemberListView from '@/features/group/member-list-view'
 import HistoryView from '@/features/history/history-view'
-import { MoreVertical, Clock, Copy, Check, Info, Users } from 'lucide-react'
+import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import FilePanel from './file-panel'
 
 export default function ChatView() {
   const { convId } = useParams<{ convId: string }>()
+  const navigate = useNavigate()
   const { t } = useTranslation()
   const rawMessages = useSyncExternalStore(chatStore.subscribe, () => chatStore.getMessages(convId || ''))
   // Filter: remove agent timeline append-only messages that were merged into parents
@@ -37,11 +41,39 @@ export default function ChatView() {
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
   const conversations = useSyncExternalStore(conversationStore.subscribe, () => conversationStore.state.conversations)
   const [showDetail, setShowDetail] = useState(false)
+  const [showMembers, setShowMembers] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showFiles, setShowFiles] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [filePanelWidth, setFilePanelWidth] = useState(260)
+  const [dragging, setDragging] = useState(false)
   const [groupNotice, setGroupNotice] = useState('')
   const markedReadRef = useRef<Set<string>>(new Set())
+
+  const conv = conversations.find(c => c.conv_id === convId)
+  const isGroup = conv?.type === ConvType.Group
+
+  const handleClone = async () => {
+    if (!convId || !isGroup) return
+    if (!confirm(t('group.cloneConfirm'))) return
+    try {
+      const r = await conversationService.clone(convId)
+      setShowMenu(false)
+      navigate(`/chat/${r.conv_id}`)
+    } catch {}
+  }
+
+  const handleLeave = async () => {
+    if (!convId) return
+    if (!confirm(isGroup ? t('group.leaveConfirm') : t('conversation.leaveConfirm'))) return
+    try {
+      await conversationService.leave(convId)
+      conversationStore.removeConversation(convId)
+      setShowMenu(false)
+      navigate('/chat')
+    } catch {}
+  }
 
   useEffect(() => {
     if (!convId) return
@@ -51,11 +83,19 @@ export default function ChatView() {
       setGroupNotice(d.type === ConvType.Group && d.notice ? d.notice : '')
     }).catch(() => { setGroupNotice('') })
     // Listen for push messages
-    const unsub = wsClient.on(MessageType.MsgPush, (payload: unknown) => {
+    const u1 = wsClient.on(MessageType.MsgPush, (payload: unknown) => {
       const push = payload as MsgPushPayload
       if (push.conv_id === convId) chatStore.handlePush(push)
     })
-    return () => { unsub?.() }
+    const u2 = wsClient.on(MessageType.MsgEdit, (payload: unknown) => {
+      const edit = payload as import('@/types/ws').MsgEditPushPayload
+      if (edit.conv_id === convId) chatStore.handleEditPush(edit)
+    })
+    const u3 = wsClient.on(MessageType.MsgRecall, (payload: unknown) => {
+      const recall = payload as import('@/types/ws').MsgRecallPushPayload
+      if (recall.conv_id === convId) chatStore.handleRecallPush(recall)
+    })
+    return () => { u1?.(); u2?.(); u3?.() }
   }, [convId])
 
   // Mark as read once messages are loaded (use max msg_id from loaded messages)
@@ -72,15 +112,14 @@ export default function ChatView() {
 
   if (!convId) return null
 
-  const conv = conversations.find(c => c.conv_id === convId)
-  const isGroup = conv?.type === ConvType.Group
   const isSystem = conv?.type === ConvType.System
   const displayName = isSystem ? t('conversation.systemMessage') : (conv?.name || convId)
   const displayAvatar = conv?.avatar || ''
   const initials = displayName.charAt(0).toUpperCase()
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full">
+      <div className="flex-1 flex flex-col min-w-0 relative">
       {/* Chat toolbar */}
       <div className="h-12 flex items-center px-4 border-b border-[var(--color-hairline)] flex-shrink-0 bg-[var(--color-surface-card)] gap-3">
         {/* Avatar */}
@@ -118,26 +157,58 @@ export default function ChatView() {
           </button>
           )}
         </div>
+        {!isSystem && (
+          <button onClick={() => setShowFiles(!showFiles)}
+            className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+            title={t('conversation.files')}>
+            <Folder size={17} />
+          </button>
+        )}
         <div className="relative">
           <button onClick={() => setShowMenu(!showMenu)}
-            className="p-1.5 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors">
+            className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors">
             <MoreVertical size={18} />
           </button>
           {showMenu && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-              <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-20 py-1"
+              <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl z-20 py-1"
                 style={{ boxShadow: 'var(--shadow-md)' }}>
                 {!isSystem && (
-                  <button onClick={() => { setShowDetail(true); setShowMenu(false) }}
+                  <>
+                    <button onClick={() => { setShowDetail(true); setShowMenu(false) }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                      <Info size={14} /> {t('chat.detail')}
+                    </button>
+                    {isGroup && (
+                      <button onClick={() => { setShowMembers(true); setShowMenu(false) }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                        <Users size={14} /> {t('group.members')}
+                      </button>
+                    )}
+                    <button onClick={() => { setShowHistory(true); setShowMenu(false) }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                      <Clock size={14} /> {t('chat.history')}
+                    </button>
+                    {isGroup && (
+                      <button onClick={handleClone}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                        <Copy size={14} /> {t('group.clone')}
+                      </button>
+                    )}
+                    <div className="border-t border-[var(--color-hairline)] my-1" />
+                    <button onClick={handleLeave}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--destructive)]/5 text-[var(--destructive)]">
+                      <LogOut size={14} /> {t('group.leave')}
+                    </button>
+                  </>
+                )}
+                {isSystem && (
+                  <button onClick={() => { setShowHistory(true); setShowMenu(false) }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
-                    <Info size={14} /> {t('chat.detail')}
+                    <Clock size={14} /> {t('chat.history')}
                   </button>
                 )}
-                <button onClick={() => { setShowHistory(true); setShowMenu(false) }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
-                  <Clock size={14} /> {t('chat.history')}
-                </button>
               </div>
             </>
           )}
@@ -147,6 +218,9 @@ export default function ChatView() {
       {/* Detail dialog */}
       {showDetail && isGroup && (
         <GroupDetail convId={convId} onClose={() => setShowDetail(false)} />
+      )}
+      {showMembers && (
+        <MemberListView convId={convId} onClose={() => setShowMembers(false)} />
       )}
       {showDetail && !isGroup && (
         <P2PDetail convId={convId} onClose={() => setShowDetail(false)} />
@@ -169,6 +243,26 @@ export default function ChatView() {
 
       {/* History modal */}
       {showHistory && <HistoryView convId={convId} onClose={() => setShowHistory(false)} />}
+      </div>
+      {/* Zero-width drag handle wrapper — sits between chat area and file panel */}
+      <div className="relative flex-shrink-0" style={{ width: 0 }}>
+        {showFiles && (
+          <div className="absolute -left-1 top-0 bottom-0 w-2 cursor-col-resize group z-10"
+            onMouseDown={e => {
+              e.preventDefault(); e.stopPropagation()
+              const sx = e.clientX; const sw = filePanelWidth
+              setDragging(true); document.body.style.userSelect = 'none'
+              const mv = (ev: MouseEvent) => { ev.preventDefault(); setFilePanelWidth(Math.max(180, Math.min(500, sw + sx - ev.clientX))) }
+              const up = () => { setDragging(false); document.body.style.userSelect = ''; document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up) }
+              document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up)
+            }}>
+            <div className="absolute left-1/2 -translate-x-1/2 w-px h-full bg-transparent group-hover:w-1 group-hover:bg-[var(--color-primary)] transition-all" />
+          </div>
+        )}
+      </div>
+      {/* File panel sidebar */}
+      {showFiles && <FilePanel convId={convId} onClose={() => setShowFiles(false)} width={filePanelWidth} />}
+      {dragging && <div className="fixed inset-0 z-50 cursor-col-resize" style={{ userSelect: 'none' } as React.CSSProperties} />}
     </div>
   )
 }

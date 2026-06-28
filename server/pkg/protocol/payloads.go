@@ -87,6 +87,34 @@ type TypingPayload struct {
 	SessionID string `json:"session_id"`
 }
 
+type MsgEditPayload struct {
+	ConvID  string `json:"conv_id"`
+	MsgID   int64  `json:"msg_id"`
+	NewBody string `json:"new_body"`
+}
+
+type MsgRecallPayload struct {
+	ConvID string `json:"conv_id"`
+	MsgID  int64  `json:"msg_id"`
+}
+
+type MsgEditPushPayload struct {
+	ConvID      string `json:"conv_id"`
+	MsgID       int64  `json:"msg_id"`
+	SenderID    string `json:"sender_id"`
+	NewBody     string `json:"new_body"`
+	EditedAt    int64  `json:"edited_at"`
+	Timestamp   int64  `json:"timestamp"`
+}
+
+type MsgRecallPushPayload struct {
+	ConvID      string `json:"conv_id"`
+	MsgID       int64  `json:"msg_id"`
+	SenderID    string `json:"sender_id"`
+	RecalledAt  int64  `json:"recalled_at"`
+	Timestamp   int64  `json:"timestamp"`
+}
+
 type EmptyPayload struct{}
 
 type ErrorPayload struct {

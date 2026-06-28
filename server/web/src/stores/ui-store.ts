@@ -15,6 +15,7 @@ interface UIState {
   selectedConvId: string | null
   activeSheet: string | null
   isSidebarOpen: boolean
+  sidebarView: string | null
   theme: Theme
   language: Language
   serverUrl: string
@@ -48,6 +49,7 @@ function getInitialState(): UIState {
     selectedConvId: null,
     activeSheet: null,
     isSidebarOpen: true,
+    sidebarView: null,
     theme,
     language,
     serverUrl,
@@ -82,7 +84,7 @@ export const uiStore = {
   },
 
   selectConversation(convId: string | null) {
-    state = { ...state, selectedConvId: convId, activeSheet: null }; emit()
+    state = { ...state, selectedConvId: convId, activeSheet: null, sidebarView: null }; emit()
   },
 
   openSheet(name: string) {
@@ -91,6 +93,10 @@ export const uiStore = {
 
   closeSheet() {
     state = { ...state, activeSheet: null }; emit()
+  },
+
+  setSidebarView(view: string | null) {
+    state = { ...state, sidebarView: view, activeSheet: null }; emit()
   },
 
   toggleSidebar() {

@@ -71,6 +71,9 @@ func main() {
 	receiptRepo := db.NewReceiptRepo(pool)
 	joinRequestRepo := db.NewJoinRequestRepo(pool)
 	fileRepo := db.NewFileRepo(pool)
+	mfaRepo := db.NewMFARepo(pool)
+	emailVerifyRepo := db.NewEmailVerifyRepo(pool)
+	mailer := auth.NewMailer(cfg.SMTP)
 
 	// Caches
 	sessCache := cache.NewSessionCache(rdb)
@@ -122,7 +125,7 @@ func main() {
 	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL)
 
 	// HTTP API handlers
-	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID)
+	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailer)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
@@ -140,10 +143,10 @@ func main() {
 
 	// Auth middleware
 	authMW := auth.AuthMiddlewareWithAPIKey(authSvc, userRepo)
-	wsAuthMW := auth.WSAuthMiddleware(authSvc)
+	wsAuthMW := auth.WSAuthMiddleware(authSvc, userRepo)
 
 	// WS handler
-	wsHandler := handler.NewWSHandler(wsAuthMW, sessMgr, gwMgr, ingest, syncHandler, receiptHandler)
+	wsHandler := handler.NewWSHandler(wsAuthMW, sessMgr, gwMgr, ingest, syncHandler, receiptHandler, msgRepo)
 
 	// Router
 	r := api.NewRouter(handlers, authMW)

@@ -331,6 +331,144 @@ func TestMessageRepo_Get(t *testing.T) {
 	}
 }
 
+func TestMessageRepo_GetHistory_Around(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewMessageRepo(mock)
+	half := 2 // limit=4 -> half=2
+
+	// "before" query: messages before aroundMsgID, DESC, limit=half
+	beforeRows := pgxmock.NewRows([]string{"msg_id", "conv_id", "sender_id", "sender_name", "content_type", "body", "mention", "reply_to", "timestamp", "conv_seq", "status"}).
+		AddRow(102, "conv_1", "u2", "u2", 1, "msg2", nil, nil, 5002, 2, 1).
+		AddRow(101, "conv_1", "u1", "u1", 1, "msg1", nil, nil, 5001, 1, 1)
+
+	mock.ExpectQuery(`AND m\.msg_id < \$2 ORDER BY m\.msg_id DESC LIMIT \$3`).
+		WithArgs("conv_1", int64(200), half).
+		WillReturnRows(beforeRows)
+
+	// "after" query: messages from aroundMsgID onward, ASC, limit=half
+	afterRows := pgxmock.NewRows([]string{"msg_id", "conv_id", "sender_id", "sender_name", "content_type", "body", "mention", "reply_to", "timestamp", "conv_seq", "status"}).
+		AddRow(200, "conv_1", "u1", "u1", 1, "around", nil, nil, 6000, 3, 1).
+		AddRow(201, "conv_1", "u2", "u2", 1, "next", nil, nil, 6001, 4, 1)
+
+	mock.ExpectQuery(`AND m\.msg_id >= \$2 ORDER BY m\.msg_id ASC LIMIT \$3`).
+		WithArgs("conv_1", int64(200), half).
+		WillReturnRows(afterRows)
+
+	msgs, err := repo.GetHistory(context.Background(), "conv_1", 0, 200, 4, "", 0, 0)
+	if err != nil {
+		t.Fatalf("GetHistory around: %v", err)
+	}
+	// Expected: before reversed [101, 102] + after [200, 201] = [101, 102, 200, 201]
+	if len(msgs) != 4 {
+		t.Fatalf("got %d messages, want 4", len(msgs))
+	}
+	if msgs[0].MsgID != 101 {
+		t.Errorf("msgs[0].MsgID = %d, want 101", msgs[0].MsgID)
+	}
+	if msgs[1].MsgID != 102 {
+		t.Errorf("msgs[1].MsgID = %d, want 102", msgs[1].MsgID)
+	}
+	if msgs[2].MsgID != 200 {
+		t.Errorf("msgs[2].MsgID = %d, want 200", msgs[2].MsgID)
+	}
+	if msgs[3].MsgID != 201 {
+		t.Errorf("msgs[3].MsgID = %d, want 201", msgs[3].MsgID)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
+func TestMessageRepo_GetHistory_Around_WithFilters(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewMessageRepo(mock)
+	half := 1 // limit=2 -> half=1
+
+	// args order: $1=convID, $2=keyword, $3=startDate, $4=endDate, $5=aroundMsgID, $6=half
+	beforeRows := pgxmock.NewRows([]string{"msg_id", "conv_id", "sender_id", "sender_name", "content_type", "body", "mention", "reply_to", "timestamp", "conv_seq", "status"}).
+		AddRow(101, "conv_1", "u1", "u1", 1, "hello", nil, nil, 5001, 1, 1)
+
+	mock.ExpectQuery(`AND m\.msg_id < \$5 ORDER BY m\.msg_id DESC LIMIT \$6`).
+		WithArgs("conv_1", "%hello%", int64(5000), int64(6000), int64(200), half).
+		WillReturnRows(beforeRows)
+
+	afterRows := pgxmock.NewRows([]string{"msg_id", "conv_id", "sender_id", "sender_name", "content_type", "body", "mention", "reply_to", "timestamp", "conv_seq", "status"}).
+		AddRow(200, "conv_1", "u1", "u1", 1, "hello", nil, nil, 6000, 3, 1)
+
+	mock.ExpectQuery(`AND m\.msg_id >= \$5 ORDER BY m\.msg_id ASC LIMIT \$6`).
+		WithArgs("conv_1", "%hello%", int64(5000), int64(6000), int64(200), half).
+		WillReturnRows(afterRows)
+
+	msgs, err := repo.GetHistory(context.Background(), "conv_1", 0, 200, 2, "hello", 5000, 6000)
+	if err != nil {
+		t.Fatalf("GetHistory around with filters: %v", err)
+	}
+	if len(msgs) != 2 {
+		t.Fatalf("got %d messages, want 2", len(msgs))
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
+func TestMessageRepo_UpdateBody(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewMessageRepo(mock)
+
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE messages SET body = $1, content_type = $2 WHERE msg_id = $3`)).
+		WithArgs("edited text", model.ContentEdit, int64(100)).
+		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+	err = repo.UpdateBody(context.Background(), 100, "edited text")
+	if err != nil {
+		t.Fatalf("UpdateBody: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
+func TestMessageRepo_Recall(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewMessageRepo(mock)
+
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE messages SET content_type = $1, body = '' WHERE msg_id = $2`)).
+		WithArgs(model.ContentRecall, int64(200)).
+		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+	err = repo.Recall(context.Background(), 200)
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
 func TestMessageRepo_Get_NotFound(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	if err != nil {

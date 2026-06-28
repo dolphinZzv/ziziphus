@@ -63,7 +63,7 @@ func NewService(jwtSecret string, accessExpireHours, refreshExpireHours int, use
 }
 
 // Register creates a new user with a bcrypt-hashed password and returns tokens.
-func (s *Service) Register(ctx context.Context, name, password, account string) (*model.User, string, string, error) {
+func (s *Service) Register(ctx context.Context, name, password, account, email string) (*model.User, string, string, error) {
 	if account != "" {
 		existing, _ := s.userRepo.GetByAccount(ctx, account)
 		if existing != nil {
@@ -79,13 +79,16 @@ func (s *Service) Register(ctx context.Context, name, password, account string) 
 	}
 
 	user := &model.User{
-		ID:        userID,
-		Account:   account,
-		Type:      model.UserHuman,
-		Name:      name,
-		Status:    model.UserOffline,
-		Password:  hashed,
-		CreatedAt: time.Now().UnixMilli(),
+		ID:              userID,
+		Account:         account,
+		Type:            model.UserHuman,
+		Name:            name,
+		Email:           email,
+		Status:          model.UserOffline,
+		Password:        hashed,
+		Discoverable:    true,
+		AllowDirectChat: true,
+		CreatedAt:       time.Now().UnixMilli(),
 	}
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, "", "", fmt.Errorf("create user: %w", err)
@@ -125,6 +128,19 @@ func (s *Service) Login(ctx context.Context, account, password string) (string, 
 	}
 
 	return accessToken, refreshToken, time.Now().Add(s.accessExpire).Unix(), user.ID, nil
+}
+
+// GenerateToken creates tokens for a given user ID (used by MFA flow).
+func (s *Service) GenerateToken(userID string, userType int) (string, string, int64, error) {
+	accessToken, err := s.generateAccessToken(userID, userType)
+	if err != nil {
+		return "", "", 0, err
+	}
+	refreshToken, err := s.generateRefreshToken(context.Background(), userID)
+	if err != nil {
+		return "", "", 0, err
+	}
+	return accessToken, refreshToken, time.Now().Add(s.accessExpire).Unix(), nil
 }
 
 // RefreshToken validates a refresh token and returns a new access token.

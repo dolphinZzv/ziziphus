@@ -1004,6 +1004,68 @@ func TestConvIDHelpers_Consistency(t *testing.T) {
 // Integration: Snowflake combined with ID generation
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// System conversation ID helpers
+// ---------------------------------------------------------------------------
+
+func TestMakeSystemConvID(t *testing.T) {
+	id := MakeSystemConvID("user_42")
+	want := "sys:user_42"
+	if id != want {
+		t.Errorf("MakeSystemConvID(%q) = %q, want %q", "user_42", id, want)
+	}
+}
+
+func TestIsSystemConvID(t *testing.T) {
+	t.Run("returns true for sys: prefixed ID", func(t *testing.T) {
+		if !IsSystemConvID("sys:user_1") {
+			t.Error("expected true for sys:user_1")
+		}
+	})
+	t.Run("returns false for P2P conv ID", func(t *testing.T) {
+		if IsSystemConvID("user_a:user_b") {
+			t.Error("expected false for user_a:user_b")
+		}
+	})
+	t.Run("returns false for group conv ID", func(t *testing.T) {
+		if IsSystemConvID("group_123") {
+			t.Error("expected false for group_123")
+		}
+	})
+	t.Run("returns false for empty string", func(t *testing.T) {
+		if IsSystemConvID("") {
+			t.Error("expected false for empty string")
+		}
+	})
+}
+
+func TestParseSystemConvUserID(t *testing.T) {
+	t.Run("extracts user ID from sys: prefixed ID", func(t *testing.T) {
+		uid := ParseSystemConvUserID("sys:user_42")
+		if uid != "user_42" {
+			t.Errorf("got %q, want %q", uid, "user_42")
+		}
+	})
+	t.Run("returns empty for non-system conv ID", func(t *testing.T) {
+		if uid := ParseSystemConvUserID("group_123"); uid != "" {
+			t.Errorf("expected empty, got %q", uid)
+		}
+	})
+	t.Run("returns empty for empty input", func(t *testing.T) {
+		if uid := ParseSystemConvUserID(""); uid != "" {
+			t.Errorf("expected empty, got %q", uid)
+		}
+	})
+	t.Run("round-trip consistency", func(t *testing.T) {
+		orig := "user_test"
+		convID := MakeSystemConvID(orig)
+		extracted := ParseSystemConvUserID(convID)
+		if extracted != orig {
+			t.Errorf("round-trip: %q → %q → %q", orig, convID, extracted)
+		}
+	})
+}
+
 func TestIDGeneration_WithSnowflake(t *testing.T) {
 	epoch := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	sf := NewSnowflake(1, epoch)

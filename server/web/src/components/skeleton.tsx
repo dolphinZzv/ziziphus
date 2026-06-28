@@ -18,7 +18,7 @@ export function SkeletonChat() {
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className={cn('flex gap-2', i % 2 === 0 ? 'justify-end' : 'justify-start')}>
           {i % 2 !== 0 && <div className="w-8 h-8 rounded-full bg-[var(--color-hairline)] animate-pulse flex-shrink-0 mt-1" />}
-          <div className={cn('rounded-lg px-3 py-2 space-y-1.5', i % 2 === 0 ? 'bg-[var(--color-primary)]/20' : 'bg-[var(--color-surface-card)]')}
+          <div className={cn('rounded-xl px-3 py-2 space-y-1.5', i % 2 === 0 ? 'bg-[var(--color-primary)]/20' : 'bg-[var(--color-surface-card)]')}
             style={{ width: `${Math.floor(Math.random() * 40 + 30)}%` }}>
             <div className="h-3 rounded-sm bg-[var(--color-hairline)] animate-pulse" style={{ width: '100%' }} />
             <div className="h-3 rounded-sm bg-[var(--color-hairline)] animate-pulse" style={{ width: '60%' }} />

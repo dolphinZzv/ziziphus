@@ -32,7 +32,7 @@ class ErrorBoundaryBase extends Component<Props, State> {
             <p className="text-xs text-[var(--color-muted)]">{this.state.error?.message || t('error.unknown')}</p>
             <button
               onClick={this.handleRetry}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm transition-colors"
             >
               <RefreshCw size={14} /> {t('common.retry')}
             </button>

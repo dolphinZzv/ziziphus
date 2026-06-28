@@ -10,6 +10,8 @@ const SettingsView = lazy(() => import('@/features/settings/settings-view'))
 const PrivacyView = lazy(() => import('@/features/settings/privacy-view'))
 const AgentList = lazy(() => import('@/features/agents/agent-list'))
 const SessionList = lazy(() => import('@/features/sessions/session-list'))
+const ShortcutsView = lazy(() => import('@/features/settings/shortcuts-view'))
+const MemberListView = lazy(() => import('@/features/group/member-list-view'))
 const ContactList = lazy(() => import('@/features/contacts/contact-list'))
 
 const SheetFallback = () => {
@@ -41,6 +43,7 @@ export function SheetWrapper({ name, activeSheet, onClose }: SheetWrapperProps) 
       {name === 'sessions' && <SessionList onClose={onClose} />}
       {name === 'contacts' && <ContactList onClose={onClose} />}
       {name === 'userSettings' && <PrivacyView onClose={onClose} />}
+      {name === 'shortcuts' && <ShortcutsView onClose={onClose} />}
     </Suspense>
   )
 }

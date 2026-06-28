@@ -17,10 +17,7 @@ function emit() { listeners.forEach(l => l()) }
 
 function sortConversations(items: ConvListItem[]) {
   return [...items].sort((a, b) => {
-    // System conversations always at top
-    if (a.type === ConvType.System && b.type !== ConvType.System) return -1
-    if (b.type === ConvType.System && a.type !== ConvType.System) return 1
-    // Then pinned
+    // Pinned first
     if ((b.pinned ? 1 : 0) !== (a.pinned ? 1 : 0)) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)
     // Then by last_msg_at DESC
     return (b.last_msg_at || 0) - (a.last_msg_at || 0)

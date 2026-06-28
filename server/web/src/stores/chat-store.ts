@@ -6,6 +6,7 @@ import { nextClientSeq } from '@/lib/storage'
 import { MessageType } from '@/types/ws'
 import type { WSFrame, MsgSendPayload, MsgPushPayload, MsgReadNotifyPayload, TypingPayload } from '@/types/ws'
 import { ContentType, MsgStatus, type Message } from '@/types/message'
+import type { MsgEditPushPayload, MsgRecallPushPayload } from '@/types/ws'
 import { conversationStore } from '@/stores/conversation-store'
 
 interface ChatState {
@@ -271,6 +272,51 @@ export const chatStore = {
     })
     messagesByConvId.set(convId, messages)
     state = { ...state, messagesByConvId }; emit()
+  },
+
+
+  async editMessage(convId: string, msgId: number, newBody: string) {
+    // Optimistically update local message first
+    const msgs = this.getMessages(convId)
+    const msg = msgs.find(m => m.msg_id === msgId)
+    if (msg) this.upsertMessage(convId, { ...msg, body: newBody, content_type: 7 })
+    // Send to server (fire-and-forget — don't block on ack)
+    try {
+      wsClient.send({
+        type: MessageType.MsgEdit,
+        payload: { conv_id: convId, msg_id: msgId, new_body: newBody },
+      })
+    } catch { /* ignore */ }
+  },
+
+  async recallMessage(convId: string, msgId: number) {
+    // Optimistically update local message first
+    const msgs = this.getMessages(convId)
+    const msg = msgs.find(m => m.msg_id === msgId)
+    if (msg) this.upsertMessage(convId, { ...msg, body: '', content_type: 6 })
+    // Send to server (fire-and-forget — don't block on ack)
+    try {
+      wsClient.send({
+        type: MessageType.MsgRecall,
+        payload: { conv_id: convId, msg_id: msgId },
+      })
+    } catch { /* ignore */ }
+  },
+
+  handleEditPush(payload: MsgEditPushPayload) {
+    const msgs = this.getMessages(payload.conv_id)
+    const msg = msgs.find(m => m.msg_id === payload.msg_id)
+    if (msg) {
+      this.upsertMessage(payload.conv_id, { ...msg, body: payload.new_body, content_type: 7 })
+    }
+  },
+
+  handleRecallPush(payload: MsgRecallPushPayload) {
+    const msgs = this.getMessages(payload.conv_id)
+    const msg = msgs.find(m => m.msg_id === payload.msg_id)
+    if (msg) {
+      this.upsertMessage(payload.conv_id, { ...msg, body: '', content_type: 6 })
+    }
   },
 
   handlePush(payload: MsgPushPayload) {

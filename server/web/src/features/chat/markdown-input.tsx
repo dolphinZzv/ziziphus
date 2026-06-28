@@ -53,7 +53,7 @@ export default function MarkdownInput({ value, onChange, onSend, placeholder = '
     }
   }
 
-  const toolbarBtn = 'p-1 rounded-md hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors'
+  const toolbarBtn = 'p-1 rounded-xl hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors'
 
   return (
     <div className="flex flex-col gap-1">

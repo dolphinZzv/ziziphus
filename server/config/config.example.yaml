@@ -27,3 +27,11 @@ ratelimit:
   msg_per_sec: 30
   max_body_bytes: 10240
   burst_size: 50
+
+# SMTP for email sending (MFA verification codes, notifications)
+smtp:
+  host: ""           # e.g. "smtp.example.com"
+  port: "587"        # default: 587
+  user: ""           # SMTP user
+  password: ""       # SMTP password
+  from: ""           # From address, defaults to user if empty

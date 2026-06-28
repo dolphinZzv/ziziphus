@@ -196,6 +196,22 @@ func (r *MessageRepo) Get(ctx context.Context, msgID int64) (*model.Message, err
 	return msg, nil
 }
 
+// UpdateBody updates a message body and sets content_type to Edit.
+func (r *MessageRepo) UpdateBody(ctx context.Context, msgID int64, newBody string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE messages SET body = $1, content_type = $2 WHERE msg_id = $3`,
+		newBody, model.ContentEdit, msgID)
+	return err
+}
+
+// Recall marks a message as recalled.
+func (r *MessageRepo) Recall(ctx context.Context, msgID int64) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE messages SET content_type = $1, body = '' WHERE msg_id = $2`,
+		model.ContentRecall, msgID)
+	return err
+}
+
 func scanMessages(rows pgx.Rows) ([]*model.Message, error) {
 	var msgs []*model.Message
 	for rows.Next() {

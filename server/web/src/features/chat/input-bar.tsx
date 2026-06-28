@@ -158,7 +158,7 @@ export default function InputBar({ convId }: Props) {
       {/* Mention popup */}
       {showMention && members.length > 0 && (
         <div className="relative">
-          <div className="absolute bottom-0 left-4 right-4 z-10 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg mb-1 max-h-[160px] overflow-y-auto"
+          <div className="absolute bottom-0 left-4 right-4 z-10 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl mb-1 max-h-[160px] overflow-y-auto"
             style={{ boxShadow: 'var(--shadow-md)' }}>
             {filtered.length > 0 ? filtered.map(m => (
               <button key={m.id} type="button"
@@ -192,7 +192,7 @@ export default function InputBar({ convId }: Props) {
             {/* @mention button */}
             <button type="button"
               onClick={() => { setMentionFilter(''); setShowMention(!showMention) }}
-              className="p-1.5 rounded-md hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+              className="p-1.5 rounded-xl hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
               title="@提及">
               <AtSign size={17} />
             </button>
@@ -201,14 +201,14 @@ export default function InputBar({ convId }: Props) {
             <div className="relative">
               <button type="button"
                 onClick={() => setShowAttachMenu(!showAttachMenu)}
-                className="p-1.5 rounded-md hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+                className="p-1.5 rounded-xl hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
                 title="附件">
                 <Paperclip size={17} />
               </button>
               {showAttachMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowAttachMenu(false)} />
-                  <div className="absolute bottom-full right-0 mb-1 w-36 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-20 py-1"
+                  <div className="absolute bottom-full right-0 mb-1 w-36 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl z-20 py-1"
                     style={{ boxShadow: 'var(--shadow-md)' }}>
                     <button type="button"
                       onClick={() => imageInputRef.current?.click()}
@@ -230,7 +230,7 @@ export default function InputBar({ convId }: Props) {
               onClick={handleSend}
               disabled={!text.trim() || uploading}
               className={cn(
-                'p-1.5 rounded-md transition-colors',
+                'p-1.5 rounded-xl transition-colors',
                 text.trim()
                   ? 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'
                   : 'text-[var(--color-muted-soft)] cursor-default'
@@ -247,7 +247,7 @@ export default function InputBar({ convId }: Props) {
 
         {/* Drag overlay */}
         {dragOver && (
-          <div className="absolute inset-0 z-50 bg-[var(--color-primary)]/10 border-2 border-dashed border-[var(--color-primary)] rounded-lg flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 z-50 bg-[var(--color-primary)]/10 border-2 border-dashed border-[var(--color-primary)] rounded-xl flex items-center justify-center pointer-events-none">
             <span className="text-sm text-[var(--color-primary)] font-medium">释放以上传文件</span>
           </div>
         )}

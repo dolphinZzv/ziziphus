@@ -18,7 +18,16 @@
     "passwordMismatch": "Passwords do not match",
     "loggingIn": "Logging in...",
     "registering": "Registering...",
-    "fieldRequired": "Please fill in all fields"
+    "fieldRequired": "Please fill in all fields",
+    "email": "Email (optional)",
+    "mfaTitle": "Enter verification code",
+    "mfaCode": "Enter 6-digit code",
+    "verify": "Verify",
+    "verifying": "Verifying...",
+    "mfaTOTPLabel": "TOTP",
+    "mfaEmailLabel": "Email 2FA",
+    "mfaTOTPHint": "Enter the code from your authenticator app",
+    "mfaEmailHint": "A verification code has been sent to your email"
   },
   "chat": {
     "inputPlaceholder": "Type a message...",
@@ -46,7 +55,13 @@
     "detail": "Chat Details",
     "clickCopyId": "Click to copy conversation ID",
     "typingUser": "{{name}} is typing...",
-    "typingMulti": "{{count}} people typing..."
+    "typingMulti": "{{count}} people typing...",
+    "edit": "Edit",
+    "recall": "Recall",
+    "recallConfirm": "Recall this message?",
+    "recalled": "Message recalled",
+    "edited": "(edited)",
+    "editHint": "Esc to cancel · Enter to save"
   },
   "conversation": {
     "title": "Messages",
@@ -64,6 +79,7 @@
     "members": "Members",
     "you": "You",
     "mentionYou": "@You",
+    "files": "Files",
     "friendRequest": "Friend Request",
     "form": "[Form]",
     "response": "[Response]",
@@ -77,7 +93,8 @@
     "p2pDetail": "Chat Details",
     "addFriend": "Add Friend",
     "alreadyFriends": "Already Friends",
-    "requestSent": "Request Sent"
+    "requestSent": "Request Sent",
+    "leaveConfirm": "Leave this conversation?"
   },
   "group": {
     "detail": "Group Info",
@@ -86,7 +103,7 @@
     "addMember": "Add Member",
     "removeMember": "Remove",
     "removeConfirm": "Remove this member?",
-    "leave": "Leave Group",
+    "leave": "Leave Conversation",
     "leaveConfirm": "Are you sure you want to leave this group?",
     "joinRequests": "Join Requests",
     "requests": "Requests",
@@ -193,7 +210,15 @@
     "sessionID": "Session ID",
     "appInfo": "App Info",
     "themeAuto": "Auto",
-    "languageAuto": "Auto"
+    "languageAuto": "Auto",
+    "dangerZone": "Danger Zone",
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirm": "Delete your account? This action cannot be undone. All data will be erased.",
+    "deleteAccountConfirm2": "Confirm again: This will permanently delete all your contacts, messages, and conversations.",
+    "notifications": "Notifications",
+    "notifyEnable": "Enable Desktop Notifications",
+    "notifyEnabled": "Desktop Notifications Enabled",
+    "notifyGranted": "Notification permission granted"
   },
   "agent": {
     "title": "Agent Management",
@@ -279,5 +304,20 @@
     "minuteAgo": "{{n}}m ago",
     "hourAgo": "{{n}}h ago",
     "dayAgo": "{{n}}d ago"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "navigateConvs": "Navigate conversations",
+    "openConv": "Open conversation",
+    "newLine": "New line",
+    "indent": "Indent",
+    "showHelp": "Show shortcuts help",
+    "tip": "Press ? anytime to view shortcuts"
+  },
+  "sys": {
+    "sys.group_created": "%s created the group \"%s\"",
+    "sys.member_added": "%s joined the group",
+    "sys.member_removed": "%s was removed from the group",
+    "sys.member_left": "%s left the group"
   }
 }

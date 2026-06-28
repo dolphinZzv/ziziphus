@@ -1105,6 +1105,179 @@ func TestRejectJoinRequest_NoPendingRequest(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// GetOrCreateSystemConv tests
+// ---------------------------------------------------------------------------
+
+func TestGetOrCreateSystemConv_CreatesNew(t *testing.T) {
+	mgr, convRepo, _, seqCache := newManager()
+	ctx := context.Background()
+	userID := "user_sys"
+
+	conv, err := mgr.GetOrCreateSystemConv(ctx, userID)
+	if err != nil {
+		t.Fatalf("GetOrCreateSystemConv failed: %v", err)
+	}
+	expectedID := model.MakeSystemConvID(userID)
+	if conv.ConvID != expectedID {
+		t.Errorf("convID = %q, want %q", conv.ConvID, expectedID)
+	}
+	if conv.Type != model.ConvSystem {
+		t.Errorf("type = %v, want ConvSystem", conv.Type)
+	}
+	if conv.OwnerID != userID {
+		t.Errorf("ownerID = %q, want %q", conv.OwnerID, userID)
+	}
+
+	isMember, err := convRepo.IsMember(ctx, expectedID, userID)
+	if err != nil {
+		t.Fatalf("IsMember: %v", err)
+	}
+	if !isMember {
+		t.Error("user should be a member of system conversation")
+	}
+
+	role, err := convRepo.GetMemberRole(ctx, expectedID, userID)
+	if err != nil {
+		t.Fatalf("GetMemberRole: %v", err)
+	}
+	if role != model.ConvRoleOwner {
+		t.Errorf("role = %v, want Owner", role)
+	}
+
+	seqCache.mu.Lock()
+	_, ok := seqCache.seqs[expectedID]
+	seqCache.mu.Unlock()
+	if !ok {
+		t.Error("expected conv seq to be initialized")
+	}
+}
+
+func TestGetOrCreateSystemConv_ReturnsExisting(t *testing.T) {
+	mgr, convRepo, _, _ := newManager()
+	ctx := context.Background()
+	userID := "user_existing"
+
+	// Create once
+	conv1, err := mgr.GetOrCreateSystemConv(ctx, userID)
+	if err != nil {
+		t.Fatalf("first call failed: %v", err)
+	}
+
+	// Get again
+	conv2, err := mgr.GetOrCreateSystemConv(ctx, userID)
+	if err != nil {
+		t.Fatalf("second call failed: %v", err)
+	}
+
+	if conv1.ConvID != conv2.ConvID {
+		t.Errorf("conversation IDs differ: %q vs %q", conv1.ConvID, conv2.ConvID)
+	}
+
+	// Ensure member still exists
+	isMember, err := convRepo.IsMember(ctx, conv2.ConvID, userID)
+	if err != nil {
+		t.Fatalf("IsMember: %v", err)
+	}
+	if !isMember {
+		t.Error("user should still be a member")
+	}
+}
+
+func TestGetOrCreateSystemTx_CreatesNew(t *testing.T) {
+	mgr, convRepo, _, seqCache := newManager()
+	ctx := context.Background()
+	userID := "user_tx"
+
+	conv, err := mgr.GetOrCreateSystemConvTx(ctx, nil, userID)
+	if err != nil {
+		t.Fatalf("GetOrCreateSystemConvTx failed: %v", err)
+	}
+	expectedID := model.MakeSystemConvID(userID)
+	if conv.ConvID != expectedID {
+		t.Errorf("convID = %q, want %q", conv.ConvID, expectedID)
+	}
+
+	isMember, err := convRepo.IsMember(ctx, expectedID, userID)
+	if err != nil {
+		t.Fatalf("IsMember: %v", err)
+	}
+	if !isMember {
+		t.Error("user should be a member after tx creation")
+	}
+
+	seqCache.mu.Lock()
+	_, ok := seqCache.seqs[expectedID]
+	seqCache.mu.Unlock()
+	if !ok {
+		t.Error("expected conv seq to be initialized")
+	}
+}
+
+func TestGetOrCreateSystemTx_ReturnsExisting(t *testing.T) {
+	mgr, _, _, _ := newManager()
+	ctx := context.Background()
+	userID := "user_tx_existing"
+
+	// Create first via non-tx
+	conv1, err := mgr.GetOrCreateSystemConv(ctx, userID)
+	if err != nil {
+		t.Fatalf("first call (non-tx) failed: %v", err)
+	}
+
+	// Get via tx should return existing
+	conv2, err := mgr.GetOrCreateSystemConvTx(ctx, nil, userID)
+	if err != nil {
+		t.Fatalf("second call (tx) failed: %v", err)
+	}
+
+	if conv1.ConvID != conv2.ConvID {
+		t.Errorf("conversation IDs differ: %q vs %q", conv1.ConvID, conv2.ConvID)
+	}
+}
+
+func TestGetMemberRole_ReturnsRole(t *testing.T) {
+	mgr, convRepo, _, _ := newManager()
+	ctx := context.Background()
+
+	convID := "conv_get_role"
+	_ = convRepo.Create(ctx, &model.Conversation{ConvID: convID, Type: model.ConvGroup})
+	_ = convRepo.AddMember(ctx, convID, "owner", model.ConvRoleOwner)
+	_ = convRepo.AddMember(ctx, convID, "admin", model.ConvRoleAdmin)
+	_ = convRepo.AddMember(ctx, convID, "member", model.ConvRoleMember)
+
+	tests := []struct {
+		userID   string
+		expected model.ConvRole
+	}{
+		{"owner", model.ConvRoleOwner},
+		{"admin", model.ConvRoleAdmin},
+		{"member", model.ConvRoleMember},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.userID, func(t *testing.T) {
+			role, err := mgr.GetMemberRole(ctx, convID, tt.userID)
+			if err != nil {
+				t.Fatalf("GetMemberRole(%q): %v", tt.userID, err)
+			}
+			if role != tt.expected {
+				t.Errorf("role = %v, want %v", role, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetMemberRole_NonExistentConv(t *testing.T) {
+	mgr, _, _, _ := newManager()
+	ctx := context.Background()
+
+	_, err := mgr.GetMemberRole(ctx, "nonexistent", "user")
+	if err == nil {
+		t.Fatal("expected error for non-existent conversation")
+	}
+}
+
 func TestRejectJoinRequest_PermissionDenied(t *testing.T) {
 	mgr, convRepo, userRepo, jrRepo := newManagerWithJR()
 	ctx := context.Background()

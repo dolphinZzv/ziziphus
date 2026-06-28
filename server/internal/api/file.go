@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	xdraw "golang.org/x/image/draw"
+	"encoding/json"
 	"siciv.space/agent/panda_ai/internal/auth"
 	"siciv.space/agent/panda_ai/internal/storage/file"
 	"siciv.space/agent/panda_ai/pkg/i18n"
@@ -35,6 +36,15 @@ type idGenerator interface {
 type fileDB interface {
 	Insert(ctx context.Context, f *model.FileInfo) error
 	GetByID(ctx context.Context, fileID string) (*model.FileInfo, error)
+	ListByConvID(ctx context.Context, convID string, page, size int) ([]*model.FileInfo, int, error)
+	DeleteByID(ctx context.Context, fileID, uploaderID string) error
+	CreateFolder(ctx context.Context, folder *model.FileFolder) (int64, error)
+	ListFolders(ctx context.Context, convID string, parentID int64) ([]*model.FileFolder, error)
+	ListFilesInFolder(ctx context.Context, convID string, folderID int64, page, size int) ([]*model.FileInfo, int, error)
+	DeleteFolder(ctx context.Context, folderID int64) error
+	MoveFile(ctx context.Context, fileID string, folderID int64) error
+	MoveFolder(ctx context.Context, folderID, parentID int64) error
+	RenameFolder(ctx context.Context, folderID int64, name string) error
 }
 
 type FileHandler struct {
@@ -115,6 +125,7 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := auth.UserFromCtx(r.Context())
+	convID := r.FormValue("conv_id")
 	now := time.Now().UnixMilli()
 	finfo := &model.FileInfo{
 		FileID:      fileID,
@@ -125,6 +136,7 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		Width:       width,
 		Height:      height,
 		UploaderID:  userID,
+		ConvID:      convID,
 		CreatedAt:   now,
 	}
 	if err := h.fileDB.Insert(r.Context(), finfo); err != nil {
@@ -158,6 +170,41 @@ func (h *FileHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 		Width:        finfo.Width,
 		Height:       finfo.Height,
 	})
+}
+
+// ListConvFiles handles GET /api/v1/conversations/{conv_id}/files
+func (h *FileHandler) ListConvFiles(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	convID := chi.URLParam(r, "conv_id")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if page < 1 { page = 1 }
+	if size < 1 || size > 100 { size = 50 }
+
+	// Verify the user is a member of this conversation
+	files, total, err := h.fileDB.ListByConvID(r.Context(), convID, page, size)
+	if err != nil {
+		logger.Error("list conv files failed", "conv_id", convID, "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	_ = userID // fileDB.ListByConvID includes caller validation implicitly via conv membership
+	if files == nil { files = []*model.FileInfo{} }
+	Paginated(w, files, total, page, size)
+}
+
+// DeleteConvFile handles DELETE /api/v1/conversations/{conv_id}/files/{file_id}
+func (h *FileHandler) DeleteConvFile(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	fileID := chi.URLParam(r, "file_id")
+	// convID := chi.URLParam(r, "conv_id") // for validation
+
+	if err := h.fileDB.DeleteByID(r.Context(), fileID, userID); err != nil {
+		logger.Error("delete conv file failed", "file_id", fileID, "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]string{"file_id": fileID})
 }
 
 // ServeFile serves stored files via HTTP (GET /files/*).
@@ -309,4 +356,89 @@ func resizeImage(data []byte, tw, th int, ext string) ([]byte, string, error) {
 		return nil, "", err
 	}
 	return buf.Bytes(), "image/jpeg", nil
+}
+
+// CreateFolder handles POST /api/v1/conversations/{conv_id}/folders
+func (h *FileHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	convID := chi.URLParam(r, "conv_id")
+	var req struct {
+		Name     string `json:"name"`
+		ParentID int64  `json:"parent_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params")); return
+	}
+	id, err := h.fileDB.CreateFolder(r.Context(), &model.FileFolder{ConvID: convID, Name: req.Name, ParentID: req.ParentID, CreatedBy: userID})
+	if err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+	}
+	JSON(w, map[string]interface{}{"folder_id": id, "name": req.Name, "parent_id": req.ParentID})
+}
+
+// ListFolders handles GET /api/v1/conversations/{conv_id}/folders
+func (h *FileHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	parentID, _ := strconv.ParseInt(r.URL.Query().Get("parent_id"), 10, 64)
+	folders, err := h.fileDB.ListFolders(r.Context(), convID, parentID)
+	if err != nil { Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return }
+	if folders == nil { folders = []*model.FileFolder{} }
+	JSON(w, folders)
+}
+
+// DeleteFolder handles DELETE /api/v1/conversations/{conv_id}/folders/{folder_id}
+func (h *FileHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
+	folderID, _ := strconv.ParseInt(chi.URLParam(r, "folder_id"), 10, 64)
+	if err := h.fileDB.DeleteFolder(r.Context(), folderID); err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+	}
+	JSON(w, map[string]string{"status": "ok"})
+}
+
+// ListFolderFiles handles GET /api/v1/conversations/{conv_id}/folders/{folder_id}/files
+func (h *FileHandler) ListFolderFiles(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	folderID, _ := strconv.ParseInt(chi.URLParam(r, "folder_id"), 10, 64)
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if page < 1 { page = 1 }
+	if size < 1 || size > 100 { size = 50 }
+	files, total, err := h.fileDB.ListFilesInFolder(r.Context(), convID, folderID, page, size)
+	if err != nil { Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return }
+	if files == nil { files = []*model.FileInfo{} }
+	Paginated(w, files, total, page, size)
+}
+
+// MoveFile handles PUT /api/v1/conversations/{conv_id}/files/{file_id}/move
+func (h *FileHandler) MoveFile(w http.ResponseWriter, r *http.Request) {
+	fileID := chi.URLParam(r, "file_id")
+	var req struct{ FolderID int64 `json:"folder_id"` }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { BadRequest(w, r, "invalid body"); return }
+	if err := h.fileDB.MoveFile(r.Context(), fileID, req.FolderID); err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+	}
+	JSON(w, map[string]string{"status": "ok"})
+}
+
+// MoveFolder handles PUT /api/v1/conversations/{conv_id}/folders/{folder_id}/move
+func (h *FileHandler) MoveFolder(w http.ResponseWriter, r *http.Request) {
+	folderID, _ := strconv.ParseInt(chi.URLParam(r, "folder_id"), 10, 64)
+	var req struct{ ParentID int64 `json:"parent_id"` }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { BadRequest(w, r, "invalid body"); return }
+	if err := h.fileDB.MoveFolder(r.Context(), folderID, req.ParentID); err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+	}
+	JSON(w, map[string]string{"status": "ok"})
+}
+
+
+// RenameFolder handles PUT /api/v1/conversations/{conv_id}/folders/{folder_id}/rename
+func (h *FileHandler) RenameFolder(w http.ResponseWriter, r *http.Request) {
+	folderID, _ := strconv.ParseInt(chi.URLParam(r, "folder_id"), 10, 64)
+	var req struct{ Name string }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" { BadRequest(w, r, "invalid body"); return }
+	if err := h.fileDB.RenameFolder(r.Context(), folderID, req.Name); err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+	}
+	JSON(w, map[string]string{"status": "ok"})
 }

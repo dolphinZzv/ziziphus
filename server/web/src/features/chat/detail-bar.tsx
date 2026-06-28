@@ -55,7 +55,7 @@ export default function DetailBar
       <div className="px-4 py-3">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wider">会话详情</span>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-[var(--color-surface-soft)]"><X size={14} /></button>
+          <button onClick={onClose} className="p-1 rounded-xl hover:bg-[var(--color-surface-soft)]"><X size={14} /></button>
         </div>
 
         {/* P2P: peer info */}

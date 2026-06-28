@@ -8,7 +8,7 @@ import { MessageType } from '@/types/ws'
 import ConversationList from '@/features/conversation-list/conversation-list'
 import { SheetWrapper } from './lazy-sheets'
 import { avatarUrl } from '@/lib/file'
-import { Plus, User, Users, UserPlus, Settings, Bot, Smartphone, MessageCircle } from 'lucide-react'
+import { Plus, User, Users, UserPlus, MessageCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export default function Sidebar() {
@@ -59,29 +59,37 @@ export default function Sidebar() {
           <span className="truncate max-w-[140px]">{user?.name || user?.account || 'User'}</span>
         </button>
 
-        <div className="relative plus-menu-container">
+        <div className="flex items-center gap-0.5">
           <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-2 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
-          >
-            <Plus size={18} />
+            onClick={() => uiStore.setSidebarView(uiStore.state.sidebarView === 'contacts' ? null : 'contacts')}
+            className={`p-2 rounded-xl transition-colors ${uiStore.state.sidebarView === 'contacts' ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-soft)]'}`}
+            title={t('sidebar.contacts')}>
+            <User size={18} />
           </button>
-          {showMenu && (
-            <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-[100] py-1"
-              style={{ boxShadow: 'var(--shadow-md)' }}>
-              {[
-                { icon: MessageCircle, label: t('sidebar.newChat'), sheet: 'newChat' },
-                { icon: Users, label: t('sidebar.createGroup'), sheet: 'createGroup' },
-                { icon: UserPlus, label: t('sidebar.joinGroup'), sheet: 'joinGroup' },
-              ].map(item => (
-                <button key={item.sheet}
-                  onClick={() => { uiStore.openSheet(item.sheet); setShowMenu(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">
-                  <item.icon size={16} /> {item.label}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="relative plus-menu-container">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-2 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+            >
+              <Plus size={18} />
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl z-[100] py-1"
+                style={{ boxShadow: 'var(--shadow-md)' }}>
+                {[
+                  { icon: MessageCircle, label: t('sidebar.newChat'), sheet: 'newChat' },
+                  { icon: Users, label: t('sidebar.createGroup'), sheet: 'createGroup' },
+                  { icon: UserPlus, label: t('sidebar.joinGroup'), sheet: 'joinGroup' },
+                ].map(item => (
+                  <button key={item.sheet}
+                    onClick={() => { uiStore.openSheet(item.sheet); setShowMenu(false) }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">
+                    <item.icon size={16} /> {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -90,26 +98,8 @@ export default function Sidebar() {
         <ConversationList />
       </div>
 
-      {/* Bottom toolbar */}
-      <div className="flex items-center justify-around h-12 border-t border-[var(--color-hairline)]">
-        {[
-          { icon: User, title: t('sidebar.contacts'), sheet: 'contacts' },
-          { icon: Bot, title: t('sidebar.agents'), sheet: 'agents' },
-          { icon: Smartphone, title: t('sidebar.sessions'), sheet: 'sessions' },
-          { icon: Settings, title: t('sidebar.settings'), sheet: 'settings' },
-        ].map(({ icon: Icon, title, sheet }) => (
-          <button key={sheet}
-            onClick={() => uiStore.openSheet(sheet)}
-            className="p-2 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
-            title={title}>
-            <Icon size={20} />
-          </button>
-        ))}
-      </div>
-
-      {/* Modals */}
       {/* Lazy-loaded sheets */}
-      {['newChat','createGroup','joinGroup','profile','settings','userSettings','agents','sessions','contacts'].map(name => (
+      {['newChat','createGroup','joinGroup','profile','settings','userSettings','agents','sessions','contacts','shortcuts'].map(name => (
         <SheetWrapper key={name} name={name} activeSheet={activeSheet} onClose={() => uiStore.closeSheet()} />
       ))}
     </>

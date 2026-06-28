@@ -3,6 +3,14 @@ import { api } from '@/services/api-client'
 import { wsClient } from '@/services/websocket-client'
 import type { User } from '@/types/user'
 
+export interface MFAChallenge {
+  userId: string
+  mfaToken: string
+  mfaType: number
+  maskedEmail?: string
+  code?: string
+}
+
 export interface AuthState {
   user: User | null
   token: string
@@ -12,6 +20,7 @@ export interface AuthState {
   isLoading: boolean
   error: string | null
   _initialized: boolean
+  mfaChallenge: MFAChallenge | null
 }
 
 function getInitialState(): AuthState {
@@ -43,6 +52,7 @@ function getInitialState(): AuthState {
     sessionId,
     isLoggedIn: !!token && !!user,
     isLoading: false,
+    mfaChallenge: null,
     error: null,
     _initialized: !token || !user, // 已登录则先显示页面，异步验证
   }
@@ -64,18 +74,32 @@ export const authStore = {
   },
 
   async login(account: string, password: string) {
-    state = { ...state, isLoading: true, error: null }; emit()
+    state = { ...state, isLoading: true, error: null, mfaChallenge: null }; emit()
     try {
-      // Server returns flat fields: { user_id, name, account, token, refresh_token, ... }
       const result = await api.request<Record<string, unknown>>(
         '/api/v1/users/login', { method: 'POST', body: { account, password } }
       )
+      if (result.mfa_required) {
+        state = {
+          ...state,
+          isLoading: false,
+          mfaChallenge: {
+            userId: result.user_id as string,
+            mfaToken: result.mfa_token as string,
+            mfaType: result.mfa_type as number,
+            maskedEmail: result.masked_email as string | undefined,
+            code: result.code as string | undefined,
+          },
+        }; emit()
+        return
+      }
       const user: User = {
         user_id: result.user_id as string,
         name: (result.name as string) || account,
         account: (result.account as string) || account,
         avatar: (result.avatar as string) || '',
         cover: (result.cover as string) || '',
+        email: (result.email as string) || '',
         type: (result.type as number) || 0,
         status: (result.status as number) || 1,
         uid: (result.uid as string) || '',
@@ -95,11 +119,47 @@ export const authStore = {
     }
   },
 
-  async register(account: string, name: string, password: string) {
+  async mfaVerify(code: string) {
+    const challenge = state.mfaChallenge
+    if (!challenge) throw new Error('No MFA challenge')
+    state = { ...state, isLoading: true, error: null }; emit()
+    try {
+      const result = await api.request<Record<string, unknown>>('/api/v1/auth/mfa/verify', {
+        method: 'POST',
+        body: { user_id: challenge.userId, mfa_token: challenge.mfaToken, code },
+      })
+      const user: User = {
+        user_id: result.user_id as string,
+        name: (result.name as string) || '',
+        account: (result.account as string) || '',
+        avatar: (result.avatar as string) || '',
+        cover: (result.cover as string) || '',
+        email: (result.email as string) || '',
+        type: (result.type as number) || 0,
+        status: (result.status as number) || 1,
+        uid: (result.uid as string) || '',
+        primary_color: (result.primary_color as string) || '#0F172A',
+        secondary_color: (result.secondary_color as string) || '#64748B',
+        wake_mode: (result.wake_mode as number) || 0,
+        api_key: (result.api_key as string) || '',
+        discoverable: (result.discoverable as boolean) ?? true,
+        allow_direct_chat: (result.allow_direct_chat as boolean) ?? true,
+        created_at: (result.created_at as number) || 0,
+      }
+      this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '')
+      wsClient.connect(result.token as string)
+      state = { ...state, mfaChallenge: null }; emit()
+    } catch (e: unknown) {
+      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : '验证失败' }; emit()
+      throw e
+    }
+  },
+
+  async register(account: string, name: string, password: string, email?: string) {
     state = { ...state, isLoading: true, error: null }; emit()
     try {
       const result = await api.request<Record<string, unknown>>(
-        '/api/v1/users/register', { method: 'POST', body: { account, name, password } }
+        '/api/v1/users/register', { method: 'POST', body: { account, name, password, email: email || '' } }
       )
       const user: User = {
         user_id: result.user_id as string,
@@ -107,6 +167,7 @@ export const authStore = {
         account: (result.account as string) || account,
         avatar: (result.avatar as string) || '',
         cover: (result.cover as string) || '',
+        email: (result.email as string) || (email || ''),
         type: (result.type as number) || 0,
         status: (result.status as number) || 1,
         uid: (result.uid as string) || '',
@@ -155,13 +216,14 @@ export const authStore = {
     }
   },
 
-  async updateProfile(data: { name?: string; avatar?: string; cover?: string; primary_color?: string; secondary_color?: string; discoverable?: boolean; allow_direct_chat?: boolean }) {
+  async updateProfile(data: { name?: string; avatar?: string; cover?: string; email?: string; primary_color?: string; secondary_color?: string; discoverable?: boolean; allow_direct_chat?: boolean }) {
     const cur = state.user
     // Always send all fields so server-side UPDATE doesn't wipe unchanged columns
     const body = {
       name: data.name ?? cur?.name ?? '',
       avatar: data.avatar ?? cur?.avatar ?? '',
       cover: data.cover ?? cur?.cover ?? '',
+      email: data.email ?? cur?.email ?? '',
       primary_color: data.primary_color ?? cur?.primary_color ?? '',
       secondary_color: data.secondary_color ?? cur?.secondary_color ?? '',
       discoverable: data.discoverable ?? cur?.discoverable ?? true,

@@ -171,7 +171,7 @@ func TestWSAuthMiddleware_Success(t *testing.T) {
 		},
 	}
 
-	mw := WSAuthMiddleware(svc)
+	mw := WSAuthMiddleware(svc, nil)
 	ctx, err := mw(context.Background(), "wstoken")
 	if err != nil {
 		t.Fatalf("WSAuthMiddleware error: %v", err)
@@ -189,7 +189,7 @@ func TestWSAuthMiddleware_Failure(t *testing.T) {
 		},
 	}
 
-	mw := WSAuthMiddleware(svc)
+	mw := WSAuthMiddleware(svc, nil)
 	_, err := mw(context.Background(), "bad-token")
 	if err == nil {
 		t.Fatal("expected error for bad token")

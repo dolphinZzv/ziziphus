@@ -27,8 +27,11 @@ async function request<T>(
   }
 
   const token = getItem<string>('token', '')
+  const lang = getItem<string>('language', 'auto')
   const reqHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers }
   if (token) reqHeaders['Authorization'] = `Bearer ${token}`
+  // Send user's language preference so server can render i18n messages
+  if (lang && lang !== 'auto') reqHeaders['X-Language'] = lang
 
   let resp: Response
   let lastErr: APIError | null = null
@@ -41,13 +44,13 @@ async function request<T>(
       })
             break
     } catch {
-      lastErr = new APIError(-1, '网络连接失败，请检查服务器地址')
+      lastErr = new APIError(-1, 'Network request failed')
             if (attempt < maxAttempts - 1) {
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1))) // exponential backoff
       }
           }
   }
-  if (!resp!) throw lastErr || new APIError(-1, '请求失败')
+  if (!resp!) throw lastErr || new APIError(-1, 'Request failed')
 
   if (resp.status === 401) {
     throw new APIError(401, 'Unauthorized, please login again')
@@ -60,13 +63,13 @@ async function request<T>(
     json = JSON.parse(text)
   } catch {
     if (!resp.ok) {
-      throw new APIError(resp.status, `服务器错误 (${resp.status})`)
+      throw new APIError(resp.status, `Server error (${resp.status})`)
     }
-    throw new APIError(-1, '服务器返回异常数据')
+    throw new APIError(-1, 'Invalid server response')
   }
 
   if (json.code !== 0) {
-    throw new APIError(json.code, json.msg || '请求失败')
+    throw new APIError(json.code, json.msg || 'Request failed')
   }
   return json.data as T
 }
@@ -75,13 +78,17 @@ export function uploadFile(
   fileData: Blob,
   fileName: string,
   fileType: number,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  convId?: string,
+  folderId?: number
 ): Promise<{ file_id: string; url: string }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     const formData = new FormData()
     formData.append('file', fileData, fileName)
     formData.append('file_type', String(fileType))
+    if (convId) formData.append('conv_id', convId)
+    if (folderId) formData.append('folder_id', String(folderId))
 
     const token = getItem<string>('token', '')
     xhr.open('POST', getBaseURL() + '/api/v1/files/upload')

@@ -341,6 +341,44 @@ func TestCheck_MultipleUsersRoundRobin(t *testing.T) {
 	}
 }
 
+func TestCleanup_RemovesStaleEntries(t *testing.T) {
+	rl := NewRateLimiter(10, 5, 1024)
+	ctx := context.Background()
+
+	rl.Check(ctx, "user_stale")
+	rl.Check(ctx, "user_fresh")
+
+	rl.mu.Lock()
+	rl.userBuckets["user_stale"] = &bucket{
+		tokens:    5,
+		lastCheck: time.Now().Add(-20 * time.Minute),
+	}
+	rl.userBuckets["user_fresh"] = &bucket{
+		tokens:    5,
+		lastCheck: time.Now().Add(-1 * time.Minute),
+	}
+	rl.mu.Unlock()
+
+	rl.cleanup()
+
+	rl.mu.Lock()
+	_, staleExists := rl.userBuckets["user_stale"]
+	_, freshExists := rl.userBuckets["user_fresh"]
+	rl.mu.Unlock()
+
+	if staleExists {
+		t.Error("stale user should have been removed")
+	}
+	if !freshExists {
+		t.Error("fresh user should still be present")
+	}
+}
+
+func TestCleanup_EmptyBuckets_NoPanic(t *testing.T) {
+	rl := NewRateLimiter(10, 5, 1024)
+	rl.cleanup()
+}
+
 func TestCheck_ContextPassed(t *testing.T) {
 	// The context parameter is accepted for API consistency.
 	// RateLimiter does not use it for cancellation, but we verify

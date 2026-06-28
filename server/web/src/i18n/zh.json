@@ -18,7 +18,16 @@
     "passwordMismatch": "两次密码不一致",
     "loggingIn": "登录中...",
     "registering": "注册中...",
-    "fieldRequired": "请填写所有字段"
+    "fieldRequired": "请填写所有字段",
+    "email": "邮箱（选填）",
+    "mfaTitle": "请输入验证码",
+    "mfaCode": "输入 6 位验证码",
+    "verify": "验证",
+    "verifying": "验证中...",
+    "mfaTOTPLabel": "TOTP 认证",
+    "mfaEmailLabel": "邮箱认证",
+    "mfaTOTPHint": "打开你的 Authenticator 应用输入验证码",
+    "mfaEmailHint": "验证码已发送到你的邮箱，请查收"
   },
   "chat": {
     "inputPlaceholder": "输入消息...",
@@ -46,7 +55,13 @@
     "detail": "会话详情",
     "clickCopyId": "点击复制会话 ID",
     "typingUser": "{{name}} 正在输入...",
-    "typingMulti": "{{count}} 人正在输入..."
+    "typingMulti": "{{count}} 人正在输入...",
+    "edit": "编辑",
+    "recall": "撤回",
+    "recallConfirm": "确定撤回该消息？",
+    "recalled": "消息已撤回",
+    "edited": "(已编辑)",
+    "editHint": "Esc 取消 · Enter 保存"
   },
   "conversation": {
     "title": "消息",
@@ -64,6 +79,7 @@
     "members": "成员",
     "you": "你",
     "mentionYou": "@了你",
+    "files": "文件",
     "friendRequest": "好友申请",
     "form": "[表单]",
     "response": "[回复]",
@@ -77,7 +93,8 @@
     "p2pDetail": "聊天详情",
     "addFriend": "添加为好友",
     "alreadyFriends": "已是好友",
-    "requestSent": "好友申请已发送"
+    "requestSent": "好友申请已发送",
+    "leaveConfirm": "确定离开该会话？"
   },
   "group": {
     "detail": "群组信息",
@@ -86,7 +103,7 @@
     "addMember": "添加成员",
     "removeMember": "移出该成员",
     "removeConfirm": "移出该成员？",
-    "leave": "退出群组",
+    "leave": "退出会话",
     "leaveConfirm": "确定退出该群组？",
     "joinRequests": "入群申请",
     "requests": "申请",
@@ -193,7 +210,15 @@
     "sessionID": "会话 ID",
     "appInfo": "应用信息",
     "themeAuto": "自动",
-    "languageAuto": "自动"
+    "languageAuto": "自动",
+    "dangerZone": "危险操作",
+    "deleteAccount": "注销账号",
+    "deleteAccountConfirm": "确定注销账号？此操作不可恢复，所有数据将被清除。",
+    "deleteAccountConfirm2": "再次确认：注销后将清除你的联系人、消息记录、会话等所有信息。",
+    "notifications": "通知",
+    "notifyEnable": "开启桌面通知",
+    "notifyEnabled": "桌面通知已开启",
+    "notifyGranted": "桌面通知权限已授予"
   },
   "agent": {
     "title": "Agent 管理",
@@ -279,5 +304,20 @@
     "minuteAgo": "{{n}}分钟前",
     "hourAgo": "{{n}}小时前",
     "dayAgo": "{{n}}天前"
+  },
+  "shortcuts": {
+    "title": "快捷键",
+    "navigateConvs": "切换会话",
+    "openConv": "打开会话",
+    "newLine": "换行",
+    "indent": "缩进",
+    "showHelp": "显示快捷键帮助",
+    "tip": "按 ? 随时查看快捷键"
+  },
+  "sys": {
+    "sys.group_created": "%s 创建了群「%s」",
+    "sys.member_added": "%s 被加入群",
+    "sys.member_removed": "%s 被移出群",
+    "sys.member_left": "%s 退出了群"
   }
 }

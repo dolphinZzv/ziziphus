@@ -17,6 +17,8 @@ const (
 	SessionRecover    MessageType = 43
 	SessionRecoverAck MessageType = 44
 	Typing            MessageType = 51
+	MsgEdit           MessageType = 13
+	MsgRecall         MessageType = 14
 	Ping              MessageType = 61
 	Pong              MessageType = 62
 	Error             MessageType = 71

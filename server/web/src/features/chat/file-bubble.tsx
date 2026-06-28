@@ -28,8 +28,8 @@ export default function FileBubble({ body }: Props) {
       onClick={handleDownload}
       className="flex items-center gap-3 p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors min-w-[200px]"
     >
-      <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-        <FileText size={20} />
+      <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+        <FileText size={22} />
       </div>
       <div className="flex-1 min-w-0 text-left">
         <div className="text-sm truncate">{name}</div>

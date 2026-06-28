@@ -27,7 +27,7 @@ export default function ImageBubble({ body, msgId }: Props) {
 
   if (error) {
     return (
-      <div className="w-[200px] h-[150px] bg-[var(--color-surface-soft)] rounded-lg flex items-center justify-center text-[var(--color-muted)]">
+      <div className="w-[200px] h-[150px] bg-[var(--color-surface-soft)] rounded-xl flex items-center justify-center text-[var(--color-muted)]">
         <Image size={24} />
       </div>
     )
@@ -37,14 +37,14 @@ export default function ImageBubble({ body, msgId }: Props) {
     <>
       <div className="relative max-w-[400px]">
         {!loaded && (
-          <div className="w-[200px] h-[150px] bg-[var(--color-surface-soft)] rounded-lg animate-pulse flex items-center justify-center">
+          <div className="w-[200px] h-[150px] bg-[var(--color-surface-soft)] rounded-xl animate-pulse flex items-center justify-center">
             <Image size={24} className="text-[var(--color-muted)]" />
           </div>
         )}
         <img
           src={thumbUrl(url)}
           alt=""
-          className={cn('rounded-lg max-w-full max-h-[360px] object-cover cursor-pointer hover:opacity-90 transition-opacity', !loaded && 'hidden')}
+          className={cn('rounded-xl max-w-full max-h-[360px] object-cover cursor-pointer hover:opacity-90 transition-opacity', !loaded && 'hidden')}
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
           onClick={() => setViewer(true)}

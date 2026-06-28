@@ -64,15 +64,23 @@ func AuthMiddlewareWithAPIKey(service tokenParser, keyLookup apiKeyLookup) func(
 	}
 }
 
-func WSAuthMiddleware(service tokenParser) func(ctx context.Context, token string) (context.Context, error) {
+func WSAuthMiddleware(service tokenParser, keyLookup apiKeyLookup) func(ctx context.Context, token string) (context.Context, error) {
 	return func(ctx context.Context, token string) (context.Context, error) {
 		claims, err := service.ParseToken(token)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			return context.WithValue(ctx, CtxKeyUserID, claims.UserID), nil
 		}
-		return context.WithValue(ctx, CtxKeyUserID, claims.UserID), nil
+		// JWT failed, try API key lookup
+		if keyLookup != nil && strings.HasPrefix(token, "sk-") {
+			user, lookupErr := keyLookup.GetByAPIKey(ctx, token)
+			if lookupErr == nil && user != nil {
+				return context.WithValue(ctx, CtxKeyUserID, user.ID), nil
+			}
+		}
+		return nil, err
 	}
 }
+
 
 func extractBearerToken(r *http.Request) string {
 	auth := r.Header.Get("Authorization")

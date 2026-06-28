@@ -55,27 +55,27 @@ export default function HistoryView({ convId, onClose }: Props) {
     }
   }, [keyword, messages, loadingMore, hasMore, loading])
 
-  const inputClass = 'w-full h-[42px] px-3.5 rounded-lg bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'
+  const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-[480px] max-h-[560px] bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg p-6 flex flex-col"
+      <div className="w-[480px] max-h-[560px] bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6 flex flex-col"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-headline text-lg font-semibold text-[var(--color-ink)]">消息记录</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
         </div>
 
         <div className="flex gap-2 mb-4">
           <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); search() } }}
             placeholder="搜索关键词..." className={`${inputClass} flex-1`} />
-          <button onClick={search} className="h-[42px] px-4 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white transition-colors"><Search size={16} /></button>
+          <button onClick={search} className="h-[42px] px-4 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white transition-colors"><Search size={16} /></button>
         </div>
 
         <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto space-y-1">
           {loading && <p className="text-xs text-[var(--color-muted)] text-center py-4"><Loader2 size={14} className="inline animate-spin mr-1" />加载中...</p>}
           {messages.map(msg => (
-            <div key={msg.msg_id} className="px-3 py-2.5 rounded-lg hover:bg-[var(--color-surface-soft)]">
+            <div key={msg.msg_id} className="px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-soft)]">
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-xs font-medium text-[var(--color-ink)]">{msg.sender_name || msg.sender_id}</span>
                 <span className="text-[10px] text-[var(--color-muted)]">{msg.timestamp ? format(new Date(msg.timestamp), 'MM/dd HH:mm') : ''}</span>

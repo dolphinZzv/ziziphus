@@ -72,6 +72,22 @@ func NewConvHandler(convMgr convManager, convRepo convDataRepo, seqCache convSeq
 	return &ConvHandler{convMgr: convMgr, convRepo: convRepo, seqCache: seqCache, readMarker: readMarker, sysMsg: sysMsg, userGetter: userGetter, idGen: idGen}
 }
 
+// sendSysMsgWithName resolves a user name and sends a formatted system message.
+func (h *ConvHandler) sendSysMsgWithName(ctx context.Context, convID, key, userID string, extra ...string) {
+	name := userID
+	if u, err := h.userGetter.GetByID(ctx, userID); err == nil && u.Name != "" {
+		name = u.Name
+	}
+	args := []interface{}{name}
+	for _, e := range extra {
+		args = append(args, e)
+	}
+	body := i18n.T(ctx, key, args...)
+	h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
+}
+
+
+
 type createGroupReq struct {
 	Name      string   `json:"name"`
 	MemberIDs []string `json:"member_ids"`
@@ -297,7 +313,7 @@ func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.sysMsg != nil {
-		h.sysMsg.SendSystemMessage(r.Context(), conv.ConvID, i18n.T(r.Context(), "sys.group_created", userID, conv.Name), userID)
+		h.sendSysMsgWithName(r.Context(), conv.ConvID, "sys.group_created", userID, conv.Name)
 	}
 
 	JSON(w, map[string]interface{}{
@@ -399,7 +415,7 @@ func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.sysMsg != nil {
 		for _, mid := range succeeded {
-			h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_added", mid), userID)
+			h.sendSysMsgWithName(r.Context(), convID, "sys.member_added", mid)
 		}
 	}
 	if len(succeeded) == 0 && firstErr != nil {
@@ -493,7 +509,7 @@ func (h *ConvHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.sysMsg != nil {
-		h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_removed", targetID), userID)
+		h.sendSysMsgWithName(r.Context(), convID, "sys.member_removed", targetID)
 	}
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }
@@ -507,7 +523,7 @@ func (h *ConvHandler) Leave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.sysMsg != nil {
-		h.sysMsg.SendSystemMessage(r.Context(), convID, i18n.T(r.Context(), "sys.member_left", userID), userID)
+		h.sendSysMsgWithName(r.Context(), convID, "sys.member_left", userID)
 	}
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }

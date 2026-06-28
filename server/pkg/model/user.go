@@ -27,6 +27,7 @@ type User struct {
 	Account        string         `json:"account"`
 	Type           UserType       `json:"type"`
 	Name           string         `json:"name"`
+	Email          string         `json:"email,omitempty"`
 	Avatar         string         `json:"avatar"`
 	Cover          string         `json:"cover,omitempty"`
 	Status         UserStatus     `json:"status"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -153,6 +154,37 @@ func (m *mockReadReceiptHandler) MarkRead(ctx context.Context, userID, convID st
 }
 
 // ---------------------------------------------------------------------------
+// Mock: msgEditor
+// ---------------------------------------------------------------------------
+
+type mockMsgEditor struct {
+	getFunc        func(ctx context.Context, msgID int64) (*model.Message, error)
+	updateBodyFunc func(ctx context.Context, msgID int64, newBody string) error
+	recallFunc     func(ctx context.Context, msgID int64) error
+}
+
+func (m *mockMsgEditor) Get(ctx context.Context, msgID int64) (*model.Message, error) {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, msgID)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+func (m *mockMsgEditor) UpdateBody(ctx context.Context, msgID int64, newBody string) error {
+	if m.updateBodyFunc != nil {
+		return m.updateBodyFunc(ctx, msgID, newBody)
+	}
+	return nil
+}
+
+func (m *mockMsgEditor) Recall(ctx context.Context, msgID int64) error {
+	if m.recallFunc != nil {
+		return m.recallFunc(ctx, msgID)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -202,7 +234,12 @@ func newHandler(
 	ingest messageIngester,
 	sync syncHandler,
 	receipt readReceiptHandler,
+	msgRepo ...msgEditor,
 ) *WSHandler {
+	mr := msgEditor(&mockMsgEditor{})
+	if len(msgRepo) > 0 {
+		mr = msgRepo[0]
+	}
 	return NewWSHandler(
 		authMW,
 		sessMgr,
@@ -210,6 +247,7 @@ func newHandler(
 		ingest,
 		sync,
 		receipt,
+		mr,
 	)
 }
 
@@ -800,6 +838,7 @@ func TestServeHTTP_FullFlow(t *testing.T) {
 			},
 		},
 		&mockReadReceiptHandler{},
+		&mockMsgEditor{},
 	)
 
 	server := httptest.NewServer(h)
@@ -890,6 +929,7 @@ func TestServeHTTP_InvalidToken(t *testing.T) {
 		&mockMessageIngester{},
 		&mockSyncHandler{},
 		&mockReadReceiptHandler{},
+		&mockMsgEditor{},
 	)
 
 	server := httptest.NewServer(h)

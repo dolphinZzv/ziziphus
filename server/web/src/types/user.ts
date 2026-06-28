@@ -20,6 +20,7 @@ export interface User {
   account: string
   type: UserType
   name: string
+  email?: string
   avatar: string
   cover?: string
   status: UserStatus

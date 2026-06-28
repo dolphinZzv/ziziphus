@@ -64,6 +64,11 @@ var Messages = map[string]map[Lang]string{
 	"contact_request.friend_established": {LangZH: "你们已成为好友，可以开始聊天了", LangEN: "You are now friends. Start chatting!"},
 	"contact_request.already_handled":    {LangZH: "该申请已被处理", LangEN: "This request has already been handled"},
 
+	// ===== MFA =====
+	"err.mfa_email_required": {LangZH: "开启邮箱认证需要设置邮箱", LangEN: "Email is required to enable email 2FA"},
+	"err.mfa_invalid_code":     {LangZH: "验证码无效", LangEN: "Invalid verification code"},
+	"err.mfa_not_found":        {LangZH: "未设置 MFA", LangEN: "MFA not set up"},
+
 	// ===== Friend request errors =====
 	"err.contact_request_self":             {LangZH: "不能给自己发好友申请", LangEN: "Cannot send friend request to yourself"},
 	"err.contact_request_duplicate":        {LangZH: "已有待处理的好友申请", LangEN: "A pending friend request already exists"},

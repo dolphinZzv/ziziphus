@@ -5,8 +5,9 @@ const AUTH_INIT = `
   localStorage.setItem('panda_ai_user', JSON.stringify({
     user_id: 'user_001', account: 'testuser', name: '测试用户', avatar: '',
     type: 0, status: 1, uid: '', primary_color: '#0F172A', secondary_color: '#64748B',
-    wake_mode: 0, api_key: '', created_at: 1700000000,
+    wake_mode: 0, api_key: '', discoverable: true, allow_direct_chat: true, created_at: 1700000000,
   }));
+  localStorage.setItem('panda_ai_language', JSON.stringify('zh'));
 `
 
 test.describe('Chat UI', () => {
@@ -17,13 +18,11 @@ test.describe('Chat UI', () => {
   })
 
   test('chat toolbar shows conversation id', async ({ page }) => {
-    await expect(page.locator('span').filter({ hasText: 'conv_test_001' }).first()).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('button').filter({ hasText: 'conv_test_001' }).first()).toBeVisible({ timeout: 5000 })
   })
 
-  test('input bar renders with all buttons', async ({ page }) => {
-    await expect(page.getByPlaceholder('输入消息...')).toBeVisible({ timeout: 5000 })
+  test('input bar renders with send button', async ({ page }) => {
     await expect(page.locator('button:has(svg.lucide-paperclip)')).toBeVisible()
-    await expect(page.locator('button:has(svg.lucide-at-sign)')).toBeVisible()
     await expect(page.locator('button:has(svg.lucide-send)')).toBeVisible()
   })
 
@@ -34,7 +33,8 @@ test.describe('Chat UI', () => {
   })
 
   test('send button enabled with text', async ({ page }) => {
-    const input = page.getByPlaceholder('输入消息...')
+    const input = page.locator('textarea').first()
+    await expect(input).toBeVisible({ timeout: 5000 })
     await input.fill('Hello')
     const sendBtn = page.locator('button:has(svg.lucide-send)')
     await expect(sendBtn).not.toBeDisabled()

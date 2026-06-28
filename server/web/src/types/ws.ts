@@ -5,6 +5,8 @@ export enum MessageType {
   MsgSendAck = 2,
   MsgPush = 11,
   MsgReceived = 12,
+  MsgEdit = 13,
+  MsgRecall = 14,
   SyncReq = 21,
   SyncRes = 22,
   MsgReadNotify = 32,
@@ -16,6 +18,34 @@ export enum MessageType {
   Ping = 61,
   Pong = 62,
   Error = 71,
+}
+
+export interface MsgEditPayload {
+  conv_id: string
+  msg_id: number
+  new_body: string
+}
+
+export interface MsgRecallPayload {
+  conv_id: string
+  msg_id: number
+}
+
+export interface MsgEditPushPayload {
+  conv_id: string
+  msg_id: number
+  sender_id: string
+  new_body: string
+  edited_at: number
+  timestamp: number
+}
+
+export interface MsgRecallPushPayload {
+  conv_id: string
+  msg_id: number
+  sender_id: string
+  recalled_at: number
+  timestamp: number
 }
 
 export interface WSFrame {

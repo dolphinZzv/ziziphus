@@ -45,7 +45,8 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Get("/api/v1/version", h.GetVersion)
 		r.Get("/health", h.Health)
 		r.Get("/metrics", promhttp.Handler().ServeHTTP)
-	})
+			r.Post("/api/v1/auth/mfa/verify", h.User.MFAVerifyLogin)
+})
 
 	// Authenticated routes
 	r.Group(func(r chi.Router) {
@@ -54,6 +55,12 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Get("/api/v1/users/{user_id}", h.User.GetUser)
 		r.Post("/api/v1/users/batch", h.User.BatchGet)
 		r.Put("/api/v1/users/me", h.User.UpdateMe)
+	r.Get("/api/v1/users/me/mfa", h.User.GetMFA)
+	r.Post("/api/v1/users/me/mfa/setup", h.User.SetupMFA)
+	r.Post("/api/v1/users/me/mfa/verify", h.User.VerifyMFA)
+	r.Post("/api/v1/users/me/mfa/disable", h.User.DisableMFA)
+r.Post("/api/v1/users/me/email/send-code", h.User.SendEmailCode)
+	r.Post("/api/v1/users/me/email/confirm", h.User.ConfirmEmail)
 		r.Get("/api/v1/users/search", h.User.Search)
 		r.Get("/api/v1/users/me/agents", h.User.ListMyAgents)
 		r.Post("/api/v1/users/me/agents", h.User.CreateAgent)
@@ -79,6 +86,15 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 			r.Post("/api/v1/conversations/{conv_id}/pin", h.Conversation.Pin)
 			r.Post("/api/v1/conversations/{conv_id}/unpin", h.Conversation.Unpin)
 			r.Post("/api/v1/conversations/{conv_id}/clone", h.Conversation.Clone)
+		r.Get("/api/v1/conversations/{conv_id}/files", h.File.ListConvFiles)
+		r.Delete("/api/v1/conversations/{conv_id}/files/{file_id}", h.File.DeleteConvFile)
+		r.Post("/api/v1/conversations/{conv_id}/folders", h.File.CreateFolder)
+		r.Get("/api/v1/conversations/{conv_id}/folders", h.File.ListFolders)
+		r.Delete("/api/v1/conversations/{conv_id}/folders/{folder_id}", h.File.DeleteFolder)
+		r.Put("/api/v1/conversations/{conv_id}/files/{file_id}/move", h.File.MoveFile)
+		r.Put("/api/v1/conversations/{conv_id}/folders/{folder_id}/move", h.File.MoveFolder)
+		r.Put("/api/v1/conversations/{conv_id}/folders/{folder_id}/rename", h.File.RenameFolder)
+		r.Get("/api/v1/conversations/{conv_id}/folders/{folder_id}/files", h.File.ListFolderFiles)
 		r.Get("/api/v1/conversations/unread/total", h.Conversation.UnreadTotal)
 
 		r.Get("/api/v1/conversations/{conv_id}/messages", h.Message.GetHistory)
