@@ -12,12 +12,15 @@ import { ContentType } from '@/types/message'
 import { avatarUrl } from '@/lib/file'
 import MessageList from './message-list'
 import InputBar from './input-bar'
-import DetailBar from './detail-bar'
+import P2PDetail from './p2p-detail'
+import GroupDetail from '@/features/group/group-detail'
 import HistoryView from '@/features/history/history-view'
-import { MoreVertical, Clock, Copy, Check, Info } from 'lucide-react'
+import { MoreVertical, Clock, Copy, Check, Info, Users } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function ChatView() {
   const { convId } = useParams<{ convId: string }>()
+  const { t } = useTranslation()
   const rawMessages = useSyncExternalStore(chatStore.subscribe, () => chatStore.getMessages(convId || ''))
   // Filter: remove agent timeline append-only messages that were merged into parents
   const parentMsgIds = new Set<number>()
@@ -25,8 +28,8 @@ export default function ChatView() {
     if (m.msg_id > 0) parentMsgIds.add(m.msg_id)
     if (m.content_type === ContentType.AgentTimeline) {
       try {
-        const t = JSON.parse(m.body)
-        if (t.parentMsgID > 0 && parentMsgIds.has(t.parentMsgID)) return false
+        const tm = JSON.parse(m.body)
+        if (tm.parentMsgID > 0 && parentMsgIds.has(tm.parentMsgID)) return false
       } catch {}
     }
     return true
@@ -71,7 +74,8 @@ export default function ChatView() {
 
   const conv = conversations.find(c => c.conv_id === convId)
   const isGroup = conv?.type === ConvType.Group
-  const displayName = conv?.name || convId
+  const isSystem = conv?.type === ConvType.System
+  const displayName = isSystem ? t('conversation.systemMessage') : (conv?.name || convId)
   const displayAvatar = conv?.avatar || ''
   const initials = displayName.charAt(0).toUpperCase()
 
@@ -80,28 +84,39 @@ export default function ChatView() {
       {/* Chat toolbar */}
       <div className="h-12 flex items-center px-4 border-b border-[var(--color-hairline)] flex-shrink-0 bg-[var(--color-surface-card)] gap-3">
         {/* Avatar */}
-        {displayAvatar ? (
-          <img src={avatarUrl(displayAvatar)} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-        ) : (
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
-            style={{ background: isGroup
-              ? 'linear-gradient(135deg, var(--color-accent), #34D399)'
-              : 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
-            {initials}
-          </div>
-        )}
+        <div className="relative flex-shrink-0">
+          {displayAvatar ? (
+            <img src={avatarUrl(displayAvatar)} alt="" className="w-7 h-7 rounded-full object-cover" />
+          ) : (
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+              style={{ background: isGroup
+                ? 'linear-gradient(135deg, var(--color-accent), #34D399)'
+                : 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
+              {initials}
+            </div>
+          )}
+          {isGroup && (
+            <div className="absolute -bottom-1 -right-1 w-[14px] h-[14px] rounded-full bg-[var(--color-surface-card)] flex items-center justify-center">
+              <Users size={8} className="text-[var(--color-muted)]" />
+            </div>
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <span className="font-headline text-sm font-semibold text-[var(--color-ink)] truncate block">
             {displayName}
           </span>
+          {isSystem ? (
+            <div className="h-[15px]" />
+          ) : (
           <button
             onClick={() => { navigator.clipboard.writeText(convId); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
             className="text-[10px] text-[var(--color-muted-soft)] hover:text-[var(--color-ink)] font-mono truncate flex items-center gap-1 transition-colors cursor-pointer"
-            title="点击复制会话 ID"
+            title={t('chat.clickCopyId')}
           >
             {convId}
             {copied ? <Check size={10} className="text-[var(--success)]" /> : <Copy size={10} />}
           </button>
+          )}
         </div>
         <div className="relative">
           <button onClick={() => setShowMenu(!showMenu)}
@@ -113,13 +128,15 @@ export default function ChatView() {
               <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
               <div className="absolute right-0 top-full mt-1 w-40 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-20 py-1"
                 style={{ boxShadow: 'var(--shadow-md)' }}>
+                {!isSystem && (
+                  <button onClick={() => { setShowDetail(true); setShowMenu(false) }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                    <Info size={14} /> {t('chat.detail')}
+                  </button>
+                )}
                 <button onClick={() => { setShowHistory(true); setShowMenu(false) }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
-                  <Clock size={14} /> 历史消息
-                </button>
-                <button onClick={() => { setShowDetail(true); setShowMenu(false) }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
-                  <Info size={14} /> 会话详情
+                  <Clock size={14} /> {t('chat.history')}
                 </button>
               </div>
             </>
@@ -127,9 +144,12 @@ export default function ChatView() {
         </div>
       </div>
 
-      {/* Detail bar — inline */}
-      {showDetail && (
-        <DetailBar convId={convId} onClose={() => setShowDetail(false)} />
+      {/* Detail dialog */}
+      {showDetail && isGroup && (
+        <GroupDetail convId={convId} onClose={() => setShowDetail(false)} />
+      )}
+      {showDetail && !isGroup && (
+        <P2PDetail convId={convId} onClose={() => setShowDetail(false)} />
       )}
 
       {/* Group notice banner */}
@@ -145,7 +165,7 @@ export default function ChatView() {
         <MessageList convId={convId} messages={messages} currentUserId={user?.user_id || ''} />
       </div>
 
-      <InputBar convId={convId} />
+      {!isSystem && <InputBar convId={convId} />}
 
       {/* History modal */}
       {showHistory && <HistoryView convId={convId} onClose={() => setShowHistory(false)} />}

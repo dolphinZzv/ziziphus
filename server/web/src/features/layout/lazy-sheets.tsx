@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Lazy-load all modal/sheet components for code splitting
 const NewChatDialog = lazy(() => import('@/features/conversation-list/new-chat-dialog'))
@@ -6,15 +7,19 @@ const CreateGroupDialog = lazy(() => import('@/features/conversation-list/create
 const JoinGroupDialog = lazy(() => import('@/features/conversation-list/join-group-dialog'))
 const ProfileView = lazy(() => import('@/features/profile/profile-view'))
 const SettingsView = lazy(() => import('@/features/settings/settings-view'))
+const PrivacyView = lazy(() => import('@/features/settings/privacy-view'))
 const AgentList = lazy(() => import('@/features/agents/agent-list'))
 const SessionList = lazy(() => import('@/features/sessions/session-list'))
 const ContactList = lazy(() => import('@/features/contacts/contact-list'))
 
-const SheetFallback = () => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-    <div className="p-6 text-[var(--color-muted)]">加载中...</div>
-  </div>
-)
+const SheetFallback = () => {
+  const { t } = useTranslation()
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="p-6 text-[var(--color-muted)]">{t('common.loading')}</div>
+    </div>
+  )
+}
 
 interface SheetWrapperProps {
   name: string
@@ -35,6 +40,7 @@ export function SheetWrapper({ name, activeSheet, onClose }: SheetWrapperProps) 
       {name === 'agents' && <AgentList onClose={onClose} />}
       {name === 'sessions' && <SessionList onClose={onClose} />}
       {name === 'contacts' && <ContactList onClose={onClose} />}
+      {name === 'userSettings' && <PrivacyView onClose={onClose} />}
     </Suspense>
   )
 }

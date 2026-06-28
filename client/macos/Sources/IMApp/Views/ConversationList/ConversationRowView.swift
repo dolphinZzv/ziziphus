@@ -25,7 +25,7 @@ struct ConversationRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Text(conv.name)
+                    Text(conv.type == .system ? "系统消息" : conv.name)
                         .font(.system(size: AppleDesign.Typography.captionSize, weight: .semibold))
                         .foregroundColor(AppleDesign.Colors.ink)
                         .lineLimit(1)
@@ -62,6 +62,16 @@ struct ConversationRowView: View {
                             LastImageThumbnailView(url: url)
                         } else if last.contentType == 9 {
                             Text(agentPreviewBody(last.body))
+                                .font(.system(size: AppleDesign.Typography.captionSize))
+                                .foregroundColor(AppleDesign.Colors.inkMuted)
+                                .lineLimit(1)
+                        } else if last.contentType == 10 {
+                            Text(formPreviewBody(last.body))
+                                .font(.system(size: AppleDesign.Typography.captionSize))
+                                .foregroundColor(AppleDesign.Colors.inkMuted)
+                                .lineLimit(1)
+                        } else if last.contentType == 11 {
+                            Text(formResponsePreviewBody(last.body))
                                 .font(.system(size: AppleDesign.Typography.captionSize))
                                 .foregroundColor(AppleDesign.Colors.inkMuted)
                                 .lineLimit(1)
@@ -121,6 +131,22 @@ struct ConversationRowView: View {
             }
         }
         return loc("agent.preview")
+    }
+
+    private func formPreviewBody(_ body: String) -> String {
+        guard let data = body.data(using: .utf8),
+              let form = try? JSONDecoder().decode(FormDefinitionBody.self, from: data) else { return "[表单]" }
+        if form.type == "contact_request", let name = form.fromUserName {
+            return "好友申请 · \(name)"
+        }
+        return form.title
+    }
+
+    private func formResponsePreviewBody(_ body: String) -> String {
+        guard let data = body.data(using: .utf8),
+              let resp = try? JSONDecoder().decode(FormResponseBody.self, from: data) else { return "[回复]" }
+        let name = resp.responderName
+        return resp.action == "approve" ? "已通过 · \(name)" : "已拒绝 · \(name)"
     }
 
     private func formatTime(_ timestamp: Int64) -> String {

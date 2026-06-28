@@ -11,6 +11,8 @@ public enum ContentType: Int, Codable, Sendable {
     case edit = 7
     case custom = 8
     case agentTimeline = 9
+    case form = 10
+    case formResponse = 11
 }
 
 public enum MsgStatus: Int, Codable, Sendable {

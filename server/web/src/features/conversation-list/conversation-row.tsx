@@ -5,11 +5,13 @@ import { ConvType, type ConvListItem } from '@/types/conversation'
 import { UserType } from '@/types/user'
 import { ContentType } from '@/types/message'
 import { conversationStore } from '@/stores/conversation-store'
-import { BellOff, Cpu, Pin, PinOff } from 'lucide-react'
+import { BellOff, Cpu, Pin, PinOff, Users } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface Props { conversation: ConvListItem; isSelected: boolean; onClick: () => void }
 
 export default function ConversationRow({ conversation, isSelected, onClick }: Props) {
+  const { t } = useTranslation()
   const { name, avatar, type, last_message, last_msg_at, unread_count, mention_me, mute, partner_type, pinned } = conversation
 
   const handlePin = (e: React.MouseEvent) => {
@@ -23,25 +25,36 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
     if (lm?.body === '') return ''
     switch (lm?.content_type) {
       case ContentType.Text: return lm.body
-      case ContentType.Image: return '[图片]'
-      case ContentType.File: return '[文件]'
+      case ContentType.Image: return t('chat.image')
+      case ContentType.File: return t('chat.file')
       case ContentType.AgentTimeline:
-        try { const p = JSON.parse(lm.body); return p.entries?.at(-1)?.content || p.entries?.at(-1)?.title || '[Agent]' } catch { return '[Agent]' }
+        try { const p = JSON.parse(lm.body); return p.entries?.at(-1)?.content || p.entries?.at(-1)?.title || t('conversation.agentResult') } catch { return t('conversation.agentResult') }
       case ContentType.System: return lm.body
+      case ContentType.Form:
+        try { const f = JSON.parse(lm.body); if (f.type === 'contact_request' && f.from_user_name) return `${t('conversation.friendRequest')} · ${f.from_user_name}`; return t('conversation.form') } catch { return '[表单]' }
+      case ContentType.FormResponse:
+        try { const r = JSON.parse(lm.body); const name = r.responder_name || ''; return r.action === 'approve' ? `${t('conversation.approved')}${name ? ' · ' + name : ''}` : `${t('conversation.rejected')}${name ? ' · ' + name : ''}` } catch { return t('conversation.response') }
+      case ContentType.Audio: return t('chat.audio')
+      case ContentType.Video: return t('chat.video')
       default: return lm?.body || ''
     }
   }
 
   const isGroup = type === ConvType.Group
+  const isSystem = type === ConvType.System
+  const displayName = isSystem ? t('conversation.systemMessage') : name
   const senderLabel = lm?.sender_name ? `${lm.sender_name}: ` : ''
   const isAI = partner_type === UserType.Agent
-  const initials = name ? name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() || name.charAt(0).toUpperCase() : '?'
+  const initials = isSystem ? '系' : (name ? name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() || name.charAt(0).toUpperCase() : '?')
 
   const previewText = getPreview()
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={e => { if (e.key === 'Enter') onClick() }}
       className={cn(
         'w-full flex items-center gap-3 px-4 h-[52px] text-left transition-colors cursor-pointer group relative overflow-visible',
         isSelected ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-soft)]'
@@ -61,18 +74,23 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
             <Cpu size={10} className="text-white" />
           </div>
         )}
+        {isGroup && (
+          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[var(--color-surface-card)] flex items-center justify-center">
+            <Users size={9} className="text-[var(--color-muted)]" />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1">
             {pinned && <Pin size={10} className="text-[var(--color-accent)] flex-shrink-0" />}
-            <span className="text-[15px] font-semibold text-[var(--color-ink)] truncate">{name}</span>
+            <span className="text-[15px] font-semibold text-[var(--color-ink)] truncate">{displayName}</span>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0 ml-1">
             <button onClick={handlePin}
               className="p-0.5 rounded hover:bg-[var(--color-hairline)] opacity-0 group-hover:opacity-100 transition-opacity"
-              title={pinned ? '取消置顶' : '置顶'}>
+              title={pinned ? t('common.unpin') : t('common.pin')}>
               {pinned ? <PinOff size={11} className="text-[var(--color-muted)]" /> : <Pin size={11} className="text-[var(--color-muted)]" />}
             </button>
             <span className="text-[11px] text-[var(--color-muted)]">{formatMessageTime(last_msg_at)}</span>
@@ -95,6 +113,6 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
           ) : null}
         </div>
       </div>
-    </button>
+    </div>
   )
 }

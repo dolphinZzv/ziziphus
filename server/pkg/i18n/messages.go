@@ -34,6 +34,7 @@ var Messages = map[string]map[Lang]string{
 	// ===== Conversation manager =====
 	"err.conv_not_found_mgr":     {LangZH: "会话不存在", LangEN: "Conversation not found"},
 	"err.permission_denied":      {LangZH: "权限不足", LangEN: "Permission denied"},
+	"err.direct_chat_disabled":   {LangZH: "对方已关闭直接发起会话", LangEN: "Direct chat disabled by this user"},
 	"err.user_not_found":         {LangZH: "用户不存在", LangEN: "User not found"},
 	"err.group_full":             {LangZH: "群组人数已达上限", LangEN: "Group member limit reached"},
 	"err.duplicate_join_request": {LangZH: "已存在待处理的入群申请", LangEN: "A pending join request already exists"},
@@ -48,4 +49,25 @@ var Messages = map[string]map[Lang]string{
 	"sys.member_added":   {LangZH: "%s 被加入群", LangEN: "%s joined the group"},
 	"sys.member_removed": {LangZH: "%s 被移出群", LangEN: "%s was removed from the group"},
 	"sys.member_left":    {LangZH: "%s 退出了群", LangEN: "%s left the group"},
+
+	// ===== Friend request messages =====
+	"contact_request.title":              {LangZH: "好友申请", LangEN: "Friend Request"},
+	"contact_request.approve":            {LangZH: "通过", LangEN: "Approve"},
+	"contact_request.reject":             {LangZH: "拒绝", LangEN: "Reject"},
+	"contact_request.approved":           {LangZH: "已通过", LangEN: "Approved"},
+	"contact_request.rejected":           {LangZH: "已拒绝", LangEN: "Rejected"},
+	"contact_request.sent":               {LangZH: "你已向 %s 发送了好友申请", LangEN: "You sent a friend request to %s"},
+	"contact_request.approved_by":        {LangZH: "%s 已通过你的好友申请", LangEN: "%s approved your friend request"},
+	"contact_request.rejected_by":        {LangZH: "%s 已拒绝你的好友申请", LangEN: "%s rejected your friend request"},
+	"contact_request.you_approved":       {LangZH: "你已通过 %s 的好友申请", LangEN: "You approved %s's friend request"},
+	"contact_request.you_rejected":       {LangZH: "你已拒绝 %s 的好友申请", LangEN: "You rejected %s's friend request"},
+	"contact_request.friend_established": {LangZH: "你们已成为好友，可以开始聊天了", LangEN: "You are now friends. Start chatting!"},
+	"contact_request.already_handled":    {LangZH: "该申请已被处理", LangEN: "This request has already been handled"},
+
+	// ===== Friend request errors =====
+	"err.contact_request_self":             {LangZH: "不能给自己发好友申请", LangEN: "Cannot send friend request to yourself"},
+	"err.contact_request_duplicate":        {LangZH: "已有待处理的好友申请", LangEN: "A pending friend request already exists"},
+	"err.contact_request_already_friends":  {LangZH: "你们已经是好友", LangEN: "You are already friends"},
+	"err.contact_request_not_found":        {LangZH: "好友申请不存在", LangEN: "Friend request not found"},
+	"err.contact_request_already_handled":  {LangZH: "该申请已被处理", LangEN: "This request has already been handled"},
 }

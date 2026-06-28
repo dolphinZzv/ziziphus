@@ -12,7 +12,7 @@ interface Props {
   disabled?: boolean
 }
 
-export default function MarkdownInput({ value, onChange, onSend, placeholder = '输入消息...', disabled }: Props) {
+export default function MarkdownInput({ value, onChange, onSend, placeholder = '', disabled }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [preview, setPreview] = useState(false)
   const [rawMode, setRawMode] = useState(false)
@@ -112,7 +112,7 @@ export default function MarkdownInput({ value, onChange, onSend, placeholder = '
           placeholder={placeholder}
           rows={2}
           disabled={disabled}
-          className="flex-1 resize-none max-h-[180px] py-2.5 pl-4 pr-20 pb-10 rounded-xl bg-[var(--color-surface-soft)] text-[var(--color-ink)] text-sm placeholder:text-[var(--color-muted)] outline-none border border-[var(--color-hairline-soft)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
+          className="flex-1 resize-none max-h-[180px] py-2.5 pl-4 pr-20 pb-10 bg-[var(--color-surface-soft)] text-[var(--color-ink)] text-sm placeholder:text-[var(--color-muted)] outline-none"
         />
       )}
     </div>

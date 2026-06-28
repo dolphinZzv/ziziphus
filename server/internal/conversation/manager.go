@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"siciv.space/agent/panda_ai/pkg/logger"
 	"siciv.space/agent/panda_ai/pkg/model"
 )
@@ -24,9 +25,11 @@ type userRepo interface {
 
 type convRepo interface {
 	Create(ctx context.Context, c *model.Conversation) error
+	CreateTx(ctx context.Context, tx pgx.Tx, c *model.Conversation) error
 	Get(ctx context.Context, convID string) (*model.Conversation, error)
 	UpdateLastMsg(ctx context.Context, convID string, msgID int64) error
 	AddMember(ctx context.Context, convID, userID string, role model.ConvRole) error
+	AddMemberTx(ctx context.Context, tx pgx.Tx, convID, userID string, role model.ConvRole) error
 	RemoveMember(ctx context.Context, convID, userID string) error
 	GetMembers(ctx context.Context, convID string) ([]*model.ConvMember, error)
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
@@ -84,6 +87,70 @@ func (m *Manager) GetOrCreateP2P(ctx context.Context, userA, userB string) (*mod
 	// init conv seq to 0
 	m.seqCache.InitConvSeq(ctx, convID, 0)
 	logger.Info("P2P conversation created", "conv_id", convID)
+	return conv, nil
+}
+
+// GetOrCreateSystemConv returns the system conversation for the given user.
+// If it does not exist it is lazily created with the user as the sole owner member.
+func (m *Manager) GetOrCreateSystemConv(ctx context.Context, userID string) (*model.Conversation, error) {
+	convID := model.MakeSystemConvID(userID)
+	conv, err := m.convRepo.Get(ctx, convID)
+	if err == nil {
+		// Ensure the user is a member (repair if creation previously failed).
+		if isMember, _ := m.convRepo.IsMember(ctx, convID, userID); !isMember {
+			if err := m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleOwner); err != nil {
+				logger.Error("repair system conv member failed", "conv_id", convID, "user_id", userID, "error", err)
+			}
+		}
+		return conv, nil
+	}
+
+	now := time.Now().UnixMilli()
+	conv = &model.Conversation{
+		ConvID:    convID,
+		Type:      model.ConvSystem,
+		Name:      "",
+		OwnerID:   userID,
+		CreatedAt: now,
+	}
+	if err := m.convRepo.Create(ctx, conv); err != nil {
+		return nil, err
+	}
+	if err := m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleOwner); err != nil {
+		return nil, fmt.Errorf("add system conv member: %w", err)
+	}
+	m.seqCache.InitConvSeq(ctx, convID, 0)
+	logger.Info("system conversation created", "conv_id", convID)
+	return conv, nil
+}
+
+// GetOrCreateSystemConvTx is the transactional variant of GetOrCreateSystemConv.
+func (m *Manager) GetOrCreateSystemConvTx(ctx context.Context, tx pgx.Tx, userID string) (*model.Conversation, error) {
+	convID := model.MakeSystemConvID(userID)
+	conv, err := m.convRepo.Get(ctx, convID)
+	if err == nil {
+		if isMember, _ := m.convRepo.IsMember(ctx, convID, userID); !isMember {
+			m.convRepo.AddMemberTx(ctx, tx, convID, userID, model.ConvRoleOwner)
+		}
+		return conv, nil
+	}
+
+	now := time.Now().UnixMilli()
+	conv = &model.Conversation{
+		ConvID:    convID,
+		Type:      model.ConvSystem,
+		Name:      "",
+		OwnerID:   userID,
+		CreatedAt: now,
+	}
+	if err := m.convRepo.CreateTx(ctx, tx, conv); err != nil {
+		return nil, err
+	}
+	if err := m.convRepo.AddMemberTx(ctx, tx, convID, userID, model.ConvRoleOwner); err != nil {
+		return nil, fmt.Errorf("add system conv member (tx): %w", err)
+	}
+	m.seqCache.InitConvSeq(ctx, convID, 0)
+	logger.Info("system conversation created (tx)", "conv_id", convID)
 	return conv, nil
 }
 

@@ -1,16 +1,18 @@
+import { useTranslation } from 'react-i18next'
 import { FileText, Download } from 'lucide-react'
 import { formatFileSize } from '@/lib/file'
 
 interface Props { body: string }
 
 export default function FileBubble({ body }: Props) {
-  let name = '文件'
+  const { t } = useTranslation()
+  let name = t('chat.file')
   let size = 0
   let url = ''
 
   try {
     const parsed = JSON.parse(body)
-    name = parsed.name || parsed.file_name || '文件'
+    name = parsed.name || parsed.file_name || t('chat.file')
     size = parsed.size || 0
     url = parsed.url || ''
   } catch {

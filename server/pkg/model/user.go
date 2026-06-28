@@ -28,6 +28,7 @@ type User struct {
 	Type           UserType       `json:"type"`
 	Name           string         `json:"name"`
 	Avatar         string         `json:"avatar"`
+	Cover          string         `json:"cover,omitempty"`
 	Status         UserStatus     `json:"status"`
 	Password       string         `json:"-"`
 	UID            string         `json:"uid"`
@@ -36,6 +37,8 @@ type User struct {
 	ExtMeta        map[string]any `json:"ext_meta,omitempty"`
 	WakeMode       WakeMode       `json:"wake_mode"`
 	APIKey         string         `json:"api_key"`
+	Discoverable     bool           `json:"discoverable"`
+	AllowDirectChat  bool           `json:"allow_direct_chat"`
 	CreatedAt      int64          `json:"created_at"`
 }
 

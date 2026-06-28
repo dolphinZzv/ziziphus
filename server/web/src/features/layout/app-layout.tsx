@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '@/features/layout/sidebar'
 import { uiStore } from '@/stores/ui-store'
@@ -7,6 +8,7 @@ import type { ConnectionStatus } from '@/services/websocket-client'
 import { cn } from '@/lib/cn'
 
 export default function AppLayout() {
+  const { t } = useTranslation()
   const isSidebarOpen = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.isSidebarOpen)
   const theme = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.theme)
   const [connStatus, setConnStatus] = useState<ConnectionStatus>('disconnected')
@@ -46,7 +48,7 @@ export default function AppLayout() {
             (connStatus === 'connecting' || connStatus === 'recovering') && 'bg-[var(--warning)] animate-pulse',
             connStatus === 'disconnected' && 'bg-[var(--destructive)]',
           )} />
-          {connStatus === 'connecting' ? '连接中...' : connStatus === 'recovering' ? '恢复中...' : '连接已断开'}
+          {connStatus === 'connecting' ? t('connection.connecting') : connStatus === 'recovering' ? t('connection.recovering') : t('connection.disconnected')}
         </div>
       )}
 

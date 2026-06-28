@@ -13,6 +13,8 @@ const (
 	ContentEdit          ContentType = 7
 	ContentCustom        ContentType = 8
 	ContentAgentTimeline ContentType = 9
+	ContentForm          ContentType = 10
+	ContentFormResponse  ContentType = 11
 )
 
 type MsgStatus int

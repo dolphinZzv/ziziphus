@@ -1,7 +1,15 @@
 import { getItem, setItem, getDeviceId } from '@/lib/storage'
+import i18n from '@/i18n'
 
-type Theme = 'light' | 'dark' | 'system'
-type Language = 'zh' | 'en'
+type Theme = 'light' | 'dark' | 'auto'
+type Language = 'zh' | 'en' | 'auto'
+
+function resolveAutoLang(): 'zh' | 'en' {
+  if (typeof navigator === 'undefined') return 'en'
+  const nav = (navigator.language || '').toLowerCase()
+  if (nav.startsWith('zh')) return 'zh'
+  return 'en'
+}
 
 interface UIState {
   selectedConvId: string | null
@@ -20,13 +28,19 @@ function applyBubbleColor(color: string) {
 }
 
 function getInitialState(): UIState {
-  const theme = (getItem<string>('theme', 'system') as Theme) || 'system'
-  const language = (getItem<string>('language', 'zh') as Language) || 'zh'
+  const theme = (getItem<string>('theme', 'auto') as Theme) || 'auto'
+  const language = (getItem<string>('language', 'auto') as Language) || 'auto'
   const serverUrl = getItem<string>('server_url', '')
   const bubbleColor = getItem<string>('bubble_color', '#0F172A')
 
   // Apply theme
   applyTheme(theme)
+  // Apply language
+  if (language === 'auto') {
+    i18n.changeLanguage(resolveAutoLang())
+  } else {
+    i18n.changeLanguage(language)
+  }
   // Apply bubble color
   applyBubbleColor(bubbleColor)
 
@@ -49,7 +63,7 @@ function applyTheme(theme: Theme) {
   } else if (theme === 'light') {
     root.classList.remove('dark')
   } else {
-    // system
+    // auto: follow system
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     root.classList.toggle('dark', prefersDark)
   }
@@ -91,6 +105,14 @@ export const uiStore = {
 
   setLanguage(lang: Language) {
     setItem('language', lang)
+    if (lang === 'auto') {
+      // Clear stored preference so auto-detection works on reload
+      setItem('panda_ai_language', '')
+      i18n.changeLanguage(resolveAutoLang())
+    } else {
+      setItem('panda_ai_language', lang)
+      i18n.changeLanguage(lang)
+    }
     state = { ...state, language: lang }; emit()
   },
 

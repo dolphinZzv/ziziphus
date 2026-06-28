@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
 import { userService } from '@/services/user-service'
@@ -11,7 +12,9 @@ import { X, Crown, Shield, UserPlus, Edit2, Bell, LogOut, Copy as CopyIcon, Cpu 
 
 interface Props { convId: string; onClose: () => void }
 
-export default function DetailBar({ convId, onClose }: Props) {
+export default function DetailBar
+({ convId, onClose }: Props) {
+  const { t } = useTranslation()
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
   const [userMap, setUserMap] = useState<Record<string, User>>({})
   const navigate = useNavigate()
@@ -37,7 +40,7 @@ export default function DetailBar({ convId, onClose }: Props) {
   const peerUser = !isGroup ? userMap[detail.members.find(m => m.user_id !== currentUserId)?.user_id || ''] : null
 
   const handleClone = async () => {
-    if (!confirm('克隆该群组？')) return
+    if (!confirm(t('group.cloneConfirm'))) return
     setCloning(true)
     try {
       const r = await conversationService.clone(convId)

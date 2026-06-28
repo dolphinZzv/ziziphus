@@ -9,6 +9,8 @@ export enum ContentType {
   Edit = 7,
   Custom = 8,
   AgentTimeline = 9,
+  Form = 10,
+  FormResponse = 11,
 }
 
 export enum MsgStatus {

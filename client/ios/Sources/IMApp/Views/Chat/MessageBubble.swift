@@ -8,6 +8,7 @@ struct MessageBubble: View {
     let senderInfo: [String: User]
     var onRetry: (() -> Void)?
     var onReply: (() -> Void)?
+    var onFormAction: ((String, Int64) -> Void)?
     var onTapSender: (() -> Void)?
     var repliedMessage: Message?
     var isFirstInGroup = true
@@ -47,6 +48,16 @@ struct MessageBubble: View {
     private var agentTimelineBody: AgentTimelineBody? {
         guard let data = message.body.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(AgentTimelineBody.self, from: data)
+    }
+
+    private var formBody: FormDefinitionBody? {
+        guard let data = message.body.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(FormDefinitionBody.self, from: data)
+    }
+
+    private var formResponseBody: FormResponseBody? {
+        guard let data = message.body.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(FormResponseBody.self, from: data)
     }
 
     var body: some View {
@@ -91,6 +102,10 @@ struct MessageBubble: View {
                         fileBubble
                     } else if message.contentType == .agentTimeline {
                         agentTimelineBubble
+                    } else if message.contentType == .form {
+                        formBubble
+                    } else if message.contentType == .formResponse {
+                        formResponseBubble
                     } else {
                         textBubble
                     }
@@ -247,6 +262,37 @@ struct MessageBubble: View {
         }
     }
 
+    // MARK: - Form Bubble
+    private var formBubble: some View {
+        Group {
+            if let form = formBody {
+                FormBubbleView(
+                    form: form,
+                    msgID: message.msgID,
+                    convID: message.convID,
+                    isMine: isMine,
+                    onAction: { action in
+                        onFormAction?(action, message.msgID)
+                    }
+                )
+            } else {
+                textBubble
+            }
+        }
+    }
+
+    // MARK: - FormResponse Bubble
+    private var formResponseBubble: some View {
+        Group {
+            if let resp = formResponseBody {
+                FormResponseBubbleView(form: resp)
+            } else {
+                textBubble
+            }
+        }
+    }
+
+    // MARK: - Agent Timeline Bubble
     private var agentTimelineBubble: some View {
         Group {
             if let timeline = agentTimelineBody {

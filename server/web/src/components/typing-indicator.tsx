@@ -1,12 +1,14 @@
+import { useTranslation } from 'react-i18next'
 
 interface Props { names: string[] }
 
 export default function TypingIndicator({ names }: Props) {
+  const { t } = useTranslation()
   if (names.length === 0) return null
 
   const text = names.length === 1
-    ? `${names[0]} 正在输入...`
-    : `${names.length} 人正在输入...`
+    ? t('chat.typingUser', { name: names[0] })
+    : t('chat.typingMulti', { count: names.length })
 
   return (
     <div className="flex items-center gap-2 px-4 py-1 text-xs text-[var(--color-muted)]">

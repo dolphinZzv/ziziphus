@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
 	"siciv.space/agent/panda_ai/pkg/model"
 )
 
@@ -35,6 +36,10 @@ func (r *mockConvRepo) Create(_ context.Context, c *model.Conversation) error {
 	cp := *c
 	r.convs[c.ConvID] = &cp
 	return nil
+}
+
+func (r *mockConvRepo) CreateTx(_ context.Context, _ pgx.Tx, c *model.Conversation) error {
+	return r.Create(context.Background(), c)
 }
 
 func (r *mockConvRepo) Get(_ context.Context, convID string) (*model.Conversation, error) {
@@ -74,6 +79,10 @@ func (r *mockConvRepo) AddMember(_ context.Context, convID, userID string, role 
 		Role:   role,
 	}
 	return nil
+}
+
+func (r *mockConvRepo) AddMemberTx(_ context.Context, _ pgx.Tx, convID, userID string, role model.ConvRole) error {
+	return r.AddMember(context.Background(), convID, userID, role)
 }
 
 func (r *mockConvRepo) RemoveMember(_ context.Context, convID, userID string) error {

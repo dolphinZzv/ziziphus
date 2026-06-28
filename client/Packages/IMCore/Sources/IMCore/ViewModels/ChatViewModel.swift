@@ -363,6 +363,44 @@ public class ChatViewModel: ObservableObject {
     // MARK: - Send Agent Timeline
     /// - Returns: The server-assigned msgID for the first message (parentMsgID == 0),
     ///            or nil for append messages / errors.
+    /// Sends a form response message (content_type=11).
+    /// Called when the user clicks approve/reject on a form bubble.
+    @discardableResult
+    public func sendFormResponse(body: FormResponseBody, convID: String, replyTo: Int64) async -> Bool {
+        let clientSeq = AuthManager.shared.nextClientSeq()
+        guard let bodyData = try? JSONEncoder().encode(body),
+              let bodyStr = String(data: bodyData, encoding: .utf8) else { return false }
+
+        let localMsg = Message(
+            convID: convID,
+            senderID: AuthManager.shared.currentUser?.userID ?? "",
+            contentType: .formResponse,
+            body: bodyStr,
+            replyTo: replyTo,
+            timestamp: Int64(Date().timeIntervalSince1970 * 1000),
+            clientSeq: clientSeq,
+            status: .sending
+        )
+        messages.append(localMsg)
+        sortMessages()
+
+        do {
+            let ack = try await msgService.sendMessage(convID: convID, body: bodyStr, clientSeq: clientSeq, contentType: 11, replyTo: replyTo)
+            if let idx = messages.firstIndex(where: { $0.clientSeq == ack.clientSeq && $0.msgID == 0 }) {
+                messages[idx].msgID = ack.msgID
+                messages[idx].timestamp = ack.timestamp
+                messages[idx].status = .sent
+                cache.insertMessage(messages[idx])
+            }
+            return true
+        } catch {
+            if let idx = messages.firstIndex(where: { $0.clientSeq == clientSeq }) {
+                messages[idx].status = .failed
+            }
+            return false
+        }
+    }
+
     @discardableResult
     public func sendAgentTimeline(body: AgentTimelineBody) async -> Int64? {
         let clientSeq = AuthManager.shared.nextClientSeq()

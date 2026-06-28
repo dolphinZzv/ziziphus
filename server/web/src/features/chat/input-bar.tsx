@@ -9,10 +9,12 @@ import type { User } from '@/types/user'
 import { cn } from '@/lib/cn'
 import { Send, Paperclip, Image, X, AtSign } from 'lucide-react'
 import MarkdownInput from './markdown-input'
+import { useTranslation } from 'react-i18next'
 
 interface Props { convId: string }
 
 export default function InputBar({ convId }: Props) {
+  const { t } = useTranslation()
   const [text, setText] = useState('')
   const [uploading, setUploading] = useState(false)
   const [members, setMembers] = useState<Array<{ id: string; name: string }>>([])
@@ -175,13 +177,13 @@ export default function InputBar({ convId }: Props) {
       )}
 
       {/* Input area — macOS style: buttons at bottom-right */}
-      <div className="px-4 pt-3 pb-3">
+      <div className="pt-3">
         <div className="relative">
           <MarkdownInput
             value={text}
             onChange={handleMentionChange}
             onSend={handleSend}
-            placeholder="输入消息... @用户名 提及"
+            placeholder={t('chat.inputPlaceholder') + ' @用户名 提及'}
             disabled={uploading}
           />
 

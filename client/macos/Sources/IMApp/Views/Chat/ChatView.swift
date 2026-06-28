@@ -50,6 +50,9 @@ struct ChatView: View {
                                     senderInfo: vm.senderInfo,
                                     onRetry: { vm.retryMessage(clientSeq: msg.clientSeq) },
                                     onReply: { vm.replyingToMsg = msg },
+                                    onFormAction: { action, formMsgID in
+                                        handleFormAction(action: action, formMsgID: formMsgID, body: msg.body)
+                                    },
                                     repliedMessage: repliedMsg,
                                     isFirstInGroup: isFirst,
                                     isLastInGroup: isLast,
@@ -180,7 +183,8 @@ struct ChatView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            // Input bar
+            // Input bar (hidden for system conversations)
+            if convType != .system {
             InputBarView(text: $vm.inputText, onSend: {
                 vm.sendMessage()
             }, onTyping: {
@@ -197,6 +201,7 @@ struct ChatView: View {
                 vm.replyingToMsg = nil
             }, members: vm.members, senderInfo: vm.senderInfo)
             .environmentObject(localizationManager)
+            } // end input bar
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .toolbar {
@@ -249,6 +254,20 @@ struct ChatView: View {
         .onChange(of: vm.inputText) { _, newText in
             UserDefaults.standard.set(newText, forKey: "draft_\(convID)")
         }
+    }
+
+    private func handleFormAction(action: String, formMsgID: Int64, body: String) {
+        guard let data = body.data(using: .utf8),
+              let formBody = try? JSONDecoder().decode(FormDefinitionBody.self, from: data) else { return }
+        let resp = FormResponseBody(
+            formMsgID: formMsgID,
+            requestID: formBody.requestID,
+            action: action,
+            responderID: AuthManager.shared.currentUser?.userID ?? "",
+            responderName: AuthManager.shared.currentUser?.name ?? "",
+            submittedAt: Int64(Date().timeIntervalSince1970 * 1000)
+        )
+        Task { await vm.sendFormResponse(body: resp, convID: convID, replyTo: formMsgID) }
     }
 
     private func performSearch() {

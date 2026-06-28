@@ -18,7 +18,7 @@ export default function SessionList({ onClose }: Props) {
     switch (d) { case 0: return <Smartphone size={18} className={cls} />; case 1: return <Monitor size={18} className={cls} />; case 2: return <Globe size={18} className={cls} />; case 3: return <Tablet size={18} className={cls} />; default: return <Monitor size={18} className={cls} /> }
   }
 
-  const deviceLabel = (d: DeviceType) => { switch (d) { case 0: return '手机'; case 1: return '电脑'; case 2: return '网页'; case 3: return '平板'; default: return '未知' } }
+  const deviceLabel = (d: DeviceType) => { switch (d) { case 0: return t('session.phone'); case 1: return t('session.desktop'); case 2: return t('session.web'); case 3: return t('session.tablet'); default: return '' } }
 
   const handleEndSession = async (sessionId: string) => {
     if (!confirm('确定下线该设备？')) return

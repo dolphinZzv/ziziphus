@@ -1,6 +1,8 @@
 export interface Contact {
   user_id: string
-  contact_id: string
-  nickname?: string
+  nickname: string
+  name?: string
+  avatar?: string
+  status?: number
   added_at: number
 }

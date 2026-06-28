@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"siciv.space/agent/panda_ai/pkg/logger"
 	"siciv.space/agent/panda_ai/pkg/model"
 )
@@ -19,9 +20,18 @@ func NewConvRepo(pool DBPool) *ConvRepo {
 
 func (r *ConvRepo) Create(ctx context.Context, c *model.Conversation) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, max_members, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.MaxMembers, time.UnixMilli(c.CreatedAt))
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt))
+	return err
+}
+
+// CreateTx is the transactional variant of Create.
+func (r *ConvRepo) CreateTx(ctx context.Context, tx pgx.Tx, c *model.Conversation) error {
+	_, err := tx.Exec(ctx,
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt))
 	return err
 }
 
@@ -30,9 +40,9 @@ func (r *ConvRepo) Get(ctx context.Context, convID string) (*model.Conversation,
 	var lastMsgAt *time.Time
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at
+		`SELECT conv_id, type, name, owner_id, avatar, cover, notice, max_members, last_msg_id, last_msg_at, created_at
 		 FROM conversations WHERE conv_id = $1`, convID).
-		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt)
+		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Cover, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt)
 	if err != nil {
 		return nil, err
 	}
@@ -198,6 +208,15 @@ func (r *ConvRepo) AddMember(ctx context.Context, convID, userID string, role mo
 	return err
 }
 
+// AddMemberTx is the transactional variant of AddMember.
+func (r *ConvRepo) AddMemberTx(ctx context.Context, tx pgx.Tx, convID, userID string, role model.ConvRole) error {
+	_, err := tx.Exec(ctx,
+		`INSERT INTO conv_members (conv_id, user_id, role, joined_at)
+		 VALUES ($1, $2, $3, NOW()) ON CONFLICT (conv_id, user_id) DO NOTHING`,
+		convID, userID, role)
+	return err
+}
+
 func (r *ConvRepo) RemoveMember(ctx context.Context, convID, userID string) error {
 	_, err := r.pool.Exec(ctx,
 		`DELETE FROM conv_members WHERE conv_id = $1 AND user_id = $2`, convID, userID)
@@ -298,6 +317,12 @@ func (r *ConvRepo) UpdateNotice(ctx context.Context, convID, notice string) erro
 	return err
 }
 
+func (r *ConvRepo) UpdateCover(ctx context.Context, convID, cover string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conversations SET cover = $1 WHERE conv_id = $2`, cover, convID)
+	return err
+}
+
 func (r *ConvRepo) Pin(ctx context.Context, userID, convID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE conv_members SET pinned = TRUE WHERE conv_id = $1 AND user_id = $2`, convID, userID)
@@ -319,8 +344,8 @@ func (r *ConvRepo) Clone(ctx context.Context, srcConvID, newConvID, ownerID stri
 
 	// Insert new conversation (copy avatar from source)
 	_, err = tx.Exec(ctx,
-		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, notice, max_members, created_at)
-		 SELECT $1, type, $2, $3, avatar, notice, max_members, NOW() FROM conversations WHERE conv_id = $4`,
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, notice, max_members, created_at)
+		 SELECT $1, type, $2, $3, avatar, cover, notice, max_members, NOW() FROM conversations WHERE conv_id = $4`,
 		newConvID, name, ownerID, srcConvID)
 	if err != nil {
 		return err
@@ -337,4 +362,12 @@ func (r *ConvRepo) Clone(ctx context.Context, srcConvID, newConvID, ownerID stri
 	}
 
 	return tx.Commit(ctx)
+}
+
+// AreContacts returns true if two users are mutual contacts.
+func (r *ConvRepo) AreContacts(ctx context.Context, userA, userB string) (bool, error) {
+	var count int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM contacts WHERE user_id = $1 AND contact_id = $2`, userA, userB).Scan(&count)
+	return count > 0, err
 }

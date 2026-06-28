@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	UserIDPrefix      = "user_"
-	SessionIDPrefix   = "sess_"
-	GroupConvIDPrefix = "group_"
+	UserIDPrefix       = "user_"
+	SessionIDPrefix    = "sess_"
+	GroupConvIDPrefix  = "group_"
+	SystemConvIDPrefix = "sys:"
 )
 
 func GenerateUserID(snowflake func() int64) string {
@@ -38,6 +39,23 @@ func IsP2PConvID(convID string) bool {
 
 func IsGroupConvID(convID string) bool {
 	return strings.HasPrefix(convID, GroupConvIDPrefix)
+}
+
+func MakeSystemConvID(userID string) string {
+	return SystemConvIDPrefix + userID
+}
+
+func IsSystemConvID(convID string) bool {
+	return strings.HasPrefix(convID, SystemConvIDPrefix)
+}
+
+// ParseSystemConvUserID extracts the user ID from a system convID.
+// Returns empty string if the convID is not a system convID.
+func ParseSystemConvUserID(convID string) string {
+	if !strings.HasPrefix(convID, SystemConvIDPrefix) {
+		return ""
+	}
+	return strings.TrimPrefix(convID, SystemConvIDPrefix)
 }
 
 type Snowflake struct {

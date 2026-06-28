@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import type { AgentTimelineBody, AgentTimelineEntry } from '@/types/agent_timeline'
 import { AgentStepStatus, AgentStepType } from '@/types/agent_timeline'
@@ -8,6 +9,7 @@ import { Brain, Wrench, FileText, MessageCircle, ChevronDown, ChevronRight, Load
 interface Props { body: string }
 
 export default function AgentTimelineBubble({ body }: Props) {
+  const { t } = useTranslation()
   let timeline: AgentTimelineBody
   try {
     timeline = JSON.parse(body)
@@ -25,10 +27,10 @@ export default function AgentTimelineBubble({ body }: Props) {
 
   const statusLabel = () => {
     const s = timeline.status
-    if (s === AgentStepStatus.Running) return '运行中'
-    if (s === AgentStepStatus.Success) return '已完成'
-    if (s === AgentStepStatus.Error) return '错误'
-    return '等待中'
+    if (s === AgentStepStatus.Running) return t('agent.running')
+    if (s === AgentStepStatus.Success) return t('agent.completed')
+    if (s === AgentStepStatus.Error) return t('agent.error')
+    return t('agent.pending')
   }
 
   return (

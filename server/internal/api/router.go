@@ -59,6 +59,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/users/me/agents", h.User.CreateAgent)
 		r.Put("/api/v1/users/me/agents/{agent_id}", h.User.UpdateAgent)
 		r.Delete("/api/v1/users/me/agents/{agent_id}", h.User.DeleteAgent)
+		r.Delete("/api/v1/users/me", h.User.DeleteAccount)
 		r.Put("/api/v1/users/me/agents/{agent_id}/regenerate-key", h.User.RegenerateAgentKey)
 		r.Get("/api/v1/groups/search", h.Conversation.SearchGroups)
 
@@ -87,6 +88,11 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Delete("/api/v1/contacts/{user_id}", h.Contact.Remove)
 		r.Put("/api/v1/contacts/{user_id}", h.Contact.UpdateNickname)
 
+			// Friend requests
+			r.Post("/api/v1/contact-requests", h.Contact.RequestContact)
+			r.Get("/api/v1/contact-requests/sent", h.Contact.ListSentRequests)
+			r.Get("/api/v1/contact-requests/received", h.Contact.ListReceivedRequests)
+			r.Get("/api/v1/contact-requests/by-form/{msg_id}", h.Contact.GetRequestByFormMsgID)
 		r.Get("/api/v1/sessions", h.Session.ListSessions)
 		r.Delete("/api/v1/sessions/{session_id}", h.Session.DeleteSession)
 

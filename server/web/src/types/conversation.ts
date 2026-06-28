@@ -3,6 +3,7 @@ import type { UserType, WakeMode } from './user'
 export enum ConvType {
   P2P = 1,
   Group = 2,
+  System = 3,
 }
 
 export enum ConvRole {
@@ -23,6 +24,7 @@ export interface Conversation {
   name: string
   owner_id: string
   avatar?: string
+  cover?: string
   max_members?: number
   last_msg_id?: number
   last_msg_at?: number

@@ -16,6 +16,7 @@ const (
 	ErrRateLimit    = 4003
 	ErrNotFound     = 4004
 	ErrTooLarge     = 4005
+	ErrConflict     = 4006
 	ErrInternal     = 5001
 )
 
@@ -33,4 +34,11 @@ var (
 	ErrDuplicateRequest = &AppError{Code: ErrBadMessage, Message: "已存在待处理的入群申请", Key: "err.duplicate_join_request"}
 	ErrAlreadyMember    = &AppError{Code: ErrBadMessage, Message: "已经是群成员", Key: "err.already_member"}
 	ErrNoPendingRequest = &AppError{Code: ErrNotFound, Message: "没有待处理的申请", Key: "err.no_pending_request"}
+
+	// Friend request errors
+	ErrContactRequestSelf           = &AppError{Code: ErrBadMessage, Message: "不能给自己发好友申请", Key: "err.contact_request_self"}
+	ErrContactRequestDuplicate      = &AppError{Code: ErrConflict, Message: "已有待处理的好友申请", Key: "err.contact_request_duplicate"}
+	ErrAlreadyFriends               = &AppError{Code: ErrConflict, Message: "你们已经是好友", Key: "err.contact_request_already_friends"}
+	ErrContactRequestNotFound       = &AppError{Code: ErrNotFound, Message: "好友申请不存在", Key: "err.contact_request_not_found"}
+	ErrContactRequestAlreadyHandled = &AppError{Code: ErrConflict, Message: "该申请已被处理", Key: "err.contact_request_already_handled"}
 )

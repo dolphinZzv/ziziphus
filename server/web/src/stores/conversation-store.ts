@@ -1,5 +1,8 @@
 import { api } from '@/services/api-client'
+import { ConvType } from '@/types/conversation'
 import type { ConvListItem } from '@/types/conversation'
+import { ContentType } from '@/types/message'
+import i18n from '@/i18n'
 
 interface ConvState {
   conversations: ConvListItem[]
@@ -11,6 +14,45 @@ interface ConvState {
 let state: ConvState = { conversations: [], unreadTotal: 0, isLoading: false, _initialLoad: true }
 const listeners = new Set<() => void>()
 function emit() { listeners.forEach(l => l()) }
+
+function sortConversations(items: ConvListItem[]) {
+  return [...items].sort((a, b) => {
+    // System conversations always at top
+    if (a.type === ConvType.System && b.type !== ConvType.System) return -1
+    if (b.type === ConvType.System && a.type !== ConvType.System) return 1
+    // Then pinned
+    if ((b.pinned ? 1 : 0) !== (a.pinned ? 1 : 0)) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)
+    // Then by last_msg_at DESC
+    return (b.last_msg_at || 0) - (a.last_msg_at || 0)
+  })
+}
+
+export function getConversationPreview(item: ConvListItem): string {
+  if (!item.last_message) return ''
+  const m = item.last_message
+
+  if (m.content_type === ContentType.Form) {
+    try {
+      const body = JSON.parse(m.body)
+      if (body.type === 'contact_request' && body.from_user_name) {
+        return `好友申请 · ${body.from_user_name}`
+      }
+    } catch { /* fallthrough */ }
+  }
+
+  if (m.content_type === ContentType.FormResponse) {
+    try {
+      const body = JSON.parse(m.body)
+      if (body.action === 'approve') return `你已通过${body.responder_name}的好友申请`
+      if (body.action === 'reject') return `你已拒绝${body.responder_name}的好友申请`
+    } catch { /* fallthrough */ }
+  }
+
+  // Default: sender + body text
+  const sender = m.sender_name || m.sender_id || ''
+  const prefix = sender ? `${sender}: ` : ''
+  return prefix + m.body
+}
 
 export const conversationStore = {
   get state() { return state },
@@ -26,9 +68,8 @@ export const conversationStore = {
       const data = await api.request<{ items: ConvListItem[]; total: number; page: number; size: number }>(
         '/api/v1/conversations', { query: { page: 1, size: 100 } }
       )
-      state = { ...state, conversations: data.items, unreadTotal: data.total, isLoading: false, _initialLoad: false }; emit()
+      state = { ...state, conversations: sortConversations(data.items), unreadTotal: data.total, isLoading: false, _initialLoad: false }; emit()
     } catch {
-      // On initial load failure, keep empty state and retry later
       state = { ...state, isLoading: false, _initialLoad: false }; emit()
     }
   },
@@ -38,7 +79,7 @@ export const conversationStore = {
       const data = await api.request<{ items: ConvListItem[]; total: number; page: number; size: number }>(
         '/api/v1/conversations', { query: { page: 1, size: 100 } }
       )
-      state = { ...state, conversations: data.items, unreadTotal: data.total }; emit()
+      state = { ...state, conversations: sortConversations(data.items), unreadTotal: data.total }; emit()
     } catch { /* silent */ }
   },
 
@@ -50,10 +91,7 @@ export const conversationStore = {
     } else {
       updated.unshift(item)
     }
-    updated.sort((a, b) =>
-      (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.last_msg_at || 0) - (a.last_msg_at || 0)
-    )
-    state = { ...state, conversations: updated }; emit()
+    state = { ...state, conversations: sortConversations(updated) }; emit()
   },
 
   incrementUnread(convId: string) {
@@ -73,18 +111,20 @@ export const conversationStore = {
   async pin(convId: string) {
     try { await api.request(`/api/v1/conversations/${convId}/pin`, { method: 'POST' }) } catch {}
     const updated = state.conversations.map(c => c.conv_id === convId ? { ...c, pinned: true } : c)
-    updated.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.last_msg_at || 0) - (a.last_msg_at || 0))
-    state = { ...state, conversations: updated }; emit()
+    state = { ...state, conversations: sortConversations(updated) }; emit()
   },
 
   async unpin(convId: string) {
     try { await api.request(`/api/v1/conversations/${convId}/unpin`, { method: 'POST' }) } catch {}
     const updated = state.conversations.map(c => c.conv_id === convId ? { ...c, pinned: false } : c)
-    updated.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.last_msg_at || 0) - (a.last_msg_at || 0))
-    state = { ...state, conversations: updated }; emit()
+    state = { ...state, conversations: sortConversations(updated) }; emit()
   },
 
   removeConversation(convId: string) {
     state = { ...state, conversations: state.conversations.filter(c => c.conv_id !== convId) }; emit()
+  },
+
+  has(convId: string): boolean {
+    return state.conversations.some(c => c.conv_id === convId)
   },
 }

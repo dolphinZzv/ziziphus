@@ -15,6 +15,15 @@ func NewContactRepo(pool DBPool) *ContactRepo {
 	return &ContactRepo{pool: pool}
 }
 
+// AddContact is a convenience wrapper for Ingest to create a minimal contact row.
+func (r *ContactRepo) AddContact(ctx context.Context, userID, contactID string) error {
+	return r.Add(ctx, &model.Contact{
+		UserID:    userID,
+		ContactID: contactID,
+		AddedAt:   time.Now().UnixMilli(),
+	})
+}
+
 func (r *ContactRepo) Add(ctx context.Context, c *model.Contact) error {
 	_, err := r.pool.Exec(ctx,
 		`INSERT INTO contacts (user_id, contact_id, nickname, added_at)

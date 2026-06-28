@@ -21,6 +21,7 @@ export interface User {
   type: UserType
   name: string
   avatar: string
+  cover?: string
   status: UserStatus
   uid: string
   primary_color: string
@@ -28,6 +29,8 @@ export interface User {
   ext_meta?: Record<string, unknown>
   wake_mode: WakeMode
   api_key: string
+  discoverable: boolean
+  allow_direct_chat: boolean
   created_at: number
 }
 

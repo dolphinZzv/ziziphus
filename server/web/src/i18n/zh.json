@@ -17,7 +17,8 @@
     "registerError": "注册失败",
     "passwordMismatch": "两次密码不一致",
     "loggingIn": "登录中...",
-    "registering": "注册中..."
+    "registering": "注册中...",
+    "fieldRequired": "请填写所有字段"
   },
   "chat": {
     "inputPlaceholder": "输入消息...",
@@ -33,38 +34,80 @@
     "selectFile": "选择文件",
     "messageFailed": "消息发送失败",
     "draft": "草稿",
-    "newMessage": "新消息"
+    "newMessage": "新消息",
+    "image": "[图片]",
+    "file": "[文件]",
+    "audio": "[音频]",
+    "video": "[视频]",
+    "quoteMessage": "引用消息",
+    "replyTo": "回复 {{name}}",
+    "noMessages": "暂无消息",
+    "history": "历史消息",
+    "detail": "会话详情",
+    "clickCopyId": "点击复制会话 ID",
+    "typingUser": "{{name}} 正在输入...",
+    "typingMulti": "{{count}} 人正在输入..."
   },
   "conversation": {
     "title": "消息",
     "newChat": "新建聊天",
     "createGroup": "创建群组",
     "joinGroup": "加入群组",
+    "searchPlaceholder": "搜索会话...",
     "searchUsers": "搜索用户...",
     "searchGroups": "搜索群组...",
     "groupName": "群组名称",
     "noConversations": "暂无会话",
+    "noMatch": "无匹配会话",
+    "startChat": "点击 + 创建新聊天",
     "selectChat": "选择一个会话开始聊天",
     "members": "成员",
     "you": "你",
-    "mentionYou": "@了你"
+    "mentionYou": "@了你",
+    "friendRequest": "好友申请",
+    "form": "[表单]",
+    "response": "[回复]",
+    "approved": "已通过",
+    "rejected": "已拒绝",
+    "agentResult": "[Agent]",
+    "systemMessage": "系统消息",
+    "clearChat": "清空聊天",
+    "memberCount": "{{count}} 名成员",
+    "conversationId": "会话 ID",
+    "p2pDetail": "聊天详情",
+    "addFriend": "添加为好友",
+    "alreadyFriends": "已是好友",
+    "requestSent": "好友申请已发送"
   },
   "group": {
     "detail": "群组信息",
     "members": "成员",
     "memberCount": "{{count}} 名成员",
     "addMember": "添加成员",
-    "removeMember": "移出群组",
+    "removeMember": "移出该成员",
+    "removeConfirm": "移出该成员？",
     "leave": "退出群组",
-    "leaveConfirm": "确定要退出该群组？",
+    "leaveConfirm": "确定退出该群组？",
     "joinRequests": "入群申请",
+    "requests": "申请",
     "approve": "同意",
     "reject": "拒绝",
     "noRequests": "暂无待处理的申请",
     "owner": "群主",
     "admin": "管理员",
     "member": "成员",
-    "avatarUpload": "更换头像"
+    "avatarUpload": "更换头像",
+    "notice": "群公告",
+    "noticeAdd": "添加",
+    "noticeEdit": "编辑",
+    "noticeEmpty": "暂无公告，群主可在此添加",
+    "noticePlaceholder": "输入群公告...",
+    "clone": "克隆群组",
+    "cloneConfirm": "克隆该群组？将创建一个包含相同成员的新群组。",
+    "searchMember": "搜索用户...",
+    "searchBtn": "搜索",
+    "cancel": "取消",
+    "me": " (我)"
   },
   "contact": {
     "title": "联系人",
@@ -74,7 +117,25 @@
     "editNickname": "修改备注",
     "noContacts": "暂无联系人",
     "online": "在线",
-    "offline": "离线"
+    "offline": "离线",
+    "startChat": "发起会话",
+    "addFriend": "添加好友",
+    "alreadyFriends": "已是好友",
+    "requestSent": "已发送",
+    "contacts": "联系人",
+    "requestSentHint": "好友申请已发送，可在系统消息中查看",
+    "sendFailed": "发送失败"
+  },
+  "friendRequest": {
+    "title": "好友申请",
+    "message": "请求添加你为好友",
+    "approve": "通过",
+    "reject": "拒绝",
+    "approved": "已通过",
+    "rejected": "已拒绝",
+    "pending": "等待对方回复",
+    "approvedBy": "{{name}} 已通过",
+    "rejectedBy": "{{name}} 已拒绝"
   },
   "search": {
     "placeholder": "搜索...",
@@ -93,15 +154,32 @@
     "title": "个人信息",
     "edit": "编辑",
     "save": "保存",
+    "saving": "保存中...",
     "userID": "用户 ID",
     "account": "账号",
-    "primaryColor": "主色调",
-    "secondaryColor": "辅色调",
+    "primaryColor": "主色",
+    "secondaryColor": "辅色",
     "logout": "退出登录",
-    "logoutConfirm": "确定退出登录？"
+    "logoutConfirm": "确定退出登录？",
+    "uploadingAvatar": "上传头像中...",
+    "nicknamePlaceholder": "昵称",
+    "nickname": "昵称",
+    "userSettings": "用户设置",
+    "agentMgmt": "Agent 管理",
+    "deviceMgmt": "设备管理",
+    "appSettings": "应用设置",
+    "dangerZone": "危险操作",
+    "deleteAccount": "注销账号",
+    "deleteAccountConfirm": "确定注销账号？此操作不可恢复，所有数据将被清除。",
+    "deleteAccountConfirm2": "再次确认：注销后将清除你的联系人、消息记录、会话等所有信息。"
   },
   "settings": {
-    "title": "设置",
+    "title": "应用设置",
+    "privacy": "隐私",
+    "discoverable": "允许通过搜索找到我",
+    "discoverableHint": "关闭后其他用户无法通过搜索查找到你",
+    "allowDirectChat": "允许直接发起会话",
+    "allowDirectChatHint": "关闭后需要先成为好友才能发起会话",
     "server": "服务器地址",
     "theme": "主题",
     "themeLight": "浅色",
@@ -113,7 +191,9 @@
     "bubbleColor": "气泡颜色",
     "deviceID": "设备 ID",
     "sessionID": "会话 ID",
-    "appInfo": "应用信息"
+    "appInfo": "应用信息",
+    "themeAuto": "自动",
+    "languageAuto": "自动"
   },
   "agent": {
     "title": "Agent 管理",
@@ -129,7 +209,12 @@
     "deleteConfirm": "确定删除该 Agent？",
     "maxReached": "最多创建 10 个 Agent",
     "copyKey": "复制 Key",
-    "keyCopied": "API Key 已复制！"
+    "keyCopied": "API Key 已复制！",
+    "alert": "提醒：API Key 仅在生成时展示一次，请立即复制保存。",
+    "running": "运行中",
+    "completed": "已完成",
+    "error": "错误",
+    "pending": "等待中"
   },
   "session": {
     "title": "设备管理",
@@ -144,7 +229,26 @@
   "connection": {
     "connected": "已连接",
     "connecting": "连接中...",
-    "disconnected": "连接已断开"
+    "disconnected": "连接已断开",
+    "recovering": "恢复中..."
+  },
+  "error": {
+    "pageError": "页面出错了",
+    "unknown": "未知错误",
+    "loadFailed": "加载失败",
+    "unauthorized": "未授权，请重新登录",
+    "notFound": "用户不存在",
+    "timeoutRetry": "操作超时，请重试",
+    "operationFailed": "操作失败，请重试"
+  },
+  "sidebar": {
+    "newChat": "新建聊天",
+    "createGroup": "创建群组",
+    "joinGroup": "加入群组",
+    "contacts": "联系人",
+    "agents": "Agent",
+    "sessions": "设备管理",
+    "settings": "设置"
   },
   "common": {
     "cancel": "取消",
@@ -159,11 +263,21 @@
     "copied": "已复制！",
     "more": "更多",
     "today": "今天",
-    "yesterday": "昨天"
+    "yesterday": "昨天",
+    "retry": "重试",
+    "search": "搜索",
+    "back": "返回",
+    "or": "或",
+    "add": "添加",
+    "edit": "编辑",
+    "remove": "移除",
+    "pin": "置顶",
+    "unpin": "取消置顶"
   },
   "time": {
     "justNow": "刚刚",
     "minuteAgo": "{{n}}分钟前",
-    "hourAgo": "{{n}}小时前"
+    "hourAgo": "{{n}}小时前",
+    "dayAgo": "{{n}}天前"
   }
 }

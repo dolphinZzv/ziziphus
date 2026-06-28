@@ -248,6 +248,11 @@ func (m *mockConvManager) GetOrCreateP2P(_ context.Context, userA, userB string)
 	return m.convs[convID], nil
 }
 
+func (m *mockConvManager) GetOrCreateSystemConv(_ context.Context, userID string) (*model.Conversation, error) {
+	convID := model.MakeSystemConvID(userID)
+	return &model.Conversation{ConvID: convID, Type: model.ConvSystem, OwnerID: userID}, nil
+}
+
 func (m *mockConvManager) IsMember(_ context.Context, convID, userID string) (bool, error) {
 	return true, nil
 }
@@ -314,6 +319,37 @@ func (r *mockConnRegistry) GetByUserID(_ context.Context, userID string) []any {
 // ---------------------------------------------------------------------------
 
 // mockReceiptWriter implements receiptWriter.
+type mockContactCreator struct{}
+
+func (m *mockContactCreator) AddContact(_ context.Context, _, _ string) error { return nil }
+
+type mockContactRequestDB struct{}
+
+func (m *mockContactRequestDB) GetByFormMsgID(_ context.Context, _ int64) (*model.ContactRequest, error) {
+	return nil, nil
+}
+func (m *mockContactRequestDB) GetByID(_ context.Context, _ int64) (*model.ContactRequest, error) {
+	return nil, nil
+}
+func (m *mockContactRequestDB) Insert(_ context.Context, _ *model.ContactRequest) (int64, error) {
+	return 1, nil
+}
+func (m *mockContactRequestDB) UpdateStatus(_ context.Context, _ int64, _ model.ContactRequestStatus) error {
+	return nil
+}
+func (m *mockContactRequestDB) UpdateStatusTx(_ context.Context, _ pgx.Tx, _ int64, _ model.ContactRequestStatus) error {
+	return nil
+}
+func (m *mockContactRequestDB) LockByIDTx(_ context.Context, _ pgx.Tx, _ int64) (*model.ContactRequest, error) {
+	return nil, nil
+}
+func (m *mockContactRequestDB) UpdateFormMsgID(_ context.Context, _, _ int64) error {
+	return nil
+}
+func (m *mockContactRequestDB) Delete(_ context.Context, _ int64) error {
+	return nil
+}
+
 type mockReceiptWriter struct {
 	mu        sync.Mutex
 	receipts  []*model.Receipt
@@ -359,7 +395,8 @@ func newIngestFixture(ratePerSec, burst, maxBody int, defaultID int64) (
 	rateLmt = NewRateLimiter(ratePerSec, burst, maxBody)
 	router := NewRouter(sessGtr, convMgr, connReg)
 	pusher := NewPusher(connReg, receiptW)
-	ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr)
+	contactReqDB := &mockContactRequestDB{}
+		ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{})
 	return
 }
 

@@ -12,8 +12,11 @@ import TextBubble from './text-bubble'
 import ImageBubble from './image-bubble'
 import FileBubble from './file-bubble'
 import AgentTimelineBubble from './agent-timeline-bubble'
+import FormBubble from './form-bubble'
+import FormResponseBubble from './form-response-bubble'
 import ReplyPreview from './reply-preview'
 import UserCard from '@/components/user-card'
+import { useTranslation } from 'react-i18next'
 
 const senderCache = new Map<string, { avatar: string; type: number }>()
 
@@ -58,6 +61,8 @@ export default function MessageBubble({ message, isOwn, isGrouped }: Props) {
       case ContentType.Image: return <ImageBubble body={message.body} msgId={message.msg_id} />
       case ContentType.File: return <FileBubble body={message.body} />
       case ContentType.AgentTimeline: return <AgentTimelineBubble body={message.body} />
+      case ContentType.Form: return <FormBubble body={message.body} msgId={message.msg_id} convId={message.conv_id} senderId={message.sender_id} />
+      case ContentType.FormResponse: return <FormResponseBubble body={message.body} />
       default: return <TextBubble text={message.body || '[不支持的消息类型]'} />
     }
   }

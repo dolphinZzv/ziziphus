@@ -6,6 +6,7 @@ import { nextClientSeq } from '@/lib/storage'
 import { MessageType } from '@/types/ws'
 import type { WSFrame, MsgSendPayload, MsgPushPayload, MsgReadNotifyPayload, TypingPayload } from '@/types/ws'
 import { ContentType, MsgStatus, type Message } from '@/types/message'
+import { conversationStore } from '@/stores/conversation-store'
 
 interface ChatState {
   messagesByConvId: Map<string, Message[]>
@@ -221,8 +222,9 @@ export const chatStore = {
 
       const ackPayload = frame.payload as { msg_id: number; timestamp: number; client_seq: number; status: number }
       this.updateMessageAfterAck(convId, clientSeq, ackPayload.msg_id, ackPayload.timestamp, ackPayload.status)
-    } catch {
+    } catch (err) {
       this.updateMessageStatus(convId, clientSeq, MsgStatus.Sending, true)
+      throw err
     }
   },
 
@@ -323,7 +325,10 @@ export const chatStore = {
     }
 
     this.upsertMessage(payload.conv_id, msg)
-    // Notification: sound + title badge (if tab is backgrounded)
+
+    if (!conversationStore.has(payload.conv_id)) {
+      conversationStore.refresh()
+    }    // Notification: sound + title badge (if tab is backgrounded)
     notifySound()
     notifyTitle(1)
   },

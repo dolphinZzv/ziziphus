@@ -28,13 +28,14 @@ type userRepo interface {
 	GetByID(ctx context.Context, id string) (*model.User, error)
 	GetByIDs(ctx context.Context, ids []string) (map[string]*model.User, error)
 	Search(ctx context.Context, q string, page, size int) ([]*model.User, int, error)
-	Update(ctx context.Context, id, name, avatar, primaryColor, secondaryColor string) error
+	Update(ctx context.Context, id, name, avatar, cover, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error
 	CountAgents(ctx context.Context, uid string) (int, error)
 	ListAgents(ctx context.Context, uid string) ([]*model.User, error)
-	UpdateAgent(ctx context.Context, agentID, uid, name, avatar, primaryColor, secondaryColor string, wakeMode model.WakeMode) error
+	UpdateAgent(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error
 	DeleteAgent(ctx context.Context, agentID, uid string) error
 	GetByAPIKey(ctx context.Context, apiKey string) (*model.User, error)
 	UpdateAgentAPIKey(ctx context.Context, agentID, uid, apiKey string) error
+	DeleteAccount(ctx context.Context, userID string) error
 }
 
 type sessionChecker interface {
@@ -210,6 +211,7 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 			"account":         u.Account,
 			"name":            u.Name,
 			"avatar":          u.Avatar,
+				"cover":           u.Cover,
 			"type":            u.Type,
 			"status":          u.Status,
 			"uid":             u.UID,
@@ -221,10 +223,13 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateMeReq struct {
-	Name           string `json:"name"`
-	Avatar         string `json:"avatar"`
-	PrimaryColor   string `json:"primary_color"`
-	SecondaryColor string `json:"secondary_color"`
+	Name            string `json:"name"`
+	Avatar          string `json:"avatar"`
+	Cover           string `json:"cover"`
+	PrimaryColor    string `json:"primary_color"`
+	SecondaryColor  string `json:"secondary_color"`
+	Discoverable    *bool  `json:"discoverable"`
+	AllowDirectChat *bool  `json:"allow_direct_chat"`
 }
 
 func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
@@ -234,16 +239,23 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := auth.UserFromCtx(r.Context())
-	if err := h.userRepo.Update(r.Context(), userID, req.Name, req.Avatar, req.PrimaryColor, req.SecondaryColor); err != nil {
+	discoverable := true
+	if req.Discoverable != nil { discoverable = *req.Discoverable }
+	allowDirectChat := true
+	if req.AllowDirectChat != nil { allowDirectChat = *req.AllowDirectChat }
+	if err := h.userRepo.Update(r.Context(), userID, req.Name, req.Avatar, req.Cover, req.PrimaryColor, req.SecondaryColor, discoverable, allowDirectChat); err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
 	JSON(w, map[string]interface{}{
-		"user_id":         userID,
-		"name":            req.Name,
-		"avatar":          req.Avatar,
-		"primary_color":   req.PrimaryColor,
-		"secondary_color": req.SecondaryColor,
+		"user_id":           userID,
+		"name":              req.Name,
+		"avatar":            req.Avatar,
+		"cover":             req.Cover,
+		"primary_color":     req.PrimaryColor,
+		"secondary_color":   req.SecondaryColor,
+		"discoverable":      discoverable,
+		"allow_direct_chat": allowDirectChat,
 	})
 }
 
@@ -268,11 +280,16 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 	items := make([]map[string]interface{}, 0, len(users))
 	for _, u := range users {
+		// Skip users that disabled discoverability
+		if !u.Discoverable {
+			continue
+		}
 		items = append(items, map[string]interface{}{
 			"user_id":         u.ID,
 			"account":         u.Account,
 			"name":            u.Name,
 			"avatar":          u.Avatar,
+				"cover":           u.Cover,
 			"type":            u.Type,
 			"status":          u.Status,
 			"uid":             u.UID,
@@ -285,11 +302,14 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 // Agent requests
 type createAgentReq struct {
-	Name           string `json:"name"`
-	Avatar         string `json:"avatar"`
-	PrimaryColor   string `json:"primary_color"`
-	SecondaryColor string `json:"secondary_color"`
-	WakeMode       int    `json:"wake_mode"`
+	Name            string `json:"name"`
+	Avatar          string `json:"avatar"`
+	Cover           string `json:"cover"`
+	PrimaryColor    string `json:"primary_color"`
+	SecondaryColor  string `json:"secondary_color"`
+	WakeMode        int    `json:"wake_mode"`
+	Discoverable    *bool  `json:"discoverable"`
+	AllowDirectChat *bool  `json:"allow_direct_chat"`
 }
 
 func (h *UserHandler) ListMyAgents(w http.ResponseWriter, r *http.Request) {
@@ -330,18 +350,25 @@ func (h *UserHandler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 
 	agentID := model.GenerateUserID(h.idGen)
 	now := time.Now().UnixMilli()
+	discoverable := true
+	if req.Discoverable != nil { discoverable = *req.Discoverable }
+	allowDirectChat := true
+	if req.AllowDirectChat != nil { allowDirectChat = *req.AllowDirectChat }
 	u := &model.User{
-		ID:             agentID,
-		Type:           model.UserAgent,
-		Name:           req.Name,
-		Account:        "agent_" + agentID,
-		Avatar:         req.Avatar,
-		Status:         model.UserOffline,
-		UID:            userID,
-		PrimaryColor:   req.PrimaryColor,
-		SecondaryColor: req.SecondaryColor,
-		WakeMode:       model.WakeMode(req.WakeMode),
-		CreatedAt:      now,
+		ID:              agentID,
+		Type:            model.UserAgent,
+		Name:            req.Name,
+		Account:         "agent_" + agentID,
+		Avatar:          req.Avatar,
+		Cover:           req.Cover,
+		Status:          model.UserOffline,
+		UID:             userID,
+		PrimaryColor:    req.PrimaryColor,
+		SecondaryColor:  req.SecondaryColor,
+		WakeMode:        model.WakeMode(req.WakeMode),
+		Discoverable:    discoverable,
+		AllowDirectChat: allowDirectChat,
+		CreatedAt:       now,
 	}
 	if err := h.userRepo.Create(r.Context(), u); err != nil {
 		logger.Error("create agent failed", "error", err)
@@ -363,7 +390,11 @@ func (h *UserHandler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
-	if err := h.userRepo.UpdateAgent(r.Context(), agentID, userID, req.Name, req.Avatar, req.PrimaryColor, req.SecondaryColor, model.WakeMode(req.WakeMode)); err != nil {
+	discoverable := true
+	if req.Discoverable != nil { discoverable = *req.Discoverable }
+	allowDirectChat := true
+	if req.AllowDirectChat != nil { allowDirectChat = *req.AllowDirectChat }
+	if err := h.userRepo.UpdateAgent(r.Context(), agentID, userID, req.Name, req.Avatar, req.Cover, req.PrimaryColor, req.SecondaryColor, model.WakeMode(req.WakeMode), discoverable, allowDirectChat); err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
@@ -419,4 +450,14 @@ func (h *UserHandler) DeleteAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	JSON(w, map[string]string{"status": "ok"})
+}
+
+func (h *UserHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	if err := h.userRepo.DeleteAccount(r.Context(), userID); err != nil {
+		logger.Error("delete account failed", "user_id", userID, "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]interface{}{"user_id": userID})
 }

@@ -50,7 +50,7 @@ async function request<T>(
   if (!resp!) throw lastErr || new APIError(-1, '请求失败')
 
   if (resp.status === 401) {
-    throw new APIError(401, '未授权，请重新登录')
+    throw new APIError(401, 'Unauthorized, please login again')
   }
 
   // Handle non-2xx that aren't JSON
@@ -97,7 +97,7 @@ export function uploadFile(
         else reject(new APIError(json.code, json.msg || '上传失败'))
       } catch { reject(new APIError(-1, '上传失败')) }
     }
-    xhr.onerror = () => reject(new APIError(-1, '网络错误'))
+    xhr.onerror = () => reject(new APIError(-1, 'Network error'))
     xhr.send(formData)
   })
 }

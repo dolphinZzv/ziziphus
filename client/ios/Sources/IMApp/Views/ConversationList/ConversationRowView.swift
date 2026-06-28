@@ -26,7 +26,7 @@ struct ConversationRowView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     HStack(spacing: 6) {
-                        Text(conv.name)
+                        Text(conv.type == .system ? "系统消息" : conv.name)
                             .fontWeight(.semibold)
                             .lineLimit(1)
 
@@ -65,6 +65,16 @@ struct ConversationRowView: View {
                             LastImageThumbnailView(url: url)
                         } else if last.contentType == 9 {
                             Text(agentPreviewBody(last.body))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        } else if last.contentType == 10 {
+                            Text(formPreviewBody(last.body))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        } else if last.contentType == 11 {
+                            Text(formResponsePreviewBody(last.body))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)

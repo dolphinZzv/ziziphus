@@ -17,7 +17,8 @@
     "registerError": "Registration failed",
     "passwordMismatch": "Passwords do not match",
     "loggingIn": "Logging in...",
-    "registering": "Registering..."
+    "registering": "Registering...",
+    "fieldRequired": "Please fill in all fields"
   },
   "chat": {
     "inputPlaceholder": "Type a message...",
@@ -33,21 +34,50 @@
     "selectFile": "Select File",
     "messageFailed": "Message send failed",
     "draft": "Draft",
-    "newMessage": "New Message"
+    "newMessage": "New Message",
+    "image": "[Image]",
+    "file": "[File]",
+    "audio": "[Audio]",
+    "video": "[Video]",
+    "quoteMessage": "Quoted message",
+    "replyTo": "Reply to {{name}}",
+    "noMessages": "No messages",
+    "history": "History",
+    "detail": "Chat Details",
+    "clickCopyId": "Click to copy conversation ID",
+    "typingUser": "{{name}} is typing...",
+    "typingMulti": "{{count}} people typing..."
   },
   "conversation": {
     "title": "Messages",
     "newChat": "New Chat",
     "createGroup": "Create Group",
     "joinGroup": "Join Group",
+    "searchPlaceholder": "Search conversations...",
     "searchUsers": "Search users...",
     "searchGroups": "Search groups...",
     "groupName": "Group Name",
     "noConversations": "No conversations yet",
+    "noMatch": "No matching conversations",
+    "startChat": "Click + to start a new chat",
     "selectChat": "Select a conversation to start chatting",
     "members": "Members",
     "you": "You",
-    "mentionYou": "@You"
+    "mentionYou": "@You",
+    "friendRequest": "Friend Request",
+    "form": "[Form]",
+    "response": "[Response]",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "agentResult": "[Agent]",
+    "systemMessage": "System Messages",
+    "clearChat": "Clear Chat",
+    "memberCount": "{{count}} members",
+    "conversationId": "Conversation ID",
+    "p2pDetail": "Chat Details",
+    "addFriend": "Add Friend",
+    "alreadyFriends": "Already Friends",
+    "requestSent": "Request Sent"
   },
   "group": {
     "detail": "Group Info",
@@ -55,16 +85,29 @@
     "memberCount": "{{count}} members",
     "addMember": "Add Member",
     "removeMember": "Remove",
+    "removeConfirm": "Remove this member?",
     "leave": "Leave Group",
     "leaveConfirm": "Are you sure you want to leave this group?",
     "joinRequests": "Join Requests",
+    "requests": "Requests",
     "approve": "Approve",
     "reject": "Reject",
     "noRequests": "No pending requests",
     "owner": "Owner",
     "admin": "Admin",
     "member": "Member",
-    "avatarUpload": "Change Avatar"
+    "avatarUpload": "Change Avatar",
+    "notice": "Announcement",
+    "noticeAdd": "Add",
+    "noticeEdit": "Edit",
+    "noticeEmpty": "No announcement yet. Owner can add one here.",
+    "noticePlaceholder": "Enter group announcement...",
+    "clone": "Clone Group",
+    "cloneConfirm": "Clone this group? A new group with the same members will be created.",
+    "searchMember": "Search users...",
+    "searchBtn": "Search",
+    "cancel": "Cancel",
+    "me": " (me)"
   },
   "contact": {
     "title": "Contacts",
@@ -74,7 +117,25 @@
     "editNickname": "Edit Nickname",
     "noContacts": "No contacts yet",
     "online": "Online",
-    "offline": "Offline"
+    "offline": "Offline",
+    "startChat": "Start Chat",
+    "addFriend": "Add Friend",
+    "alreadyFriends": "Already Friends",
+    "requestSent": "Sent",
+    "contacts": "Contacts",
+    "requestSentHint": "Friend request sent. Check system messages.",
+    "sendFailed": "Send failed"
+  },
+  "friendRequest": {
+    "title": "Friend Request",
+    "message": "wants to add you as a friend",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "pending": "Waiting for response",
+    "approvedBy": "Approved by {{name}}",
+    "rejectedBy": "Rejected by {{name}}"
   },
   "search": {
     "placeholder": "Search...",
@@ -93,15 +154,32 @@
     "title": "Profile",
     "edit": "Edit",
     "save": "Save",
+    "saving": "Saving...",
     "userID": "User ID",
     "account": "Account",
-    "primaryColor": "Primary Color",
-    "secondaryColor": "Secondary Color",
+    "primaryColor": "Primary",
+    "secondaryColor": "Secondary",
     "logout": "Logout",
-    "logoutConfirm": "Are you sure you want to logout?"
+    "logoutConfirm": "Are you sure you want to logout?",
+    "uploadingAvatar": "Uploading avatar...",
+    "nicknamePlaceholder": "Nickname",
+    "nickname": "Nickname",
+    "userSettings": "User Settings",
+    "agentMgmt": "Agent Management",
+    "deviceMgmt": "Device Management",
+    "appSettings": "App Settings",
+    "dangerZone": "Danger Zone",
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirm": "Delete your account? This action cannot be undone. All data will be erased.",
+    "deleteAccountConfirm2": "Confirm again: This will permanently delete all your contacts, messages, and conversations."
   },
   "settings": {
-    "title": "Settings",
+    "title": "App Settings",
+    "privacy": "Privacy",
+    "discoverable": "Allow others to find me via search",
+    "discoverableHint": "When disabled, other users cannot find you via search",
+    "allowDirectChat": "Allow direct messages",
+    "allowDirectChatHint": "When disabled, users must be friends to start a chat",
     "server": "Server URL",
     "theme": "Theme",
     "themeLight": "Light",
@@ -113,7 +191,9 @@
     "bubbleColor": "Bubble Color",
     "deviceID": "Device ID",
     "sessionID": "Session ID",
-    "appInfo": "App Info"
+    "appInfo": "App Info",
+    "themeAuto": "Auto",
+    "languageAuto": "Auto"
   },
   "agent": {
     "title": "Agent Management",
@@ -129,7 +209,12 @@
     "deleteConfirm": "Delete this agent?",
     "maxReached": "Maximum 10 agents reached",
     "copyKey": "Copy Key",
-    "keyCopied": "API Key copied!"
+    "keyCopied": "API Key copied!",
+    "alert": "Note: The API Key is only shown once. Please copy it now.",
+    "running": "Running",
+    "completed": "Completed",
+    "error": "Error",
+    "pending": "Pending"
   },
   "session": {
     "title": "Device Sessions",
@@ -144,7 +229,26 @@
   "connection": {
     "connected": "Connected",
     "connecting": "Connecting...",
-    "disconnected": "Disconnected"
+    "disconnected": "Disconnected",
+    "recovering": "Recovering..."
+  },
+  "error": {
+    "pageError": "Something went wrong",
+    "unknown": "Unknown error",
+    "loadFailed": "Failed to load",
+    "unauthorized": "Unauthorized, please login again",
+    "notFound": "User not found",
+    "timeoutRetry": "Operation timed out, please retry",
+    "operationFailed": "Operation failed, please retry"
+  },
+  "sidebar": {
+    "newChat": "New Chat",
+    "createGroup": "Create Group",
+    "joinGroup": "Join Group",
+    "contacts": "Contacts",
+    "agents": "Agents",
+    "sessions": "Device Mgmt",
+    "settings": "Settings"
   },
   "common": {
     "cancel": "Cancel",
@@ -159,7 +263,16 @@
     "copied": "Copied!",
     "more": "More",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "retry": "Retry",
+    "search": "Search",
+    "back": "Back",
+    "or": "or",
+    "add": "Add",
+    "edit": "Edit",
+    "remove": "Remove",
+    "pin": "Pin",
+    "unpin": "Unpin"
   },
   "time": {
     "justNow": "Just now",

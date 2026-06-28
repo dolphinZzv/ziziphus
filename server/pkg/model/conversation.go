@@ -3,8 +3,9 @@ package model
 type ConvType int
 
 const (
-	ConvP2P   ConvType = 1
-	ConvGroup ConvType = 2
+	ConvP2P    ConvType = 1
+	ConvGroup  ConvType = 2
+	ConvSystem ConvType = 3
 )
 
 type ConvRole int
@@ -21,6 +22,7 @@ type Conversation struct {
 	Name       string   `json:"name"`
 	OwnerID    string   `json:"owner_id"`
 	Avatar     string   `json:"avatar,omitempty"`
+	Cover      string   `json:"cover,omitempty"`
 	Notice     string   `json:"notice,omitempty"`
 	MaxMembers int      `json:"max_members,omitempty"`
 	LastMsgID  int64    `json:"last_msg_id,omitempty"`

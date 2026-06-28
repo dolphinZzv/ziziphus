@@ -3,6 +3,7 @@ import Foundation
 public enum ConvType: Int, Codable, Sendable {
     case p2p = 1
     case group = 2
+    case system = 3
 }
 
 public struct Conversation: Codable, Sendable, Identifiable, Hashable {

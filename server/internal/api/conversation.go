@@ -22,10 +22,12 @@ type convDataRepo interface {
 	GetUserConvs(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
 	UpdateNameAvatar(ctx context.Context, convID, name, avatar string) error
 	UpdateNotice(ctx context.Context, convID, notice string) error
+	UpdateCover(ctx context.Context, convID, cover string) error
 	Pin(ctx context.Context, userID, convID string) error
 	Unpin(ctx context.Context, userID, convID string) error
 	Clone(ctx context.Context, srcConvID, newConvID, ownerID string, name string, idGen func() int64) error
 	SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
+	AreContacts(ctx context.Context, userA, userB string) (bool, error)
 }
 
 type ConvHandler struct {
@@ -128,6 +130,7 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 		"name":         conv.Name,
 		"owner_id":     conv.OwnerID,
 		"avatar":       conv.Avatar,
+		"cover":        conv.Cover,
 		"notice":       conv.Notice,
 		"members":      members,
 		"unread_count": unread,
@@ -139,6 +142,7 @@ type updateGroupReq struct {
 	Name   *string `json:"name"`
 	Avatar *string `json:"avatar"`
 	Notice *string `json:"notice"`
+	Cover  *string `json:"cover"`
 }
 
 func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
@@ -154,21 +158,64 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		NotFound(w, r)
 		return
 	}
-	if conv.Type != model.ConvGroup {
+
+	userID := auth.UserFromCtx(r.Context())
+	isMember, err := h.convMgr.IsMember(r.Context(), convID, userID)
+	if err != nil || !isMember {
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
+		return
+	}
+
+	isGroup := conv.Type == model.ConvGroup
+
+	// Name and avatar can only be updated for groups
+	if (req.Name != nil || req.Avatar != nil) && !isGroup {
 		Error(w, r, http.StatusBadRequest, &model.AppError{Code: model.ErrBadMessage, Message: i18n.T(r.Context(), "err.group_only")})
 		return
 	}
 
-	// Only owner or admin can update group info
-	userID := auth.UserFromCtx(r.Context())
-	role, err := h.convMgr.GetMemberRole(r.Context(), convID, userID)
-	if err != nil {
-		NotFound(w, r)
-		return
+	// For groups, admin+ permission is required for name/avatar/cover updates
+	// For P2P, any member can update cover
+	var role model.ConvRole
+	if isGroup {
+		role, err = h.convMgr.GetMemberRole(r.Context(), convID, userID)
+		if err != nil {
+			NotFound(w, r)
+			return
+		}
 	}
-	if role < model.ConvRoleAdmin {
-		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
-		return
+
+	// Name update (group, admin+)
+	if req.Name != nil {
+		if role < model.ConvRoleAdmin {
+			Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
+			return
+		}
+	}
+	// Avatar update (group, admin+)
+	if req.Avatar != nil {
+		if role < model.ConvRoleAdmin {
+			Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
+			return
+		}
+	}
+	// Notice update (group, owner only)
+	if req.Notice != nil {
+		if !isGroup {
+			Error(w, r, http.StatusBadRequest, &model.AppError{Code: model.ErrBadMessage, Message: i18n.T(r.Context(), "err.group_only")})
+			return
+		}
+		if role != model.ConvRoleOwner {
+			Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.owner_only")})
+			return
+		}
+	}
+	// Cover update (group: admin+, P2P: any member)
+	if req.Cover != nil {
+		if isGroup && role < model.ConvRoleAdmin {
+			Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
+			return
+		}
 	}
 
 	name := conv.Name
@@ -179,12 +226,18 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	if req.Avatar != nil {
 		avatar = *req.Avatar
 	}
-	// Notice can only be changed by the group owner
-	if req.Notice != nil {
-		if role != model.ConvRoleOwner {
-			Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.owner_only")})
+
+	// Apply name/avatar update
+	if req.Name != nil || req.Avatar != nil {
+		if err := h.convRepo.UpdateNameAvatar(r.Context(), convID, name, avatar); err != nil {
+			logger.Error("update group failed", "conv_id", convID, "error", err)
+			Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 			return
 		}
+	}
+
+	// Apply notice update
+	if req.Notice != nil {
 		if err := h.convRepo.UpdateNotice(r.Context(), convID, *req.Notice); err != nil {
 			logger.Error("update notice failed", "conv_id", convID, "error", err)
 			Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
@@ -192,17 +245,26 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.convRepo.UpdateNameAvatar(r.Context(), convID, name, avatar); err != nil {
-		logger.Error("update group failed", "conv_id", convID, "error", err)
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
-		return
+	// Apply cover update
+	if req.Cover != nil {
+		if err := h.convRepo.UpdateCover(r.Context(), convID, *req.Cover); err != nil {
+			logger.Error("update cover failed", "conv_id", convID, "error", err)
+			Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+			return
+		}
 	}
 
-	JSON(w, map[string]interface{}{
+	resp := map[string]interface{}{
 		"conv_id": convID,
 		"name":    name,
 		"avatar":  avatar,
-	})
+	}
+	if req.Cover != nil {
+		resp["cover"] = *req.Cover
+	} else {
+		resp["cover"] = conv.Cover
+	}
+	JSON(w, resp)
 }
 
 func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
@@ -264,6 +326,17 @@ func (h *ConvHandler) CreateP2P(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if target user allows direct chat
+	partner, partnerErr := h.userGetter.GetByID(r.Context(), req.UserID)
+	if partnerErr == nil && !partner.AllowDirectChat && partner.Type == model.UserHuman {
+		// Allow contacts to bypass this restriction
+		areContacts, _ := h.convRepo.AreContacts(r.Context(), userID, req.UserID)
+		if !areContacts {
+			Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.direct_chat_disabled")})
+			return
+		}
+	}
+
 	conv, err := h.convMgr.GetOrCreateP2P(r.Context(), userID, req.UserID)
 	if err != nil {
 		logger.Error("create p2p failed", "error", err)
@@ -273,7 +346,7 @@ func (h *ConvHandler) CreateP2P(w http.ResponseWriter, r *http.Request) {
 
 	// Resolve the partner's display name
 	partnerName := ""
-	if partner, err := h.userGetter.GetByID(r.Context(), req.UserID); err == nil {
+	if partnerErr == nil {
 		partnerName = partner.Name
 	}
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
 import { userService } from '@/services/user-service'
 import { fileService } from '@/services/file-service'
+import { useTranslation } from 'react-i18next'
 import { avatarUrl } from '@/lib/file'
 import { authStore } from '@/stores/auth-store'
 import type { ConversationDetail, JoinRequest } from '@/types/conversation'
@@ -15,6 +16,7 @@ interface Props { convId: string; onClose: () => void }
 const inputSm = 'w-full h-9 px-3 rounded-lg bg-[var(--color-surface-card)] text-sm border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
 
 export default function GroupDetail({ convId, onClose }: Props) {
+  const { t } = useTranslation()
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([])
   const [userMap, setUserMap] = useState<Record<string, User>>({})
@@ -28,6 +30,8 @@ export default function GroupDetail({ convId, onClose }: Props) {
   const [addResults, setAddResults] = useState<User[]>([])
   const [tab, setTab] = useState<'members' | 'notice' | 'requests'>('members')
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingCover, setUploadingCover] = useState(false)
   const navigate = useNavigate()
   const currentUserId = authStore.state.user?.user_id || ''
 
@@ -57,7 +61,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
   const userName = (id: string) => userMap[id]?.name || id
 
   const handleRemove = async (userId: string) => {
-    if (!confirm('移出该成员？')) return
+    if (!confirm(t('group.removeConfirm'))) return
     try { await conversationService.removeMember(convId, userId); setDetail({ ...detail, members: detail.members.filter(m => m.user_id !== userId) }) } catch {}
   }
   const handleApprove = async (userId: string) => {
@@ -67,7 +71,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
     await conversationService.rejectJoinRequest(convId, userId); setJoinRequests(prev => prev.filter(r => r.user_id !== userId))
   }
   const handleLeave = async () => {
-    if (!confirm('确定退出该群组？')) return
+    if (!confirm(t('group.leaveConfirm'))) return
     try { await conversationService.leave(convId); onClose() } catch {}
   }
   const handleSaveName = async () => {
@@ -87,6 +91,13 @@ export default function GroupDetail({ convId, onClose }: Props) {
     setUploading(true)
     try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { avatar: r.url }); setDetail({ ...detail!, avatar: r.url }) } catch {}
     setUploading(false)
+  }
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingCover(true)
+    try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { cover: r.url }); setDetail({ ...detail!, cover: r.url }) } catch {}
+    setUploadingCover(false)
   }
   const handleAddMemberSearch = async () => {
     if (!addQuery.trim()) return
@@ -113,41 +124,58 @@ export default function GroupDetail({ convId, onClose }: Props) {
       <div className="w-[420px] max-h-[580px] bg-[var(--color-surface-card)] rounded-lg overflow-hidden flex flex-col"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4 bg-gradient-to-b from-[var(--color-surface-soft)] to-transparent">
-          <div className="flex items-start justify-between mb-5">
-            <div className="flex items-center gap-4">
-              <button onClick={() => isAdmin ? avatarInputRef.current?.click() : undefined} disabled={uploading} className="relative group flex-shrink-0">
-                {detail.avatar ? (
-                  <img src={avatarUrl(detail.avatar)} alt="" className="w-14 h-14 rounded-full object-cover" />
-                ) : (
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold"
-                    style={{ background: 'linear-gradient(135deg, var(--color-accent), #34D399)' }}>{detail.name?.charAt(0)?.toUpperCase() || 'G'}</div>
-                )}
-                {isAdmin && <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Camera size={15} className="text-white" /></div>}
-              </button>
-              {isAdmin && <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />}
-              <div className="min-w-0">
-                {editingName ? (
-                  <div className="flex items-center gap-2">
-                    <input value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }} autoFocus className="h-8 px-2 rounded bg-[var(--color-surface-card)] text-sm font-semibold border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] w-[160px]" />
-                    <button onClick={handleSaveName} className="text-[11px] text-[var(--color-accent)] font-medium flex-shrink-0">保存</button>
-                  </div>
-                ) : (
-                  <button onClick={() => { if (isAdmin) { setEditName(detail.name); setEditingName(true) } }}
-                    className={`font-headline text-base font-semibold text-[var(--color-ink)] truncate block text-left ${isAdmin ? 'hover:text-[var(--color-accent)] cursor-pointer' : 'cursor-default'}`}>{detail.name}</button>
-                )}
-                <div className="text-[11px] text-[var(--color-muted)] mt-0.5">{detail.members.length} 名成员</div>
+        {/* Header with cover as background */}
+        <div className="h-28 flex items-end justify-between px-6 pb-5 relative"
+          style={{ background: detail.cover ? `url(${detail.cover}?w=840&h=224) center/cover` : `linear-gradient(135deg, var(--color-primary), var(--color-muted))` }}>
+          {detail.cover && <div className="absolute inset-0 bg-black/20" />}
+          {isAdmin && (
+            <button onClick={() => coverInputRef.current?.click()} disabled={uploadingCover}
+              className="absolute top-3 left-3 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white z-10 transition-colors">
+              <Camera size={14} />
+            </button>
+          )}
+          <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
+          <div />
+          <div className="flex items-center gap-1 relative z-10">
+            <button onClick={onClose} className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white"><X size={15} /></button>
+          </div>
+        </div>
+
+        {/* Avatar — overlaps header */}
+        <div className="flex justify-center -mt-10 mb-4">
+          <button onClick={() => isAdmin ? avatarInputRef.current?.click() : undefined} disabled={uploading}
+            className="relative group cursor-pointer disabled:opacity-50">
+            {detail.avatar ? (
+              <img src={avatarUrl(detail.avatar)} alt="" className="w-[72px] h-[72px] rounded-full object-cover border-4 border-[var(--color-surface-card)]" />
+            ) : (
+              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-[var(--color-surface-card)]"
+                style={{ background: 'linear-gradient(135deg, var(--color-accent), #34D399)' }}>{detail.name?.charAt(0)?.toUpperCase() || 'G'}</div>
+            )}
+            {isAdmin && <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Camera size={18} className="text-white" /></div>}
+          </button>
+          <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+        </div>
+
+        {/* Info */}
+        <div className="px-6 pb-4">
+          <div className="text-center space-y-1 mb-4">
+            {editingName ? (
+              <div className="flex items-center justify-center gap-2">
+                <input value={editName} onChange={e => setEditName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }} autoFocus className="h-8 px-2 rounded bg-[var(--color-surface-soft)] text-sm font-semibold border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] w-[160px] text-center" />
+                <button onClick={handleSaveName} className="text-[11px] text-[var(--color-accent)] font-medium flex-shrink-0">保存</button>
               </div>
-            </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] flex-shrink-0"><X size={18} /></button>
+            ) : (
+              <button onClick={() => { if (isAdmin) { setEditName(detail.name); setEditingName(true) } }}
+                className={`font-headline text-lg font-semibold ${isAdmin ? 'hover:text-[var(--color-accent)] cursor-pointer' : 'cursor-default text-[var(--color-ink)]'}`}>{detail.name}</button>
+            )}
+            <div className="text-sm text-[var(--color-muted)]">{t('group.memberCount', { count: detail.members.length })}</div>
           </div>
 
           {/* Tab bar */}
-          <div className="flex gap-1.5">
-            {tabBtn('members', '成员')}
-            {tabBtn('notice', '公告')}
-            {isAdmin && joinRequests.length > 0 && tabBtn('requests', '申请', joinRequests.length)}
+          <div className="flex gap-1.5 border-t border-[var(--color-hairline)] pt-4 mb-3">
+            {tabBtn('members', t('group.members'))}
+            {tabBtn('notice', t('group.notice'))}
+            {isAdmin && joinRequests.length > 0 && tabBtn('requests', t('group.requests'), joinRequests.length)}
           </div>
         </div>
 
@@ -167,7 +195,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
                     <div className="space-y-2 bg-[var(--color-surface-soft)] rounded-lg p-3">
                       <div className="flex gap-2">
                         <input type="text" value={addQuery} onChange={e => setAddQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddMemberSearch() } }}
-                          placeholder="搜索用户..." autoFocus className={inputSm} />
+                          placeholder={t('group.searchMember')} autoFocus className={inputSm} />
                         <button onClick={handleAddMemberSearch} className="px-3 h-9 rounded-lg bg-[var(--color-primary)] text-white text-xs flex-shrink-0">搜索</button>
                         <button onClick={() => setShowAddMember(false)} className="px-2 h-9 text-xs text-[var(--color-muted)] flex-shrink-0">取消</button>
                       </div>
@@ -222,7 +250,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
             <div>
               {editingNotice ? (
                 <div className="space-y-3">
-                  <textarea value={editNotice} onChange={e => setEditNotice(e.target.value)} autoFocus rows={4} placeholder="输入群公告..."
+                  <textarea value={editNotice} onChange={e => setEditNotice(e.target.value)} autoFocus rows={4} placeholder={t('group.noticePlaceholder')}
                     className="w-full resize-none rounded-lg bg-[var(--color-surface-card)] text-sm border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] px-3 py-2" />
                   <div className="flex gap-2">
                     <button onClick={handleSaveNotice} className="px-4 h-9 rounded-lg bg-[var(--color-primary)] text-white text-sm">保存</button>
@@ -233,7 +261,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
                 <div className={`rounded-lg p-4 text-sm ${detail.notice ? 'bg-[var(--color-warning)]/5 border border-[var(--color-warning)]/10' : 'bg-[var(--color-surface-soft)]'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5"><Bell size={12} /> 群公告</span>
-                    {isOwner && <button onClick={() => { setEditNotice(detail.notice || ''); setEditingNotice(true) }} className="text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)] flex items-center gap-1"><Edit2 size={11} />{detail.notice ? '编辑' : '添加'}</button>}
+                    {isOwner && <button onClick={() => { setEditNotice(detail.notice || ''); setEditingNotice(true) }} className="text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)] flex items-center gap-1"><Edit2 size={11} />{detail.notice ? t('group.noticeEdit') : t('group.noticeAdd')}</button>}
                   </div>
                   {detail.notice ? <p className="text-[var(--color-body)] leading-relaxed whitespace-pre-wrap">{detail.notice}</p> : <p className="text-[var(--color-muted)] italic text-xs">暂无公告，群主可在此添加</p>}
                 </div>
@@ -261,7 +289,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
         <div className="px-6 pb-5 space-y-2">
           {isOwner && (
             <button onClick={async () => {
-              if (!confirm('克隆该群组？将创建一个包含相同成员的新群组。')) return
+              if (!confirm(t('group.cloneConfirm'))) return
               try {
                 const r = await conversationService.clone(convId)
                 onClose()

@@ -1,3 +1,5 @@
+import i18n from '@/i18n'
+
 // Server timestamps may be seconds or milliseconds — normalize
 function toDate(ts: number): Date {
   if (!ts || ts <= 0) return new Date(0)
@@ -24,8 +26,8 @@ export function formatMessageTime(ts: number): string {
   const now = Date.now()
   const diff = now - d.getTime()
   const secs = Math.floor(diff / 1000)
-  if (secs < 60) return '刚刚'
-  if (secs < 3600) return `${Math.floor(secs / 60)}分钟前`
+  if (secs < 60) return i18n.t('time.justNow')
+  if (secs < 3600) return i18n.t('time.minuteAgo', { n: Math.floor(secs / 60) })
   if (secs < 86400) {
     const h = d.getHours().toString().padStart(2, '0')
     const m = d.getMinutes().toString().padStart(2, '0')
@@ -35,7 +37,7 @@ export function formatMessageTime(ts: number): string {
   today.setHours(0, 0, 0, 0)
   const yesterday = new Date(today.getTime() - 86400000)
   const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  if (msgDay.getTime() >= yesterday.getTime() && msgDay.getTime() < today.getTime()) return '昨天'
+  if (msgDay.getTime() >= yesterday.getTime() && msgDay.getTime() < today.getTime()) return i18n.t('common.yesterday')
   if (d.getFullYear() === today.getFullYear()) {
     return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`
   }
@@ -50,8 +52,8 @@ export function getDateLabel(ts: number): string {
   const yesterday = new Date(today.getTime() - 86400000)
   const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
 
-  if (msgDay.getTime() >= today.getTime()) return '今天'
-  if (msgDay.getTime() >= yesterday.getTime()) return '昨天'
+  if (msgDay.getTime() >= today.getTime()) return i18n.t('common.today')
+  if (msgDay.getTime() >= yesterday.getTime()) return i18n.t('common.yesterday')
   return `${d.getFullYear()}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`
 }
 

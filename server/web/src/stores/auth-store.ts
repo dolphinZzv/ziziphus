@@ -75,6 +75,7 @@ export const authStore = {
         name: (result.name as string) || account,
         account: (result.account as string) || account,
         avatar: (result.avatar as string) || '',
+        cover: (result.cover as string) || '',
         type: (result.type as number) || 0,
         status: (result.status as number) || 1,
         uid: (result.uid as string) || '',
@@ -82,12 +83,14 @@ export const authStore = {
         secondary_color: (result.secondary_color as string) || '#64748B',
         wake_mode: (result.wake_mode as number) || 0,
         api_key: (result.api_key as string) || '',
+        discoverable: (result.discoverable as boolean) ?? true,
+        allow_direct_chat: (result.allow_direct_chat as boolean) ?? true,
         created_at: (result.created_at as number) || 0,
       }
       this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '')
       wsClient.connect(result.token as string)
     } catch (e: unknown) {
-      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : '登录失败' }; emit()
+      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : 'Login failed' }; emit()
       throw e
     }
   },
@@ -103,6 +106,7 @@ export const authStore = {
         name: (result.name as string) || name,
         account: (result.account as string) || account,
         avatar: (result.avatar as string) || '',
+        cover: (result.cover as string) || '',
         type: (result.type as number) || 0,
         status: (result.status as number) || 1,
         uid: (result.uid as string) || '',
@@ -110,12 +114,14 @@ export const authStore = {
         secondary_color: (result.secondary_color as string) || '#64748B',
         wake_mode: (result.wake_mode as number) || 0,
         api_key: (result.api_key as string) || '',
+        discoverable: (result.discoverable as boolean) ?? true,
+        allow_direct_chat: (result.allow_direct_chat as boolean) ?? true,
         created_at: (result.created_at as number) || 0,
       }
       this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '')
       wsClient.connect(result.token as string)
     } catch (e: unknown) {
-      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : '注册失败' }; emit()
+      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : 'Registration failed' }; emit()
       throw e
     }
   },
@@ -149,14 +155,17 @@ export const authStore = {
     }
   },
 
-  async updateProfile(data: { name?: string; avatar?: string; primary_color?: string; secondary_color?: string }) {
+  async updateProfile(data: { name?: string; avatar?: string; cover?: string; primary_color?: string; secondary_color?: string; discoverable?: boolean; allow_direct_chat?: boolean }) {
     const cur = state.user
     // Always send all fields so server-side UPDATE doesn't wipe unchanged columns
     const body = {
       name: data.name ?? cur?.name ?? '',
       avatar: data.avatar ?? cur?.avatar ?? '',
+      cover: data.cover ?? cur?.cover ?? '',
       primary_color: data.primary_color ?? cur?.primary_color ?? '',
       secondary_color: data.secondary_color ?? cur?.secondary_color ?? '',
+      discoverable: data.discoverable ?? cur?.discoverable ?? true,
+      allow_direct_chat: data.allow_direct_chat ?? cur?.allow_direct_chat ?? true,
     }
     await api.request<Record<string, unknown>>('/api/v1/users/me', { method: 'PUT', body })
     let user = await api.request<User>('/api/v1/users/me')

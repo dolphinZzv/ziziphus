@@ -18,9 +18,9 @@ func NewUserRepo(pool DBPool) *UserRepo {
 
 func (r *UserRepo) Create(ctx context.Context, u *model.User) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO users (id, type, name, avatar, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-		u.ID, u.Type, u.Name, u.Avatar, u.Status, u.Password, u.ExtMeta, time.UnixMilli(u.CreatedAt), u.Account, u.PrimaryColor, u.SecondaryColor, u.UID, u.WakeMode, u.APIKey)
+		`INSERT INTO users (id, type, name, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+		u.ID, u.Type, u.Name, u.Avatar, u.Cover, u.Status, u.Password, u.ExtMeta, time.UnixMilli(u.CreatedAt), u.Account, u.PrimaryColor, u.SecondaryColor, u.UID, u.WakeMode, u.APIKey, u.Discoverable, u.AllowDirectChat)
 	return err
 }
 
@@ -28,8 +28,8 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*model.User, error) 
 	u := &model.User{}
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, type, name, avatar, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key FROM users WHERE id = $1`, id).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey)
+		`SELECT id, type, name, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE id = $1`, id).
+		Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Cover, &u.Status, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat)
 	if err != nil {
 		logger.Error("GetByID query failed",
 			"id", id,
@@ -42,7 +42,7 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*model.User, error) 
 
 func (r *UserRepo) GetByIDs(ctx context.Context, ids []string) (map[string]*model.User, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, type, name, avatar, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key FROM users WHERE id = ANY($1)`, ids)
+		`SELECT id, type, name, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE id = ANY($1)`, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (r *UserRepo) GetByIDs(ctx context.Context, ids []string) (map[string]*mode
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Cover, &u.Status, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat); err != nil {
 			return nil, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -68,7 +68,7 @@ func (r *UserRepo) Search(ctx context.Context, q string, page, size int) ([]*mod
 	}
 	offset := (page - 1) * size
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, type, name, avatar, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key FROM users WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+		`SELECT id, type, name, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
 		"%"+q+"%", size, offset)
 	if err != nil {
 		return nil, 0, err
@@ -78,7 +78,7 @@ func (r *UserRepo) Search(ctx context.Context, q string, page, size int) ([]*mod
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Cover, &u.Status, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat); err != nil {
 			return nil, 0, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -91,8 +91,8 @@ func (r *UserRepo) GetByAccount(ctx context.Context, account string) (*model.Use
 	u := &model.User{}
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, type, name, avatar, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key FROM users WHERE account = $1`, account).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey)
+		`SELECT id, type, name, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE account = $1`, account).
+		Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Cover, &u.Status, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat)
 	if err != nil {
 		return nil, err
 	}
@@ -100,10 +100,10 @@ func (r *UserRepo) GetByAccount(ctx context.Context, account string) (*model.Use
 	return u, nil
 }
 
-func (r *UserRepo) Update(ctx context.Context, id, name, avatar, primaryColor, secondaryColor string) error {
+func (r *UserRepo) Update(ctx context.Context, id, name, avatar, cover, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE users SET name = $1, avatar = $2, primary_color = $3, secondary_color = $4 WHERE id = $5`,
-		name, avatar, primaryColor, secondaryColor, id)
+		`UPDATE users SET name = $1, avatar = $2, cover = $3, primary_color = $4, secondary_color = $5, discoverable = $6, allow_direct_chat = $7 WHERE id = $8`,
+		name, avatar, cover, primaryColor, secondaryColor, discoverable, allowDirectChat, id)
 	return err
 }
 
@@ -118,7 +118,7 @@ func (r *UserRepo) CountAgents(ctx context.Context, uid string) (int, error) {
 // ListAgents lists agents owned by uid.
 func (r *UserRepo) ListAgents(ctx context.Context, uid string) ([]*model.User, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, type, name, avatar, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key FROM users WHERE type = $1 AND uid = $2 ORDER BY created_at ASC`,
+		`SELECT id, type, name, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE type = $1 AND uid = $2 ORDER BY created_at ASC`,
 		model.UserAgent, uid)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (r *UserRepo) ListAgents(ctx context.Context, uid string) ([]*model.User, e
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Cover, &u.Status, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat); err != nil {
 			return nil, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -138,10 +138,10 @@ func (r *UserRepo) ListAgents(ctx context.Context, uid string) ([]*model.User, e
 }
 
 // UpdateAgent updates an agent owned by uid.
-func (r *UserRepo) UpdateAgent(ctx context.Context, agentID, uid, name, avatar, primaryColor, secondaryColor string, wakeMode model.WakeMode) error {
+func (r *UserRepo) UpdateAgent(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE users SET name = $1, avatar = $2, primary_color = $3, secondary_color = $4, wake_mode = $5 WHERE id = $6 AND type = $7 AND uid = $8`,
-		name, avatar, primaryColor, secondaryColor, wakeMode, agentID, model.UserAgent, uid)
+		`UPDATE users SET name = $1, avatar = $2, cover = $3, primary_color = $4, secondary_color = $5, wake_mode = $6, discoverable = $7, allow_direct_chat = $8 WHERE id = $9 AND type = $10 AND uid = $11`,
+		name, avatar, cover, primaryColor, secondaryColor, wakeMode, discoverable, allowDirectChat, agentID, model.UserAgent, uid)
 	return err
 }
 
@@ -150,8 +150,8 @@ func (r *UserRepo) GetByAPIKey(ctx context.Context, apiKey string) (*model.User,
 	u := &model.User{}
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, type, name, avatar, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key FROM users WHERE api_key = $1`, apiKey).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Status, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey)
+		`SELECT id, type, name, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE api_key = $1`, apiKey).
+		Scan(&u.ID, &u.Type, &u.Name, &u.Avatar, &u.Cover, &u.Status, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat)
 	if err != nil {
 		return nil, err
 	}
@@ -173,4 +173,63 @@ func (r *UserRepo) DeleteAgent(ctx context.Context, agentID, uid string) error {
 		`DELETE FROM users WHERE id = $1 AND type = $2 AND uid = $3`,
 		agentID, model.UserAgent, uid)
 	return err
+}
+
+// DeleteAccount wipes all user data and deletes the user account.
+// Uses a transaction to ensure atomicity.
+func (r *UserRepo) DeleteAccount(ctx context.Context, userID string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// Step through in dependency order — children first, then parents.
+
+	// 1. Remove from all conversations (member records)
+	if _, err := tx.Exec(ctx, `DELETE FROM conv_members WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+
+	// 2. Anonymize sent messages
+	if _, err := tx.Exec(ctx, `UPDATE messages SET body = '' WHERE sender_id = $1`, userID); err != nil {
+		return err
+	}
+
+	// 3. Remove join requests
+	if _, err := tx.Exec(ctx, `DELETE FROM join_requests WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+
+	// 4. Remove contacts (both directions)
+	if _, err := tx.Exec(ctx, `DELETE FROM contacts WHERE user_id = $1 OR contact_id = $1`, userID); err != nil {
+		return err
+	}
+
+	// 5. Remove contact requests
+	if _, err := tx.Exec(ctx, `DELETE FROM contact_requests WHERE from_user_id = $1 OR to_user_id = $1`, userID); err != nil {
+		return err
+	}
+
+	// 6. Remove msg receipts (if table exists)
+	if _, err := tx.Exec(ctx, `DELETE FROM msg_receipts WHERE user_id = $1`, userID); err != nil {
+		// msg_receipts may not have FK to users — ignore if this fails
+	}
+
+	// 7. Clear owner references in conversations
+	if _, err := tx.Exec(ctx, `UPDATE conversations SET owner_id = '' WHERE owner_id = $1`, userID); err != nil {
+		return err
+	}
+
+	// 8. Remove sessions
+	if _, err := tx.Exec(ctx, `DELETE FROM sessions WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+
+	// 9. Delete the user itself
+	if _, err := tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }

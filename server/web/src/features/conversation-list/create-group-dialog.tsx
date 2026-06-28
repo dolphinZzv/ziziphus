@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn'
 interface Props { onClose: () => void }
 
 export default function CreateGroupDialog({ onClose }: Props) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [groupName, setGroupName] = useState('')
   const [query, setQuery] = useState('')
@@ -84,7 +85,7 @@ export default function CreateGroupDialog({ onClose }: Props) {
 
         <button onClick={handleCreate} disabled={!groupName.trim() || selected.length === 0 || creating}
           className="w-full h-[42px] rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-          {creating ? '创建中...' : `创建群组 (${selected.length}人)`}
+          {creating ? t('common.loading') : `${t('conversation.createGroup')} (${selected.length})`}
         </button>
       </div>
     </div>

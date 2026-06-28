@@ -9,10 +9,12 @@ import ConversationList from '@/features/conversation-list/conversation-list'
 import { SheetWrapper } from './lazy-sheets'
 import { avatarUrl } from '@/lib/file'
 import { Plus, User, Users, UserPlus, Settings, Bot, Smartphone, MessageCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function Sidebar() {
   const navigate = useNavigate()
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
+  const { t } = useTranslation()
   const activeSheet = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.activeSheet)
   const [showMenu, setShowMenu] = useState(false)
 
@@ -68,9 +70,9 @@ export default function Sidebar() {
             <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-[100] py-1"
               style={{ boxShadow: 'var(--shadow-md)' }}>
               {[
-                { icon: MessageCircle, label: '新建聊天', sheet: 'newChat' },
-                { icon: Users, label: '创建群组', sheet: 'createGroup' },
-                { icon: UserPlus, label: '加入群组', sheet: 'joinGroup' },
+                { icon: MessageCircle, label: t('sidebar.newChat'), sheet: 'newChat' },
+                { icon: Users, label: t('sidebar.createGroup'), sheet: 'createGroup' },
+                { icon: UserPlus, label: t('sidebar.joinGroup'), sheet: 'joinGroup' },
               ].map(item => (
                 <button key={item.sheet}
                   onClick={() => { uiStore.openSheet(item.sheet); setShowMenu(false) }}
@@ -91,10 +93,10 @@ export default function Sidebar() {
       {/* Bottom toolbar */}
       <div className="flex items-center justify-around h-12 border-t border-[var(--color-hairline)]">
         {[
-          { icon: User, title: '联系人', sheet: 'contacts' },
-          { icon: Bot, title: 'Agent', sheet: 'agents' },
-          { icon: Smartphone, title: '设备管理', sheet: 'sessions' },
-          { icon: Settings, title: '设置', sheet: 'settings' },
+          { icon: User, title: t('sidebar.contacts'), sheet: 'contacts' },
+          { icon: Bot, title: t('sidebar.agents'), sheet: 'agents' },
+          { icon: Smartphone, title: t('sidebar.sessions'), sheet: 'sessions' },
+          { icon: Settings, title: t('sidebar.settings'), sheet: 'settings' },
         ].map(({ icon: Icon, title, sheet }) => (
           <button key={sheet}
             onClick={() => uiStore.openSheet(sheet)}
@@ -107,7 +109,7 @@ export default function Sidebar() {
 
       {/* Modals */}
       {/* Lazy-loaded sheets */}
-      {['newChat','createGroup','joinGroup','profile','settings','agents','sessions','contacts'].map(name => (
+      {['newChat','createGroup','joinGroup','profile','settings','userSettings','agents','sessions','contacts'].map(name => (
         <SheetWrapper key={name} name={name} activeSheet={activeSheet} onClose={() => uiStore.closeSheet()} />
       ))}
     </>

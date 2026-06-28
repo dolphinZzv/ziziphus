@@ -27,17 +27,12 @@ export const contactStore = {
       const data = await api.request<{ items: Contact[]; total: number; page: number; size: number }>(
         '/api/v1/contacts', { query: { page: 1, size: 200 } }
       )
-      const userMap = new Map(state.userMap)
-      const userIds = data.items.map(c => c.contact_id)
-      if (userIds.length > 0) {
-        try {
-          const users = await api.request<Record<string, User>>('/api/v1/users/batch', {
-            method: 'POST', body: { user_ids: userIds },
-          })
-          Object.entries(users).forEach(([k, v]) => userMap.set(k, v))
-        } catch { /* ignore */ }
+      // Build online status from the contact items themselves (server enriches with status)
+      const onlineUsers = new Set(state.onlineUsers)
+      for (const c of data.items) {
+        if (c.status === 1) onlineUsers.add(c.user_id) // UserOnline = 1
       }
-      state = { ...state, contacts: data.items, userMap, isLoading: false }; emit()
+      state = { ...state, contacts: data.items, onlineUsers, isLoading: false }; emit()
     } catch {
       state = { ...state, isLoading: false }; emit()
     }
@@ -50,12 +45,12 @@ export const contactStore = {
 
   async remove(userId: string) {
     await api.request(`/api/v1/contacts/${userId}`, { method: 'DELETE' })
-    state = { ...state, contacts: state.contacts.filter(c => c.contact_id !== userId) }; emit()
+    state = { ...state, contacts: state.contacts.filter(c => c.user_id !== userId) }; emit()
   },
 
   async updateNickname(userId: string, nickname: string) {
     await api.request(`/api/v1/contacts/${userId}`, { method: 'PUT', body: { nickname } })
-    state = { ...state, contacts: state.contacts.map(c => c.contact_id === userId ? { ...c, nickname } : c) }; emit()
+    state = { ...state, contacts: state.contacts.map(c => c.user_id === userId ? { ...c, nickname } : c) }; emit()
   },
 
   setOnline(userId: string, online: boolean) {

@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from 'react'
 import { Image } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useTranslation } from 'react-i18next'
 
 const ImageViewer = lazy(() => import('@/components/image-viewer'))
 
@@ -13,6 +14,7 @@ function thumbUrl(original: string, size = 400): string {
 }
 
 export default function ImageBubble({ body, msgId }: Props) {
+  const { t } = useTranslation()
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
   const [viewer, setViewer] = useState(false)

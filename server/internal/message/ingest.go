@@ -2,26 +2,37 @@ package message
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"siciv.space/agent/panda_ai/internal/metrics"
 	"siciv.space/agent/panda_ai/pkg/model"
 	"siciv.space/agent/panda_ai/pkg/protocol"
 )
 
 type Ingest struct {
-	store     messageStore
-	router    *Router
-	pusher    *Pusher
-	rateLimit *RateLimiter
-	idGen     idGenerator
-	seqCache  seqCache
-	convMgr   convManager
+	store        messageStore
+	router       *Router
+	pusher       *Pusher
+	rateLimit    *RateLimiter
+	idGen        idGenerator
+	seqCache     seqCache
+	convMgr      convManager
+	contactReqDB contactRequestDB
+	contactRepo  contactCreator
+}
+
+type contactCreator interface {
+	AddContact(ctx context.Context, userID, contactID string) error
 }
 
 type messageStore interface {
 	Insert(ctx context.Context, msg *model.Message) error
+	Get(ctx context.Context, msgID int64) (*model.Message, error)
 	GetByClientSeq(ctx context.Context, senderID, sessionID string, clientSeq int64) (*model.Message, error)
 }
 
@@ -35,21 +46,35 @@ type seqCache interface {
 	SetRecentMsg(ctx context.Context, convID string, msgID int64, score float64) error
 }
 
+type contactRequestDB interface {
+	GetByFormMsgID(ctx context.Context, formMsgID int64) (*model.ContactRequest, error)
+	GetByID(ctx context.Context, id int64) (*model.ContactRequest, error)
+	Insert(ctx context.Context, req *model.ContactRequest) (int64, error)
+	UpdateStatus(ctx context.Context, id int64, status model.ContactRequestStatus) error
+	UpdateStatusTx(ctx context.Context, tx pgx.Tx, id int64, status model.ContactRequestStatus) error
+	LockByIDTx(ctx context.Context, tx pgx.Tx, id int64) (*model.ContactRequest, error)
+	UpdateFormMsgID(ctx context.Context, id, formMsgID int64) error
+	Delete(ctx context.Context, id int64) error
+}
+
 type convManager interface {
 	GetOrCreateP2P(ctx context.Context, userA, userB string) (*model.Conversation, error)
+	GetOrCreateSystemConv(ctx context.Context, userID string) (*model.Conversation, error)
 	Get(ctx context.Context, convID string) (*model.Conversation, error)
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
 }
 
-func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager) *Ingest {
+func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager, contactReqDB contactRequestDB, contactRepo contactCreator) *Ingest {
 	return &Ingest{
-		store:     store,
-		router:    router,
-		pusher:    pusher,
-		rateLimit: rateLimit,
-		idGen:     idGen,
-		seqCache:  seqCache,
-		convMgr:   convMgr,
+		store:        store,
+		router:       router,
+		pusher:       pusher,
+		rateLimit:    rateLimit,
+		idGen:        idGen,
+		seqCache:     seqCache,
+		convMgr:      convMgr,
+		contactReqDB: contactReqDB,
+		contactRepo:  contactRepo,
 	}
 }
 
@@ -60,6 +85,11 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 	}
 	if err := in.rateLimit.CheckBodySize(payload.Body); err != nil {
 		return nil, err
+	}
+
+	// 1.5. FormResponse — handle specially before the normal message flow.
+	if model.ContentType(payload.ContentType) == model.ContentFormResponse {
+		return in.handleFormResponse(ctx, senderID, sessionID, payload)
 	}
 
 	// 2. dedup
@@ -156,14 +186,15 @@ func (in *Ingest) SendSystemMessage(ctx context.Context, convID, body string, se
 		return nil, err
 	}
 	msg := &model.Message{
-		MsgID:       msgID,
-		ConvID:      convID,
-		SenderID:    "",
-		ContentType: model.ContentSystem,
-		Body:        body,
-		Timestamp:   time.Now().UnixMilli(),
-		ConvSeq:     convSeq,
-		Status:      model.MsgSent,
+		MsgID:           msgID,
+		ConvID:          convID,
+		SenderID:        "",
+		SenderSessionID: strconv.FormatInt(msgID, 10),
+		ContentType:     model.ContentSystem,
+		Body:            body,
+		Timestamp:       time.Now().UnixMilli(),
+		ConvSeq:         convSeq,
+		Status:          model.MsgSent,
 	}
 	if err := in.store.Insert(ctx, msg); err != nil {
 		return nil, err
@@ -181,6 +212,212 @@ func (in *Ingest) SendSystemMessage(ctx context.Context, convID, body string, se
 		in.pusher.Push(ctx, msg, targets)
 	}
 	return msg, nil
+}
+
+// SendFormMessage creates, persists, and pushes a form message (content_type=10).
+// It is a general-purpose infrastructure for sending form definitions to a conversation.
+func (in *Ingest) SendFormMessage(ctx context.Context, convID string, body *model.FormDefinitionBody) (*model.Message, error) {
+	bodyJSON, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("marshal form body: %w", err)
+	}
+
+	msgID := in.idGen.NextID()
+	convSeq, err := in.seqCache.GetAndIncrementConvSeq(ctx, convID)
+	if err != nil {
+		return nil, err
+	}
+	msg := &model.Message{
+		MsgID:           msgID,
+		ConvID:          convID,
+		SenderID:        "",
+		SenderSessionID: strconv.FormatInt(msgID, 10),
+		ContentType:     model.ContentForm,
+		Body:            string(bodyJSON),
+		Timestamp:       time.Now().UnixMilli(),
+		ConvSeq:         convSeq,
+		Status:          model.MsgSent,
+	}
+	if err := in.store.Insert(ctx, msg); err != nil {
+		return nil, err
+	}
+	in.seqCache.SetRecentMsg(ctx, convID, msgID, float64(msgID))
+
+	targets := in.router.Route(ctx, msg)
+	if len(targets) > 0 {
+		in.pusher.Push(ctx, msg, targets)
+	}
+	return msg, nil
+}
+
+// handleFormResponse processes a FormResponse message (content_type=11).
+func (in *Ingest) handleFormResponse(ctx context.Context, senderID string, sessionID string, payload protocol.MsgSendPayload) (*protocol.MsgSendAckPayload, error) {
+	var resp model.FormResponseBody
+	if err := json.Unmarshal([]byte(payload.Body), &resp); err != nil {
+		return nil, model.ErrBadMsgContent
+	}
+
+	// Dedup: check if this client_seq was already processed.
+	existing, err := in.store.GetByClientSeq(ctx, senderID, sessionID, payload.ClientSeq)
+	if err == nil && existing != nil {
+		return &protocol.MsgSendAckPayload{
+			MsgID:     existing.MsgID,
+			Timestamp: existing.Timestamp,
+			ClientSeq: payload.ClientSeq,
+			Status:    int(model.MsgSent),
+		}, nil
+	}
+
+	// Look up the contact request by form_msg_id (most reliable).
+	req, err := in.contactReqDB.GetByFormMsgID(ctx, resp.FormMsgID)
+	if err != nil {
+		return nil, err
+	}
+	if req == nil {
+		// Fallback: try by request_id.
+		req, err = in.contactReqDB.GetByID(ctx, resp.RequestID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if req == nil {
+		return nil, model.ErrContactRequestNotFound
+	}
+
+	// Validate permission: sender must be the target of this request.
+	if req.ToUserID != senderID {
+		return nil, model.ErrNotInConv
+	}
+
+	// Validate conversation: must be the sender's own system conversation.
+	expectedConvID := model.MakeSystemConvID(senderID)
+	if payload.ConvID != expectedConvID {
+		return nil, model.ErrNotInConv
+	}
+
+	// Validate status: must still be pending (or already approved for idempotent replay).
+	if req.Status == model.ContactRequestApproved {
+		// Already approved — this is an idempotent replay from the client.
+		// Ensure contacts and P2P exist (may be missing from an earlier deploy).
+		if resp.Action == "approve" {
+			in.ensureContacts(ctx, req.FromUserID, req.ToUserID)
+		}
+		// Return ack for the already-persisted FormResponse message.
+		existing, err := in.store.GetByClientSeq(ctx, senderID, sessionID, payload.ClientSeq)
+		if err == nil && existing != nil {
+			return &protocol.MsgSendAckPayload{
+				MsgID:     existing.MsgID,
+				Timestamp: existing.Timestamp,
+				ClientSeq: payload.ClientSeq,
+				Status:    int(model.MsgSent),
+			}, nil
+		}
+		// Fallback: the FormResponse was already persisted but we return ok anyway.
+		return &protocol.MsgSendAckPayload{
+			MsgID:     0,
+			Timestamp: time.Now().UnixMilli(),
+			ClientSeq: payload.ClientSeq,
+			Status:    int(model.MsgSent),
+		}, nil
+	}
+	if req.Status != model.ContactRequestPending {
+		return nil, model.ErrContactRequestAlreadyHandled
+	}
+
+	// Determine new status based on action.
+	var newStatus model.ContactRequestStatus
+	switch resp.Action {
+	case "approve":
+		newStatus = model.ContactRequestApproved
+	case "reject":
+		newStatus = model.ContactRequestRejected
+	default:
+		return nil, model.ErrBadMsgContent
+	}
+
+	// Persist the FormResponse message.
+	msgID := in.idGen.NextID()
+	convSeq, err := in.seqCache.GetAndIncrementConvSeq(ctx, payload.ConvID)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UnixMilli()
+
+	msg := &model.Message{
+		MsgID:           msgID,
+		ConvID:          payload.ConvID,
+		SenderID:        senderID,
+		SenderSessionID: sessionID,
+		ContentType:     model.ContentFormResponse,
+		Body:            payload.Body,
+		ReplyTo:         resp.FormMsgID,
+		Timestamp:       now,
+		ClientSeq:       payload.ClientSeq,
+		ConvSeq:         convSeq,
+		Status:          model.MsgSent,
+	}
+	if err := in.store.Insert(ctx, msg); err != nil {
+		return nil, err
+	}
+	metrics.MessagesSentTotal.Inc()
+	in.seqCache.SetUserSeq(ctx, senderID, payload.ConvID, convSeq)
+	in.seqCache.SetRecentMsg(ctx, payload.ConvID, msgID, float64(msgID))
+
+	// Update contact request status.
+	if err := in.contactReqDB.UpdateStatus(ctx, req.ID, newStatus); err != nil {
+		// Log but don't fail.
+	}
+
+	responderName := senderID
+	if resp.ResponderName != "" {
+		responderName = resp.ResponderName
+	}
+	initiatorName := req.FromUserID
+	if resp.FormMsgID > 0 {
+		if formMsg, err := in.store.Get(ctx, resp.FormMsgID); err == nil && formMsg != nil {
+			var formBody model.FormDefinitionBody
+			if json.Unmarshal([]byte(formMsg.Body), &formBody) == nil && formBody.FromUserName != "" {
+				initiatorName = formBody.FromUserName
+			}
+		}
+	}
+
+	sysB := model.MakeSystemConvID(req.ToUserID)   // B's system conv
+	sysA := model.MakeSystemConvID(req.FromUserID) // A's system conv
+
+	if newStatus == model.ContactRequestApproved {
+		in.ensureContacts(ctx, req.FromUserID, req.ToUserID)
+		in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s 已通过你的好友申请", responderName))
+		in.SendSystemMessage(ctx, sysB, fmt.Sprintf("你已通过 %s 的好友申请", initiatorName))
+	} else {
+		in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s 已拒绝你的好友申请", responderName))
+		in.SendSystemMessage(ctx, sysB, fmt.Sprintf("你已拒绝 %s 的好友申请", initiatorName))
+	}
+
+	// Push the FormResponse to the sender's own system conversation.
+	targets := in.router.Route(ctx, msg)
+	if len(targets) > 0 {
+		in.pusher.Push(ctx, msg, targets)
+	}
+
+	return &protocol.MsgSendAckPayload{
+		MsgID:     msgID,
+		Timestamp: now,
+		ClientSeq: payload.ClientSeq,
+		Status:    int(model.MsgSent),
+	}, nil
+}
+
+// ensureContacts creates bidirectional contacts and ensures the P2P conversation exists.
+// It is idempotent — safe to call multiple times.
+func (in *Ingest) ensureContacts(ctx context.Context, userA, userB string) {
+	if in.contactRepo != nil {
+		in.contactRepo.AddContact(ctx, userA, userB)
+		in.contactRepo.AddContact(ctx, userB, userA)
+	}
+	if in.convMgr != nil {
+		in.convMgr.GetOrCreateP2P(ctx, userA, userB)
+	}
 }
 
 // parseP2PCounterpart extracts the other user's ID from a P2P convID.

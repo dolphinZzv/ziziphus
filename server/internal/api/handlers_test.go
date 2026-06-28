@@ -291,6 +291,7 @@ type mockConvDataRepo struct {
 	getUserConvsFunc     func(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
 	updateNameAvatarFunc func(ctx context.Context, convID, name, avatar string) error
 	updateNoticeFunc     func(ctx context.Context, convID, notice string) error
+	updateCoverFunc      func(ctx context.Context, convID, cover string) error
 	searchByNameFunc     func(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
 }
 
@@ -313,9 +314,16 @@ func (m *mockConvDataRepo) UpdateNotice(ctx context.Context, convID, notice stri
 	return nil
 }
 
+func (m *mockConvDataRepo) UpdateCover(ctx context.Context, convID, cover string) error {
+	if m.updateCoverFunc != nil { return m.updateCoverFunc(ctx, convID, cover) }
+	return nil
+}
+
 func (m *mockConvDataRepo) Pin(ctx context.Context, userID, convID string) error { return nil }
 func (m *mockConvDataRepo) Unpin(ctx context.Context, userID, convID string) error { return nil }
 func (m *mockConvDataRepo) Clone(ctx context.Context, src, dst, owner, name string, idGen func() int64) error { return nil }
+
+func (m *mockConvDataRepo) AreContacts(ctx context.Context, userA, userB string) (bool, error) { return false, nil }
 
 func (m *mockConvDataRepo) SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error) {
 	if m.searchByNameFunc != nil {
@@ -391,6 +399,33 @@ func (m *mockUserQueryRepo) GetByIDs(ctx context.Context, ids []string) (map[str
 		return m.getByIDsFunc(ctx, ids)
 	}
 	return nil, nil
+}
+
+type mockContactRequestStorage struct{}
+
+func (m *mockContactRequestStorage) Insert(_ context.Context, _ *model.ContactRequest) (int64, error) { return 1, nil }
+func (m *mockContactRequestStorage) UpdateFormMsgID(_ context.Context, _, _ int64) error { return nil }
+func (m *mockContactRequestStorage) GetByID(_ context.Context, _ int64) (*model.ContactRequest, error) { return nil, nil }
+func (m *mockContactRequestStorage) GetByFormMsgID(_ context.Context, _ int64) (*model.ContactRequest, error) { return nil, nil }
+func (m *mockContactRequestStorage) GetByPair(_ context.Context, _, _ string) (*model.ContactRequest, error) { return nil, nil }
+func (m *mockContactRequestStorage) ListSent(_ context.Context, _ string, _, _ int) ([]*model.ContactRequest, int, error) { return nil, 0, nil }
+func (m *mockContactRequestStorage) ListReceived(_ context.Context, _ string, _ int, _, _ int) ([]*model.ContactRequest, int, error) { return nil, 0, nil }
+func (m *mockContactRequestStorage) Delete(_ context.Context, _ int64) error { return nil }
+func (m *mockContactRequestStorage) ExistsAnyDirection(_ context.Context, _, _ string) (bool, error) { return false, nil }
+
+type mockFormMessageSender struct{}
+
+func (m *mockFormMessageSender) SendFormMessage(_ context.Context, _ string, _ *model.FormDefinitionBody) (*model.Message, error) {
+	return &model.Message{MsgID: 1}, nil
+}
+func (m *mockFormMessageSender) SendSystemMessage(_ context.Context, _ string, _ string, _ ...string) (*model.Message, error) {
+	return &model.Message{MsgID: 2}, nil
+}
+
+type mockSystemConvManager struct{}
+
+func (m *mockSystemConvManager) GetOrCreateSystemConv(_ context.Context, _ string) (*model.Conversation, error) {
+	return &model.Conversation{ConvID: "sys:test"}, nil
 }
 
 // ---------------------------------------------------------------------------

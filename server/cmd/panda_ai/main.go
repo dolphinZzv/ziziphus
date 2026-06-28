@@ -106,7 +106,8 @@ func main() {
 	pusher := message.NewPusher(gwMgr, receiptRepo)
 
 	// Ingest pipeline
-	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr)
+	contactReqRepo := db.NewContactRequestRepo(pool)
+	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr, contactReqRepo, contactRepo)
 
 	// Sync handler
 	syncHandler := message.NewSyncHandler(msgRepo, seqCache)
@@ -124,7 +125,7 @@ func main() {
 	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, convMgr)
-	contactHandler := api.NewContactHandler(contactRepo, userRepo, sessMgr)
+	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
 	sessionHandler := api.NewSessionHandler(sessMgr, gwMgr)
 	handlers := &api.Handlers{
 		User:         userHandler,
