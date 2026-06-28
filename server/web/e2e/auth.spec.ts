@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/coverage'
 
 const ZH_INIT = `
   localStorage.setItem('panda_ai_language', JSON.stringify('zh'));

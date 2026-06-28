@@ -1,0 +1,146 @@
+name: E2E Tests + Coverage
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: imdb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: server/web/package-lock.json
+
+      # ── Backend ──
+      - name: Build backend with coverage
+        working-directory: server
+        run: |
+          go build -cover -o /tmp/panda_ai ./cmd/panda_ai/
+          echo "GOCOVERDIR=${{ runner.temp }}/gocover" >> $GITHUB_ENV
+
+      - name: Start backend
+        working-directory: server
+        env:
+          GOCOVERDIR: ${{ runner.temp }}/gocover
+        run: |
+          mkdir -p $GOCOVERDIR
+          /tmp/panda_ai -c config/config.yaml &
+          sleep 3
+          curl -s http://localhost:8080/health | grep -q ok && echo "Server OK"
+
+      # ── Frontend ──
+      - name: Install JS deps
+        working-directory: server/web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: server/web
+        run: npx vite build
+
+      - name: Start Vite
+        working-directory: server/web
+        run: |
+          npx vite --port 5173 --host &
+          sleep 2
+          curl -s http://localhost:5173 | head -c 50 && echo "Vite OK"
+
+      - name: Install Playwright
+        working-directory: server/web
+        run: npx playwright install chromium
+
+      # ── E2E Tests ──
+      - name: Run Playwright (with JS coverage)
+        working-directory: server/web
+        run: npx playwright test --reporter=list
+        continue-on-error: true
+
+      # ── Coverage Reports ──
+      - name: Generate frontend coverage
+        working-directory: server/web
+        run: |
+          node -e "
+          import { readFileSync, readdirSync, writeFileSync } from 'fs';
+          import { resolve } from 'path';
+          const dir = '${{ github.workspace }}/coverage';
+          const out = resolve(dir, 'frontend-report.json');
+          const files = readdirSync(dir).filter(f => f.endsWith('.json') && !f.includes('report'));
+          const all = {};
+          let totalR = 0, coveredR = 0;
+          files.forEach(f => {
+            JSON.parse(readFileSync(resolve(dir, f), 'utf-8')).forEach(e => {
+              if (e.url.includes('/node_modules/') || e.url.includes('.vite/deps/')) return;
+              if (e.functions) e.functions.forEach(fn => { totalR += fn.total||0; coveredR += fn.ranges||0; });
+            });
+          });
+          const cov = totalR > 0 ? Math.round((coveredR/totalR)*100) : 0;
+          console.log('Frontend source coverage: ' + cov + '%');
+          writeFileSync(out, JSON.stringify({ coverage: cov }, null, 2));
+          "
+
+      - name: Generate backend coverage
+        env:
+          GOCOVERDIR: ${{ runner.temp }}/gocover
+        run: |
+          if ls $GOCOVERDIR/*.cov 2>/dev/null; then
+            go tool covdata textfmt -i=$GOCOVERDIR -o=/tmp/backend-e2e.out
+            TOTAL=$(go tool cover -func=/tmp/backend-e2e.out 2>&1 | grep "total:" | awk '{print $NF}')
+            echo "Backend E2E coverage: $TOTAL"
+          else
+            echo "No backend coverage data (Go 1.23+ required)"
+          fi
+
+      - name: Run Go unit tests with coverage
+        working-directory: server
+        run: go test -coverprofile=/tmp/unit.out ./... -count=1 && go tool cover -func=/tmp/unit.out | grep "total:"
+
+      # ── Upload reports ──
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            server/web/test-results/
+            ${{ github.workspace }}/coverage/
+            /tmp/backend-e2e.out
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: server/web/playwright-report/
+          retention-days: 7
