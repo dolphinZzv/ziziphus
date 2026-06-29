@@ -242,6 +242,12 @@ struct MessageBubble: View {
                     }
                 }
             }
+            // PDF inline preview
+            if let body = fileBody, body.name.lowercased().hasSuffix(".pdf"),
+               let url = URL(string: AppSettings.shared.serverURL + body.url) {
+                PDFPreviewView(url: url, filename: body.name)
+                    .padding(.top, 4)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -296,7 +302,7 @@ struct MessageBubble: View {
     private var agentTimelineBubble: some View {
         Group {
             if let timeline = agentTimelineBody {
-                AgentTimelineView(timeline: timeline, isMine: isMine)
+                AgentTimelineView(timeline: timeline, isMine: isMine, convID: message.convID)
             } else {
                 textBubble
             }

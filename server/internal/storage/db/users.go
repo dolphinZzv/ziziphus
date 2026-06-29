@@ -213,7 +213,7 @@ func (r *UserRepo) DeleteAccount(ctx context.Context, userID string) error {
 
 	// 6. Remove msg receipts (if table exists)
 	if _, err := tx.Exec(ctx, `DELETE FROM msg_receipts WHERE user_id = $1`, userID); err != nil {
-		// msg_receipts may not have FK to users — ignore if this fails
+		logger.Warn("delete msg_receipts failed", "user_id", userID, "error", err)
 	}
 
 	// 7. Clear owner references in conversations

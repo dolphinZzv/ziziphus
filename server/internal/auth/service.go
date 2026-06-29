@@ -64,6 +64,9 @@ func NewService(jwtSecret string, accessExpireHours, refreshExpireHours int, use
 
 // Register creates a new user with a bcrypt-hashed password and returns tokens.
 func (s *Service) Register(ctx context.Context, name, password, account, email string) (*model.User, string, string, error) {
+	if len(password) < 8 {
+		return nil, "", "", &model.AppError{Code: model.ErrBadMessage, Message: "密码长度不能少于8位", Key: "auth.password_too_short"}
+	}
 	if account != "" {
 		existing, _ := s.userRepo.GetByAccount(ctx, account)
 		if existing != nil {
@@ -111,11 +114,11 @@ func (s *Service) Register(ctx context.Context, name, password, account, email s
 func (s *Service) Login(ctx context.Context, account, password string) (string, string, int64, string, error) {
 	user, err := s.userRepo.GetByAccount(ctx, account)
 	if err != nil {
-		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "用户不存在", Key: "auth.user_not_found"}
+		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "账号或密码错误", Key: "auth.bad_credentials"}
 	}
 
 	if !CheckPassword(password, user.Password) {
-		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "密码错误", Key: "auth.wrong_password"}
+		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "账号或密码错误", Key: "auth.bad_credentials"}
 	}
 
 	accessToken, err := s.generateAccessToken(user.ID, int(user.Type))

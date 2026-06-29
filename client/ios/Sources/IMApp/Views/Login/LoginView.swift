@@ -10,6 +10,84 @@ struct LoginView: View {
     @State private var showSettings = false
 
     var body: some View {
+        Group {
+            if loginVM.mfaRequired {
+                mfaView
+            } else {
+                loginFormView
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+        .sheet(isPresented: $showSettings) {
+            AppSettingsView()
+                .environmentObject(appSettings)
+                .environmentObject(themeManager)
+                .environmentObject(localizationManager)
+        }
+    }
+
+    private var mfaView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.blue)
+
+            Text("双重验证")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text(loginVM.mfaType == 1
+                 ? "请输入验证器中的 6 位代码"
+                 : "验证码已发送至 \(loginVM.maskedEmail)")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            TextField("000000", text: $loginVM.mfaCode)
+                .font(.system(size: 28, design: .monospaced))
+                .multilineTextAlignment(.center)
+                .keyboardType(.numberPad)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color(.systemGray6))
+                .clipShape(Capsule())
+                .frame(maxWidth: 200)
+                .onChange(of: loginVM.mfaCode) { _, newValue in
+                    if newValue.count > 6 { loginVM.mfaCode = String(newValue.prefix(6)) }
+                    if newValue.count == 6 { loginVM.verifyMFA() }
+                }
+
+            if let err = loginVM.mfaError {
+                Text(err)
+                    .foregroundColor(.red)
+                    .font(.callout)
+            }
+
+            Button(action: loginVM.verifyMFA) {
+                if loginVM.isLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.white)
+                } else {
+                    Text("验证")
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .frame(maxWidth: 200)
+            .disabled(loginVM.isLoading || loginVM.mfaCode.isEmpty)
+
+            Button("返回") { loginVM.cancelMFA() }
+                .foregroundColor(.blue)
+
+            Spacer()
+        }
+    }
+
+    private var loginFormView: some View {
         VStack(spacing: 24) {
             HStack {
                 Spacer()
@@ -83,14 +161,6 @@ struct LoginView: View {
             .foregroundColor(.blue)
 
             Spacer()
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showSettings) {
-            AppSettingsView()
-                .environmentObject(appSettings)
-                .environmentObject(themeManager)
-                .environmentObject(localizationManager)
         }
     }
 }

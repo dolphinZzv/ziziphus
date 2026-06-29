@@ -78,6 +78,17 @@ ios-deploy: build-info xcodegen
 xcodegen:
 	cd client && xcodegen generate
 
+# Code quality
+.PHONY: lint lint-web lint-server
+
+lint-web:
+	cd server/web && npx oxlint ./src
+
+lint-server:
+	cd server && golangci-lint run ./... --new
+
+lint: lint-web lint-server
+
 # =============================================================================
 # 远程部署
 # =============================================================================

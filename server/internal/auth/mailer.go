@@ -57,9 +57,9 @@ func (m *Mailer) SendVerificationCode(to, code string) error {
 
 // SendVerificationCodeLang sends a 6-digit code in the specified language.
 // To add a new language:
-//   1. Copy verify_code_zh.html to verify_code_{lang}.html
-//   2. Translate the text
-//   3. Add the embed directive and register in emailTemplates
+//  1. Copy verify_code_zh.html to verify_code_{lang}.html
+//  2. Translate the text
+//  3. Add the embed directive and register in emailTemplates
 func (m *Mailer) SendVerificationCodeLang(to, code, lang string) error {
 	if !m.Enabled() {
 		return fmt.Errorf("mailer disabled")

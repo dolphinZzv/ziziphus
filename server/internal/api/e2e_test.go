@@ -97,7 +97,7 @@ func e2eRouter(t *testing.T) (http.Handler, *testAuthUserRepo, *mockConvManager,
 
 	userHandler := NewUserHandler(authSvc, userRepo, sessMgr, func() int64 { return time.Now().UnixNano() }, nil, nil, nil)
 	convHandler := NewConvHandler(convMgr, convRepo, seqCache, readMarker, sysMsg, userRepo, func() int64 { return 1 })
-	msgHandler := NewMsgHandler(msgRepo, convMgr)
+	msgHandler := NewMsgHandler(msgRepo, &mockReceiptStorage{}, convMgr)
 	contactHandler := NewContactHandler(contactRepo, &mockContactRequestStorage{}, userQueryRepo, sessMgr, &mockFormMessageSender{}, &mockSystemConvManager{})
 
 	handlers := &Handlers{

@@ -13,7 +13,8 @@ import type { User } from '@/types/user'
 import { ConvType } from '@/types/conversation'
 import { UserType } from '@/types/user'
 import { avatarUrl } from '@/lib/file'
-import { X, Copy, Check, Camera, UserPlus, UserCheck, Cpu, LogOut } from 'lucide-react'
+import { getConvSettings, toggleConvSetting, subscribe as settingsSubscribe } from '@/stores/conversation-settings-store'
+import { X, Copy, Check, Camera, UserPlus, UserCheck, Cpu, LogOut, EyeOff } from 'lucide-react'
 
 interface Props { convId: string; onClose: () => void }
 
@@ -27,6 +28,14 @@ export default function P2PDetail({ convId, onClose }: Props) {
   const [uploadingCover, setUploadingCover] = useState(false)
   const [requestSent, setRequestSent] = useState(false)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const [showAgentResponseOnly, setShowAgentResponseOnly] = useState(
+    () => getConvSettings(convId).showAgentResponseOnly
+  )
+  useEffect(() => {
+    return settingsSubscribe(() => {
+      setShowAgentResponseOnly(getConvSettings(convId).showAgentResponseOnly)
+    })
+  }, [convId])
   const contacts = useSyncExternalStore(contactStore.subscribe, () => contactStore.state.contacts)
   const currentUserId = authStore.state.user?.user_id || ''
   const peerId = detail?.members?.find(m => m.user_id !== currentUserId)?.user_id || ''
@@ -168,6 +177,23 @@ export default function P2PDetail({ convId, onClose }: Props) {
               </div>
             </div>
           )}
+
+          {/* Agent display settings */}
+          <div className="border-t border-[var(--color-hairline)] pt-3">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <EyeOff size={14} className="text-[var(--color-muted)] flex-shrink-0" />
+                <div>
+                  <div className="text-xs font-medium text-[var(--color-muted)]">{t('conversation.agentDisplay')}</div>
+                  <div className="text-[10px] text-[var(--color-muted-soft)]">{t('conversation.agentDisplayHint')}</div>
+                </div>
+              </div>
+              <button onClick={() => toggleConvSetting(convId, 'showAgentResponseOnly')}
+                className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ml-3 ${showAgentResponseOnly ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-hairline)]'}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${showAgentResponseOnly ? 'left-[18px]' : 'left-0.5'}`} />
+              </button>
+            </label>
+          </div>
 
           {/* Leave */}
           <div className="border-t border-[var(--color-hairline)] pt-3">

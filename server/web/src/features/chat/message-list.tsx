@@ -9,15 +9,19 @@ interface Props {
   convId: string
   messages: Message[]
   currentUserId: string
+  searchKeyword?: string
+  matchIndex?: number
+  searchMatches?: number[]
 }
 
 // Memoized bubble to avoid re-rendering unchanged messages
 const MemoBubble = memo(MessageBubble)
 
-export default function MessageList({ convId, messages, currentUserId }: Props) {
+export default function MessageList({ convId, messages, currentUserId, searchKeyword, matchIndex, searchMatches }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const loadingMore = useRef(false)
   const prevLen = useRef(0)
+  const matchRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const scrollToEnd = useCallback(() => {
     const el = scrollRef.current
@@ -30,12 +34,22 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
     prevLen.current = messages.length
   }, [convId])
 
-  // Scroll when new messages arrive (new push or own send)
+  // Scroll when new messages arrive
   useLayoutEffect(() => {
     if (loadingMore.current) return
     if (messages.length > prevLen.current) scrollToEnd()
     prevLen.current = messages.length
   }, [messages.length])
+
+  // Scroll to current match
+  useEffect(() => {
+    if (searchMatches && searchMatches.length > 0 && matchIndex !== undefined) {
+      const idx = searchMatches[matchIndex]
+      if (idx !== undefined && matchRefs.current[idx]) {
+        matchRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+  }, [matchIndex, searchMatches])
 
   // Load older messages when scrolling up
   const handleScroll = useCallback(() => {
@@ -58,18 +72,32 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
   // Build message rows with date separators
   const rows: React.ReactNode[] = []
   let lastDate = 0
-  for (const msg of messages) {
+  const lowerKeyword = searchKeyword?.toLowerCase() || ''
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i]
     if (!isSameDay(msg.timestamp, lastDate)) {
       rows.push(<DateSeparator key={`date-${msg.timestamp}`} timestamp={msg.timestamp} />)
       lastDate = msg.timestamp
     }
+
+    const isMatch = searchMatches?.includes(i) ?? false
+    const isCurrentMatch = matchIndex !== undefined && searchMatches?.[matchIndex] === i
+
     rows.push(
-      <MemoBubble
-        key={msg.msg_id > 0 ? `msg-${msg.msg_id}` : `local-${msg.client_seq}`}
-        message={msg}
-        isOwn={msg.sender_id === currentUserId}
-        isGrouped={false}
-      />
+      <div key={msg.msg_id > 0 ? `msg-${msg.msg_id}` : `local-${msg.client_seq}`}
+        id={`msg-${msg.msg_id}`}
+        ref={el => { matchRefs.current[i] = el }}
+      >
+        <MemoBubble
+          message={msg}
+          isOwn={msg.sender_id === currentUserId}
+          isGrouped={false}
+          highlight={lowerKeyword}
+          isSearchMatch={isMatch}
+          isCurrentSearchMatch={isCurrentMatch}
+        />
+      </div>
     )
   }
 

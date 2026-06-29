@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
@@ -8,7 +8,7 @@ import { avatarUrl } from '@/lib/file'
 import type { ConversationDetail } from '@/types/conversation'
 import type { User } from '@/types/user'
 import { ConvRole, ConvType } from '@/types/conversation'
-import { X, Crown, Shield, UserPlus, Edit2, Bell, LogOut, Copy as CopyIcon, Cpu } from 'lucide-react'
+import { X, Crown, Shield, Bell, Copy as CopyIcon } from 'lucide-react'
 
 interface Props { convId: string; onClose: () => void }
 
@@ -34,7 +34,6 @@ export default function DetailBar
   if (!detail) return null
 
   const me = detail.members.find(m => m.user_id === currentUserId)
-  const isAdmin = me?.role === ConvRole.Admin || me?.role === ConvRole.Owner
   const isOwner = me?.role === ConvRole.Owner
   const isGroup = detail.type === ConvType.Group
   const peerUser = !isGroup ? userMap[detail.members.find(m => m.user_id !== currentUserId)?.user_id || ''] : null

@@ -109,6 +109,8 @@ func (r *mockConvRepo) GetMembers(_ context.Context, convID string) ([]*model.Co
 	return out, nil
 }
 
+func (r *mockConvRepo) IsDirectChatBlocked(_ context.Context, _ string) (bool, error) { return false, nil }
+
 func (r *mockConvRepo) IsMember(_ context.Context, convID, userID string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

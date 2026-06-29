@@ -1,21 +1,35 @@
 import { useTranslation } from 'react-i18next'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { AgentTimelineBody, AgentTimelineEntry } from '@/types/agent_timeline'
 import { AgentStepStatus, AgentStepType } from '@/types/agent_timeline'
+import { getConvSettings, subscribe } from '@/stores/conversation-settings-store'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Brain, Wrench, FileText, MessageCircle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import { Brain, Wrench, FileText, MessageCircle, ChevronDown, ChevronRight, Loader2, EyeOff } from 'lucide-react'
 
-interface Props { body: string }
+interface Props { body: string; convId: string }
 
-export default function AgentTimelineBubble({ body }: Props) {
+export default function AgentTimelineBubble({ body, convId }: Props) {
   const { t } = useTranslation()
+  const [showResponseOnly, setShowResponseOnly] = useState(
+    () => getConvSettings(convId).showAgentResponseOnly
+  )
+  useEffect(() => {
+    return subscribe(() => {
+      setShowResponseOnly(getConvSettings(convId).showAgentResponseOnly)
+    })
+  }, [convId])
   let timeline: AgentTimelineBody
   try {
     timeline = JSON.parse(body)
   } catch {
     return <div className="text-sm italic opacity-60">[Agent 消息]</div>
   }
+
+  // Filter entries when "show agent response only" is enabled
+  const entries = showResponseOnly
+    ? (timeline.entries || []).filter(e => e.type === AgentStepType.Response)
+    : (timeline.entries || [])
 
   const statusColor = () => {
     const s = timeline.status
@@ -33,6 +47,8 @@ export default function AgentTimelineBubble({ body }: Props) {
     return t('agent.pending')
   }
 
+  const hiddenCount = (timeline.entries || []).length - entries.length
+
   return (
     <div className="min-w-[260px] space-y-1.5">
       {/* Status header */}
@@ -44,9 +60,16 @@ export default function AgentTimelineBubble({ body }: Props) {
         </span>
       </div>
 
-      {timeline.entries?.map((entry, i) => (
+      {entries.map((entry, i) => (
         <TimelineEntry key={entry.id || i} entry={entry} />
       ))}
+
+      {hiddenCount > 0 && (
+        <div className="flex items-center gap-1 text-[10px] text-[var(--color-muted)] italic pt-0.5">
+          <EyeOff size={10} />
+          <span>{t('conversation.agentStepsHidden', { count: hiddenCount })}</span>
+        </div>
+      )}
     </div>
   )
 }

@@ -7,8 +7,6 @@ import { api } from '@/services/api-client'
 import { avatarUrl } from '@/lib/file'
 import { cn } from '@/lib/cn'
 import { Check, X, Loader2 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-
 interface Props {
   body: string
   msgId: number

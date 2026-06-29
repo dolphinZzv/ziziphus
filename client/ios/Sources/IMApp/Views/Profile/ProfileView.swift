@@ -113,6 +113,12 @@ struct ProfileView: View {
                 } label: {
                     Label(loc("settings.device_management"), systemImage: "ipad.and.iphone")
                 }
+
+                NavigationLink {
+                    MFASettingsView()
+                } label: {
+                    Label("双重验证", systemImage: "lock.shield")
+                }
             }
 
             // Actions

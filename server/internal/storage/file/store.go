@@ -61,5 +61,11 @@ func (s *Store) BasePath() string {
 func (s *Store) fullPath(relative string) string {
 	clean := filepath.Clean(relative)
 	clean = strings.TrimPrefix(clean, "/")
-	return filepath.Join(s.basePath, clean)
+	resolved := filepath.Join(s.basePath, clean)
+	// Prevent path traversal: any path containing ".." after cleaning
+	// or any path that resolves outside basePath is rejected.
+	if strings.Contains(clean, "..") || (!strings.HasPrefix(resolved, s.basePath+string(filepath.Separator)) && resolved != s.basePath) {
+		return filepath.Join(s.basePath, "blocked")
+	}
+	return resolved
 }

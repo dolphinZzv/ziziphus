@@ -5,7 +5,7 @@ import "time"
 
 // Simple in-memory store for MFA session tokens and signup codes
 var (
-	storeMu sync.RWMutex
+	storeMu   sync.RWMutex
 	codeStore = map[string]codeEntry{}
 )
 

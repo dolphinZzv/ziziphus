@@ -1,5 +1,27 @@
 import Foundation
 
+public enum LoginError: Error, LocalizedError {
+    case mfaRequired(userID: String, mfaToken: String, mfaType: Int, maskedEmail: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .mfaRequired: return "MFA required"
+        }
+    }
+    public var userID: String {
+        if case .mfaRequired(let uid, _, _, _) = self { return uid }; return ""
+    }
+    public var mfaToken: String {
+        if case .mfaRequired(_, let tok, _, _) = self { return tok }; return ""
+    }
+    public var mfaType: Int {
+        if case .mfaRequired(_, _, let t, _) = self { return t }; return 0
+    }
+    public var maskedEmail: String {
+        if case .mfaRequired(_, _, _, let e) = self { return e }; return ""
+    }
+}
+
 @MainActor
 public class AuthService {
     public static let shared = AuthService()
@@ -46,11 +68,19 @@ public class AuthService {
             let name: String
             let token: String
             let expiresAt: Int64
+            let mfaRequired: Bool?
+            let mfaToken: String?
+            let mfaType: Int?
+            let maskedEmail: String?
 
             enum CodingKeys: String, CodingKey {
                 case userID = "user_id"
                 case account, name, token
                 case expiresAt = "expires_at"
+                case mfaRequired = "mfa_required"
+                case mfaToken = "mfa_token"
+                case mfaType = "mfa_type"
+                case maskedEmail = "masked_email"
             }
         }
 
@@ -58,6 +88,53 @@ public class AuthService {
             "/api/v1/users/login",
             method: .post,
             body: LoginReq(account: account, password: password)
+        )
+
+        // MFA required — throw a structured error so the ViewModel can intercept
+        if resp.mfaRequired == true, let mfaToken = resp.mfaToken {
+            throw LoginError.mfaRequired(
+                userID: resp.userID,
+                mfaToken: mfaToken,
+                mfaType: resp.mfaType ?? 1,
+                maskedEmail: resp.maskedEmail ?? ""
+            )
+        }
+
+        AuthManager.shared.saveToken(resp.token)
+        let user = User(userID: resp.userID, account: resp.account, name: resp.name)
+        AuthManager.shared.setLoggedIn(user: user)
+        return user
+    }
+
+    // MARK: - MFA Verify Login
+    public func mfaVerify(userID: String, mfaToken: String, code: String) async throws -> User {
+        struct MFAVerifyReq: Codable, Sendable {
+            let userID: String
+            let mfaToken: String
+            let code: String
+            enum CodingKeys: String, CodingKey {
+                case userID = "user_id"
+                case mfaToken = "mfa_token"
+                case code
+            }
+        }
+        struct MFAVerifyResp: Codable, Sendable {
+            let userID: String
+            let account: String
+            let name: String
+            let token: String
+            let expiresAt: Int64
+            enum CodingKeys: String, CodingKey {
+                case userID = "user_id"
+                case account, name, token
+                case expiresAt = "expires_at"
+            }
+        }
+
+        let resp: MFAVerifyResp = try await api.request(
+            "/api/v1/auth/mfa/verify",
+            method: .post,
+            body: MFAVerifyReq(userID: userID, mfaToken: mfaToken, code: code)
         )
 
         AuthManager.shared.saveToken(resp.token)

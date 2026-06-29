@@ -14,6 +14,15 @@ public class LoginViewModel: ObservableObject {
     @Published public var rememberAccount = false
     @Published public var showAccountPicker = false
 
+    // MFA challenge state
+    @Published public var mfaRequired = false
+    @Published public var mfaToken = ""
+    @Published public var mfaType: Int = 0
+    @Published public var maskedEmail = ""
+    @Published public var mfaCode = ""
+    @Published public var mfaError: String?
+    private var mfaUserID = ""
+
     private let authService = AuthService.shared
     private let wsClient = WebSocketClient.shared
 
@@ -67,23 +76,71 @@ public class LoginViewModel: ObservableObject {
         MessageCache.shared.deleteAll()
         isLoading = true
         errorMessage = nil
+        mfaError = nil
         Task {
             do {
                 _ = try await authService.login(account: account, password: password)
                 isLoggedIn = true
                 wsClient.connect()
-                if rememberAccount {
-                    saveRememberedAccount()
-                    password = ""
-                } else {
-                    account = ""
-                    password = ""
+                finishLoginCleanup()
+            } catch let error as LoginError {
+                if case .mfaRequired(let uid, let mfaTok, let mfaT, let email) = error {
+                    mfaRequired = true
+                    mfaUserID = uid
+                    mfaToken = mfaTok
+                    mfaType = mfaT
+                    maskedEmail = email
+                    mfaCode = ""
                 }
+                isLoading = false
             } catch {
                 errorMessage = error.localizedDescription
+                isLoading = false
             }
-            isLoading = false
         }
+    }
+
+    public func verifyMFA() {
+        guard !mfaCode.isEmpty else { return }
+        isLoading = true
+        mfaError = nil
+        Task {
+            do {
+                _ = try await authService.mfaVerify(userID: mfaUserID, mfaToken: mfaToken, code: mfaCode)
+                isLoggedIn = true
+                wsClient.connect()
+                finishLoginCleanup()
+                resetMFAState()
+            } catch {
+                mfaError = error.localizedDescription
+                isLoading = false
+            }
+        }
+    }
+
+    public func cancelMFA() {
+        resetMFAState()
+        isLoading = false
+    }
+
+    private func resetMFAState() {
+        mfaRequired = false
+        mfaToken = ""
+        mfaType = 0
+        maskedEmail = ""
+        mfaCode = ""
+        mfaError = nil
+    }
+
+    private func finishLoginCleanup() {
+        if rememberAccount {
+            saveRememberedAccount()
+            password = ""
+        } else {
+            account = ""
+            password = ""
+        }
+        isLoading = false
     }
 
     public func register() {

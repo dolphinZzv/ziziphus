@@ -4,8 +4,6 @@ import { fileService } from '@/services/file-service'
 import { conversationService } from '@/services/conversation-service'
 import { userService } from '@/services/user-service'
 import { ContentType } from '@/types/message'
-import type { ConvMember } from '@/types/conversation'
-import type { User } from '@/types/user'
 import { cn } from '@/lib/cn'
 import { Send, Paperclip, Image, X, AtSign } from 'lucide-react'
 import MarkdownInput from './markdown-input'
@@ -24,7 +22,6 @@ export default function InputBar({ convId }: Props) {
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
-  const draft = useSyncExternalStore(chatStore.subscribe, () => chatStore.getDraft(convId))
   const replyTo = useSyncExternalStore(chatStore.subscribe, () => chatStore.getReplyTo(convId))
 
   // Load members for @mention

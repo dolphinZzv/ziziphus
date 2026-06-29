@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
-	"image/jpeg"
-	"image/png"
 	_ "image/gif"
+	"image/jpeg"
 	_ "image/jpeg"
+	"image/png"
 	_ "image/png"
 	"io"
 	"net/http"
@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	xdraw "golang.org/x/image/draw"
-	"encoding/json"
 	"siciv.space/agent/panda_ai/internal/auth"
 	"siciv.space/agent/panda_ai/internal/storage/file"
 	"siciv.space/agent/panda_ai/pkg/i18n"
@@ -47,15 +47,20 @@ type fileDB interface {
 	RenameFolder(ctx context.Context, folderID int64, name string) error
 }
 
+type fileConvChecker interface {
+	IsMember(ctx context.Context, convID, userID string) (bool, error)
+}
+
 type FileHandler struct {
 	store   *file.Store
 	fileDB  fileDB
 	idGen   idGenerator
 	baseURL string
+	convMgr fileConvChecker
 }
 
-func NewFileHandler(store *file.Store, fileDB fileDB, idGen idGenerator, baseURL string) *FileHandler {
-	return &FileHandler{store: store, fileDB: fileDB, idGen: idGen, baseURL: baseURL}
+func NewFileHandler(store *file.Store, fileDB fileDB, idGen idGenerator, baseURL string, convMgr fileConvChecker) *FileHandler {
+	return &FileHandler{store: store, fileDB: fileDB, idGen: idGen, baseURL: baseURL, convMgr: convMgr}
 }
 
 type uploadResp struct {
@@ -178,8 +183,12 @@ func (h *FileHandler) ListConvFiles(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
-	if page < 1 { page = 1 }
-	if size < 1 || size > 100 { size = 50 }
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 100 {
+		size = 50
+	}
 
 	// Verify the user is a member of this conversation
 	files, total, err := h.fileDB.ListByConvID(r.Context(), convID, page, size)
@@ -189,7 +198,9 @@ func (h *FileHandler) ListConvFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = userID // fileDB.ListByConvID includes caller validation implicitly via conv membership
-	if files == nil { files = []*model.FileInfo{} }
+	if files == nil {
+		files = []*model.FileInfo{}
+	}
 	Paginated(w, files, total, page, size)
 }
 
@@ -367,11 +378,13 @@ func (h *FileHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		ParentID int64  `json:"parent_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
-		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params")); return
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
 	}
 	id, err := h.fileDB.CreateFolder(r.Context(), &model.FileFolder{ConvID: convID, Name: req.Name, ParentID: req.ParentID, CreatedBy: userID})
 	if err != nil {
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
 	}
 	JSON(w, map[string]interface{}{"folder_id": id, "name": req.Name, "parent_id": req.ParentID})
 }
@@ -381,8 +394,13 @@ func (h *FileHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	parentID, _ := strconv.ParseInt(r.URL.Query().Get("parent_id"), 10, 64)
 	folders, err := h.fileDB.ListFolders(r.Context(), convID, parentID)
-	if err != nil { Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return }
-	if folders == nil { folders = []*model.FileFolder{} }
+	if err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	if folders == nil {
+		folders = []*model.FileFolder{}
+	}
 	JSON(w, folders)
 }
 
@@ -390,7 +408,8 @@ func (h *FileHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
 func (h *FileHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	folderID, _ := strconv.ParseInt(chi.URLParam(r, "folder_id"), 10, 64)
 	if err := h.fileDB.DeleteFolder(r.Context(), folderID); err != nil {
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
 	}
 	JSON(w, map[string]string{"status": "ok"})
 }
@@ -401,21 +420,36 @@ func (h *FileHandler) ListFolderFiles(w http.ResponseWriter, r *http.Request) {
 	folderID, _ := strconv.ParseInt(chi.URLParam(r, "folder_id"), 10, 64)
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
-	if page < 1 { page = 1 }
-	if size < 1 || size > 100 { size = 50 }
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 100 {
+		size = 50
+	}
 	files, total, err := h.fileDB.ListFilesInFolder(r.Context(), convID, folderID, page, size)
-	if err != nil { Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return }
-	if files == nil { files = []*model.FileInfo{} }
+	if err != nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	if files == nil {
+		files = []*model.FileInfo{}
+	}
 	Paginated(w, files, total, page, size)
 }
 
 // MoveFile handles PUT /api/v1/conversations/{conv_id}/files/{file_id}/move
 func (h *FileHandler) MoveFile(w http.ResponseWriter, r *http.Request) {
 	fileID := chi.URLParam(r, "file_id")
-	var req struct{ FolderID int64 `json:"folder_id"` }
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { BadRequest(w, r, "invalid body"); return }
+	var req struct {
+		FolderID int64 `json:"folder_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		BadRequest(w, r, "invalid body")
+		return
+	}
 	if err := h.fileDB.MoveFile(r.Context(), fileID, req.FolderID); err != nil {
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
 	}
 	JSON(w, map[string]string{"status": "ok"})
 }
@@ -423,22 +457,31 @@ func (h *FileHandler) MoveFile(w http.ResponseWriter, r *http.Request) {
 // MoveFolder handles PUT /api/v1/conversations/{conv_id}/folders/{folder_id}/move
 func (h *FileHandler) MoveFolder(w http.ResponseWriter, r *http.Request) {
 	folderID, _ := strconv.ParseInt(chi.URLParam(r, "folder_id"), 10, 64)
-	var req struct{ ParentID int64 `json:"parent_id"` }
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { BadRequest(w, r, "invalid body"); return }
+	var req struct {
+		ParentID int64 `json:"parent_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		BadRequest(w, r, "invalid body")
+		return
+	}
 	if err := h.fileDB.MoveFolder(r.Context(), folderID, req.ParentID); err != nil {
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
 	}
 	JSON(w, map[string]string{"status": "ok"})
 }
-
 
 // RenameFolder handles PUT /api/v1/conversations/{conv_id}/folders/{folder_id}/rename
 func (h *FileHandler) RenameFolder(w http.ResponseWriter, r *http.Request) {
 	folderID, _ := strconv.ParseInt(chi.URLParam(r, "folder_id"), 10, 64)
 	var req struct{ Name string }
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" { BadRequest(w, r, "invalid body"); return }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+		BadRequest(w, r, "invalid body")
+		return
+	}
 	if err := h.fileDB.RenameFolder(r.Context(), folderID, req.Name); err != nil {
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer); return
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
 	}
 	JSON(w, map[string]string{"status": "ok"})
 }

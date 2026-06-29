@@ -29,6 +29,7 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "conv.mention": [.zhHans: "有人@我", .en: "Someone @ me"],
     "conv.delete_confirm": [.zhHans: "确定删除会话？", .en: "Delete this conversation?"],
     "conv.unread": [.zhHans: "未读", .en: "unread"],
+    "conversation.agentStepsHidden": [.zhHans: "已隐藏 %lld 个步骤", .en: "%lld steps hidden"],
 
     // MARK: - Chat
     "chat.today": [.zhHans: "今天", .en: "Today"],
@@ -45,6 +46,10 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "chat.retry": [.zhHans: "重试", .en: "Retry"],
     "chat.image": [.zhHans: "图片", .en: "Image"],
     "chat.file": [.zhHans: "文件", .en: "File"],
+    "chat.agent_response_only": [.zhHans: "Agent 仅显示回复", .en: "Agent: Show Response Only"],
+    "chat.agent_response_only_hint": [.zhHans: "隐藏思考过程和工具调用", .en: "Hide thinking steps and tool calls"],
+    "chat.preview": [.zhHans: "预览", .en: "Preview"],
+    "chat.hide_preview": [.zhHans: "收起预览", .en: "Hide Preview"],
 
     // MARK: - Contacts
     "contact.title": [.zhHans: "通讯录", .en: "Contacts"],
@@ -150,6 +155,7 @@ nonisolated let StringCatalog: [String: [Language: String]] = [
     "common.edit": [.zhHans: "编辑", .en: "Edit"],
     "common.delete": [.zhHans: "删除", .en: "Delete"],
     "common.download": [.zhHans: "下载", .en: "Download"],
+    "common.open": [.zhHans: "打开", .en: "Open"],
     "common.done": [.zhHans: "完成", .en: "Done"],
     "common.back": [.zhHans: "返回", .en: "Back"],
     "common.copy": [.zhHans: "复制", .en: "Copy"],

@@ -36,9 +36,16 @@ function useSenderInfo(userId: string): { avatar?: string; isAgent: boolean } {
   return info
 }
 
-interface Props { message: Message; isOwn: boolean; isGrouped: boolean }
+interface Props {
+  message: Message
+  isOwn: boolean
+  isGrouped: boolean
+  highlight?: string
+  isSearchMatch?: boolean
+  isCurrentSearchMatch?: boolean
+}
 
-export default function MessageBubble({ message, isOwn, isGrouped }: Props) {
+export default function MessageBubble({ message, isOwn, isGrouped, highlight, isSearchMatch, isCurrentSearchMatch }: Props) {
   const { t } = useTranslation()
   // Always call hooks at top level, even for centered messages
   const _senderInfo = useSenderInfo(message.sender_id)
@@ -52,6 +59,53 @@ export default function MessageBubble({ message, isOwn, isGrouped }: Props) {
   const avatarRef = useRef<HTMLButtonElement>(null)
   const [userCardPos, setUserCardPos] = useState<{ x: number; y: number } | null>(null)
   const me = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
+
+  // --- Feature 3: Read receipts ---
+  const [readReceipts, setReadReceipts] = useState<Array<{ user_id: string; name?: string; avatar?: string }> | null>(null)
+  const [showReadBy, setShowReadBy] = useState(false)
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 })
+  const readTimer = useRef<ReturnType<typeof setTimeout>>()
+  const statusRef = useRef<HTMLDivElement>(null)
+
+  const fetchReadReceipts = async () => {
+    if (readReceipts) return
+    try {
+      const { api } = await import('@/services/api-client')
+      const data = await api.request<Array<{ user_id: string }>>(`/api/v1/messages/${message.msg_id}/receipts`)
+      const ids = data.filter(r => r.user_id !== message.sender_id).map(r => r.user_id)
+      if (ids.length === 0) { setReadReceipts([]); return }
+      const { userService } = await import('@/services/user-service')
+      const users = await userService.batchGet(ids)
+      setReadReceipts(ids.map(id => ({
+        user_id: id,
+        name: users[id]?.name || id,
+        avatar: users[id]?.avatar,
+      })))
+    } catch { setReadReceipts([]) }
+  }
+
+  const handleStatusHover = () => {
+    if (!isOwn || message.status !== MsgStatus.Read || message.msg_id <= 0) return
+    // Position tooltip above the status icon
+    if (statusRef.current) {
+      const rect = statusRef.current.getBoundingClientRect()
+      setTooltipPos({ top: rect.top - 8, left: rect.left + rect.width / 2 })
+    }
+    readTimer.current = setTimeout(() => {
+      fetchReadReceipts()
+      setShowReadBy(true)
+    }, 400)
+  }
+
+  const handleStatusLeave = () => {
+    if (readTimer.current) clearTimeout(readTimer.current)
+    setTimeout(() => setShowReadBy(false), 200)
+  }
+
+  useEffect(() => {
+    return () => { if (readTimer.current) clearTimeout(readTimer.current) }
+  }, [])
+  // --- End read receipts ---
 
   const msgTimestampMs = message.timestamp > 1e12 ? message.timestamp : message.timestamp * 1000
   const canEdit = isOwn && (message.content_type === ContentType.Text || message.content_type === ContentType.Edit) && (Date.now() - msgTimestampMs) < 300000 // 5 min
@@ -87,10 +141,10 @@ export default function MessageBubble({ message, isOwn, isGrouped }: Props) {
     switch (message.content_type) {
       case ContentType.Recall: return <span className="italic opacity-50 text-xs">{t('chat.recalled')}</span>
       case ContentType.Edit:
-      case ContentType.Text: case ContentType.System: return <TextBubble text={message.body} />
+      case ContentType.Text: case ContentType.System: return <TextBubble text={message.body} highlight={highlight} />
       case ContentType.Image: return <ImageBubble body={message.body} msgId={message.msg_id} />
       case ContentType.File: return <FileBubble body={message.body} />
-      case ContentType.AgentTimeline: return <AgentTimelineBubble body={message.body} />
+      case ContentType.AgentTimeline: return <AgentTimelineBubble body={message.body} convId={message.conv_id} />
       case ContentType.Form: return <FormBubble body={message.body} msgId={message.msg_id} convId={message.conv_id} senderId={message.sender_id} />
       case ContentType.FormResponse: return <FormResponseBubble body={message.body} />
       default: return <TextBubble text={message.body || '[不支持的消息类型]'} />
@@ -113,7 +167,7 @@ export default function MessageBubble({ message, isOwn, isGrouped }: Props) {
   const senderInitials = message.sender_name?.charAt(0)?.toUpperCase() || '?'
   const myInitials = me?.name?.charAt(0)?.toUpperCase() || '?'
 
-  const AvatarDot = ({ name, avatar, userId, clickable, isAgent }: { name: string; avatar?: string; userId: string; clickable: boolean; isAgent?: boolean }) => (
+  const AvatarDot = ({ name, avatar, userId: _userId, clickable, isAgent }: { name: string; avatar?: string; userId: string; clickable: boolean; isAgent?: boolean }) => (
     clickable ? (
       <button
         ref={avatarRef}
@@ -156,7 +210,11 @@ export default function MessageBubble({ message, isOwn, isGrouped }: Props) {
   }
 
   return (
-    <div className={cn('flex gap-2 group m-1', isOwn ? 'flex-row-reverse' : 'flex-row')}>
+    <div className={cn(
+      'flex gap-2 group m-1',
+      isOwn ? 'flex-row-reverse' : 'flex-row',
+      isCurrentSearchMatch && 'rounded-xl ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-[var(--color-surface-card)]'
+    )}>
       {/* Avatar */}
       {!isGrouped && isOwn && (
         <AvatarDot name={myInitials} avatar={me?.avatar} userId={me?.user_id || ''} clickable={false} isAgent={me?.type === 1} />
@@ -192,7 +250,7 @@ export default function MessageBubble({ message, isOwn, isGrouped }: Props) {
             </button>
           )}
 
-          {/* Menu rendered at body level via portal — not affected by any stacking context */}
+          {/* Menu rendered at body level via portal */}
           {showMenu && menuPos && typeof document !== 'undefined' && createPortal(
             <>
               <div className="fixed inset-0 z-[998]" onClick={() => { setShowMenu(false); setMenuPos(null) }} />
@@ -223,7 +281,8 @@ export default function MessageBubble({ message, isOwn, isGrouped }: Props) {
           <div className={cn(
             'relative rounded-xl px-3 py-1.5 text-sm',
             isOwn ? 'bg-[var(--bubble-self)] text-[var(--bubble-self-text)]' : 'bg-[var(--bubble-other)] text-[var(--bubble-other-text)] border border-[var(--bubble-other-border)]',
-            isFailed && 'border-[var(--destructive)]'
+            isFailed && 'border-[var(--destructive)]',
+            isSearchMatch && !isCurrentSearchMatch && 'ring-1 ring-[var(--color-primary)]/40'
           )}
             style={{ boxShadow: 'var(--shadow-sm)' }}
             onClick={() => { if (isFailed) handleRetry() }}>
@@ -231,7 +290,42 @@ export default function MessageBubble({ message, isOwn, isGrouped }: Props) {
             {message.content_type === 7 && <span className="text-[9px] opacity-40 ml-1">{t('chat.edited')}</span>}
             <div className={cn('flex items-center gap-1 mt-1', !isOwn ? 'justify-end' : 'justify-start')}>
               <span className="text-[10px] opacity-60">{formatTime(message.timestamp)}</span>
-              {statusIcon()}
+              <div
+                ref={statusRef}
+                className="relative"
+                onMouseEnter={handleStatusHover}
+                onMouseLeave={handleStatusLeave}
+              >
+                {statusIcon()}
+                {/* Read receipts tooltip */}
+                {showReadBy && readReceipts && isOwn && message.status === MsgStatus.Read && createPortal(
+                  <div className="fixed z-[999] bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl py-2 px-3 shadow-lg"
+                    style={{ boxShadow: 'var(--shadow-lg)', top: tooltipPos.top, left: tooltipPos.left, transform: 'translate(-50%, -100%)' }}
+                    onMouseEnter={() => { if (readTimer.current) clearTimeout(readTimer.current); setShowReadBy(true) }}
+                    onMouseLeave={handleStatusLeave}>
+                    <div className="text-[11px] font-medium text-[var(--color-muted)] mb-1.5">{t('chat.readBy')}</div>
+                    {readReceipts.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {readReceipts.map(r => (
+                          <div key={r.user_id} className="flex items-center gap-2">
+                            {r.avatar ? (
+                              <img src={avatarUrl(r.avatar)} alt="" className="w-5 h-5 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-[9px] font-semibold text-[var(--color-ink)]">
+                                {r.name?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                            )}
+                            <span className="text-xs text-[var(--color-ink)] truncate max-w-[120px]">{r.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-[var(--color-muted)]">{t('chat.noReadReceipts')}</div>
+                    )}
+                  </div>,
+                  document.body
+                )}
+              </div>
             </div>
           </div>
           )}

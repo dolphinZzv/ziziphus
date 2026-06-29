@@ -18,12 +18,12 @@ import (
 	"siciv.space/agent/panda_ai/internal/conversation"
 	"siciv.space/agent/panda_ai/internal/gateway"
 	"siciv.space/agent/panda_ai/internal/handler"
-	"siciv.space/agent/panda_ai/internal/webembed"
 	"siciv.space/agent/panda_ai/internal/message"
 	"siciv.space/agent/panda_ai/internal/session"
 	"siciv.space/agent/panda_ai/internal/storage/cache"
 	"siciv.space/agent/panda_ai/internal/storage/db"
 	"siciv.space/agent/panda_ai/internal/storage/file"
+	"siciv.space/agent/panda_ai/internal/webembed"
 	"siciv.space/agent/panda_ai/pkg/logger"
 	"siciv.space/agent/panda_ai/pkg/model"
 )
@@ -122,12 +122,12 @@ func main() {
 	// File storage (using afero for filesystem abstraction)
 	fileFs := afero.NewOsFs()
 	fileStore := file.NewStore(fileFs, cfg.Storage.LocalPath)
-	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL)
+	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL, convMgr)
 
 	// HTTP API handlers
 	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailer)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
-	msgHandler := api.NewMsgHandler(msgRepo, convMgr)
+	msgHandler := api.NewMsgHandler(msgRepo, receiptRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
 	sessionHandler := api.NewSessionHandler(sessMgr, gwMgr)
 	handlers := &api.Handlers{

@@ -432,6 +432,21 @@ func (m *mockMsgStorage) GetHistory(ctx context.Context, convID string, beforeMs
 }
 
 // ---------------------------------------------------------------------------
+// Mock: receiptStorage
+// ---------------------------------------------------------------------------
+
+type mockReceiptStorage struct {
+	getByMsgIDFunc func(ctx context.Context, msgID int64) ([]*model.Receipt, error)
+}
+
+func (m *mockReceiptStorage) GetByMsgID(ctx context.Context, msgID int64) ([]*model.Receipt, error) {
+	if m.getByMsgIDFunc != nil {
+		return m.getByMsgIDFunc(ctx, msgID)
+	}
+	return nil, nil
+}
+
+// ---------------------------------------------------------------------------
 // Mock: contactStorage
 // ---------------------------------------------------------------------------
 
@@ -2069,6 +2084,70 @@ func TestMsgHandler_GetHistory_NotMember(t *testing.T) {
 	}
 }
 
+func TestMsgHandler_GetReceipts_Success(t *testing.T) {
+	handler := &MsgHandler{
+		receipts: &mockReceiptStorage{
+			getByMsgIDFunc: func(_ context.Context, msgID int64) ([]*model.Receipt, error) {
+				return []*model.Receipt{
+					{MsgID: 1, UserID: "user_2", Status: model.ReceiptRead, Timestamp: 1000},
+					{MsgID: 1, UserID: "user_3", Status: model.ReceiptRead, Timestamp: 2000},
+				}, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/messages/{msg_id}/receipts", nil)
+	req = setChiURLParam(req, "msg_id", "1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.GetReceipts(w, req)
+
+	resp := decodeResponse(t, w)
+	items := resp.Data.([]interface{})
+	if len(items) != 2 {
+		t.Errorf("got %d receipts, want 2", len(items))
+	}
+	if items[0].(map[string]interface{})["user_id"] != "user_2" {
+		t.Errorf("first user_id = %v, want user_2", items[0].(map[string]interface{})["user_id"])
+	}
+}
+
+func TestMsgHandler_GetReceipts_InvalidID(t *testing.T) {
+	handler := &MsgHandler{}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/messages/{msg_id}/receipts", nil)
+	req = setChiURLParam(req, "msg_id", "-1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.GetReceipts(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrBadMessage {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrBadMessage)
+	}
+}
+
+func TestMsgHandler_GetReceipts_Empty(t *testing.T) {
+	handler := &MsgHandler{
+		receipts: &mockReceiptStorage{
+			getByMsgIDFunc: func(_ context.Context, msgID int64) ([]*model.Receipt, error) {
+				return nil, nil
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/messages/{msg_id}/receipts", nil)
+	req = setChiURLParam(req, "msg_id", "999")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.GetReceipts(w, req)
+
+	resp := decodeResponse(t, w)
+	items := resp.Data.([]interface{})
+	if len(items) != 0 {
+		t.Errorf("got %d receipts, want 0", len(items))
+	}
+}
+
 // =========================================================================
 // Tests: ContactHandler
 // =========================================================================
@@ -3256,7 +3335,7 @@ func TestFileHandler_resizeImage_JPG(t *testing.T) {
 // =========================================================================
 
 func TestNewFileHandler(t *testing.T) {
-	h := NewFileHandler(nil, nil, nil, "http://example.com")
+	h := NewFileHandler(nil, nil, nil, "http://example.com", nil)
 	if h == nil {
 		t.Fatal("NewFileHandler returned nil")
 	}
@@ -3848,5 +3927,24 @@ func TestContactHandler_Remove_Error(t *testing.T) {
 	resp := decodeResponse(t, w)
 	if resp.Code != model.ErrInternalServer.Code {
 		t.Errorf("code = %d, want %d", resp.Code, model.ErrInternalServer.Code)
+	}
+}
+
+func TestRegister_PasswordMinLength(t *testing.T) {
+	// Password < 8 chars should be rejected.
+	userRepo := &mockUserRepo{
+		createFunc: func(_ context.Context, _ *model.User) error { return nil },
+	}
+	handler := &UserHandler{userRepo: userRepo}
+
+	reqBody := `{"account":"test","name":"Test","password":"1234567"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", strings.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.Register(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Register with 7-char password: got status %d; want 400", w.Code)
 	}
 }

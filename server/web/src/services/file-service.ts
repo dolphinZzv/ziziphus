@@ -1,6 +1,6 @@
 import { uploadFile as upload } from './api-client'
 import { api } from './api-client'
-import type { FileInfo } from '@/types/file'
+
 
 export interface ConvFileInfo {
   file_id: string

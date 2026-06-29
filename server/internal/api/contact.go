@@ -333,7 +333,7 @@ func (h *ContactHandler) RequestContact(w http.ResponseWriter, r *http.Request) 
 		logger.Error("ensure sender system conv failed", "error", err)
 	} else {
 		h.ingest.SendSystemMessage(ctx, model.MakeSystemConvID(senderID),
-			i18n.T(ctx, "contact_request.sent", targetName))
+			i18n.T(ctx, "contact_request.sent", targetName), senderID)
 	}
 
 	JSON(w, map[string]interface{}{
@@ -414,6 +414,12 @@ func (h *ContactHandler) GetRequestByFormMsgID(w http.ResponseWriter, r *http.Re
 	}
 	if req == nil {
 		Error(w, r, http.StatusNotFound, model.ErrContactRequestNotFound)
+		return
+	}
+	// Verify the caller is either sender or recipient of this request
+	userID := auth.UserFromCtx(r.Context())
+	if req.FromUserID != userID && req.ToUserID != userID {
+		Error(w, r, http.StatusForbidden, model.ErrConvNotFound)
 		return
 	}
 	JSON(w, req)

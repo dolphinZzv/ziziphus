@@ -68,6 +68,25 @@ struct P2PDetailView: View {
                 }
             }
 
+            // Agent display settings
+            if !isLoading {
+                Divider()
+                Toggle(isOn: Binding(
+                    get: { ConversationSettings.shared.showAgentResponseOnly(convID: convID) },
+                    set: { ConversationSettings.shared.setShowAgentResponseOnly(convID: convID, value: $0) }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(loc("chat.agent_response_only"))
+                            .font(.appleCaption)
+                        Text(loc("chat.agent_response_only_hint"))
+                            .font(.appleCaption)
+                            .foregroundColor(AppleDesign.Colors.inkMuted)
+                    }
+                }
+                .toggleStyle(.switch)
+                .padding(.horizontal, AppleDesign.Spacing.lg)
+            }
+
             Spacer()
         }
         .frame(width: 400, height: 500)

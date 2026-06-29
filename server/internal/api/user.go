@@ -76,7 +76,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
-	if req.Name == "" || req.Password == "" {
+	if req.Name == "" || len(req.Password) < 8 {
 		BadRequest(w, r, i18n.T(r.Context(), "err.name_password_required"))
 		return
 	}
@@ -219,13 +219,17 @@ func (h *UserHandler) MFAVerifyLogin(w http.ResponseWriter, r *http.Request) {
 	auth.ClearSignupCode(req.MFAToken)
 	mfaUser, _ := h.userRepo.GetByID(r.Context(), req.MFAUserID)
 	userType := 0
-	if mfaUser != nil && mfaUser.Type == model.UserAgent { userType = 1 }
+	if mfaUser != nil && mfaUser.Type == model.UserAgent {
+		userType = 1
+	}
 	accessToken, refreshToken, expiresAt, err := h.authSvc.GenerateToken(req.MFAUserID, userType)
 	if err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	if mfaUser != nil { mfaUser.Password = "" }
+	if mfaUser != nil {
+		mfaUser.Password = ""
+	}
 	JSON(w, map[string]interface{}{
 		"user_id":       req.MFAUserID,
 		"account":       mfaUser.Account,
@@ -279,9 +283,18 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "user_id")
+	callerID := auth.UserFromCtx(r.Context())
 	if userID == "" {
 		BadRequest(w, r, i18n.T(r.Context(), "err.user_id_required"))
 		return
+	}
+	// Respect discoverability: only allow looking up the caller or discoverable users
+	if userID != callerID {
+		u, _ := h.userRepo.GetByID(r.Context(), userID)
+		if u != nil && !u.Discoverable {
+			NotFound(w, r)
+			return
+		}
 	}
 	user, err := h.userRepo.GetByID(r.Context(), userID)
 	if err != nil {
@@ -330,7 +343,7 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 			"account":         u.Account,
 			"name":            u.Name,
 			"avatar":          u.Avatar,
-				"cover":           u.Cover,
+			"cover":           u.Cover,
 			"type":            u.Type,
 			"status":          u.Status,
 			"uid":             u.UID,
@@ -360,9 +373,13 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := auth.UserFromCtx(r.Context())
 	discoverable := true
-	if req.Discoverable != nil { discoverable = *req.Discoverable }
+	if req.Discoverable != nil {
+		discoverable = *req.Discoverable
+	}
 	allowDirectChat := true
-	if req.AllowDirectChat != nil { allowDirectChat = *req.AllowDirectChat }
+	if req.AllowDirectChat != nil {
+		allowDirectChat = *req.AllowDirectChat
+	}
 	if err := h.userRepo.Update(r.Context(), userID, req.Name, req.Avatar, req.Cover, req.Email, req.PrimaryColor, req.SecondaryColor, discoverable, allowDirectChat); err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
@@ -410,7 +427,7 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 			"account":         u.Account,
 			"name":            u.Name,
 			"avatar":          u.Avatar,
-				"cover":           u.Cover,
+			"cover":           u.Cover,
 			"type":            u.Type,
 			"status":          u.Status,
 			"uid":             u.UID,
@@ -420,7 +437,6 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 	Paginated(w, items, total, page, size)
 }
-
 
 // ===== MFA =====
 
@@ -503,14 +519,14 @@ func (h *UserHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 	}
 	user, _ := h.userRepo.GetByID(r.Context(), userID)
 	account := ""
-	if user != nil { account = user.Account }
+	if user != nil {
+		account = user.Account
+	}
 	if req.MFAType == int(model.MFATOTP) {
 		resp["secret"] = secret
 		resp["uri"] = auth.TOTPURI(account, "Panda AI", secret)
 	}
-	if req.MFAType == int(model.MFAEmail) {
-		resp["code"] = secret // development: return code; in production it's sent via email
-	}
+	// Email OTP: code is sent via email by the mailer, never returned in API response
 	JSON(w, resp)
 }
 
@@ -555,7 +571,6 @@ func (h *UserHandler) DisableMFA(w http.ResponseWriter, r *http.Request) {
 	}
 	JSON(w, map[string]interface{}{"enabled": false})
 }
-
 
 type emailVerifyHandler interface {
 	Upsert(ctx context.Context, ev *model.EmailVerify) error
@@ -627,7 +642,7 @@ func (h *UserHandler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]interface{}{"email": ev.PendingEmail, "verified": true})
 }
 
-	// Agent requests
+// Agent requests
 type createAgentReq struct {
 	Name            string `json:"name"`
 	Avatar          string `json:"avatar"`
@@ -681,9 +696,13 @@ func (h *UserHandler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	apiKeyStr := "sk-" + hex.EncodeToString(apiKeyBytes)
 	now := time.Now().UnixMilli()
 	discoverable := true
-	if req.Discoverable != nil { discoverable = *req.Discoverable }
+	if req.Discoverable != nil {
+		discoverable = *req.Discoverable
+	}
 	allowDirectChat := true
-	if req.AllowDirectChat != nil { allowDirectChat = *req.AllowDirectChat }
+	if req.AllowDirectChat != nil {
+		allowDirectChat = *req.AllowDirectChat
+	}
 	u := &model.User{
 		ID:              agentID,
 		Type:            model.UserAgent,
@@ -722,9 +741,13 @@ func (h *UserHandler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	discoverable := true
-	if req.Discoverable != nil { discoverable = *req.Discoverable }
+	if req.Discoverable != nil {
+		discoverable = *req.Discoverable
+	}
 	allowDirectChat := true
-	if req.AllowDirectChat != nil { allowDirectChat = *req.AllowDirectChat }
+	if req.AllowDirectChat != nil {
+		allowDirectChat = *req.AllowDirectChat
+	}
 	if err := h.userRepo.UpdateAgent(r.Context(), agentID, userID, req.Name, req.Avatar, req.Cover, req.PrimaryColor, req.SecondaryColor, model.WakeMode(req.WakeMode), discoverable, allowDirectChat); err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return

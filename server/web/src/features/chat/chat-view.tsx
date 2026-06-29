@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { chatStore } from '@/stores/chat-store'
 import { authStore } from '@/stores/auth-store'
 import { conversationStore } from '@/stores/conversation-store'
 import { conversationService } from '@/services/conversation-service'
+import { fileService } from '@/services/file-service'
 import { wsClient } from '@/services/websocket-client'
 import { MessageType } from '@/types/ws'
 import type { MsgPushPayload } from '@/types/ws'
@@ -16,7 +17,7 @@ import P2PDetail from './p2p-detail'
 import GroupDetail from '@/features/group/group-detail'
 import MemberListView from '@/features/group/member-list-view'
 import HistoryView from '@/features/history/history-view'
-import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder } from 'lucide-react'
+import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import FilePanel from './file-panel'
@@ -50,6 +51,68 @@ export default function ChatView() {
   const [dragging, setDragging] = useState(false)
   const [groupNotice, setGroupNotice] = useState('')
   const markedReadRef = useRef<Set<string>>(new Set())
+
+  // --- Feature 1: In-chat search ---
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Compute matches from text-based messages
+  const searchMatches = searchKeyword.trim()
+    ? messages.reduce<number[]>((acc, m, i) => {
+        if ((m.content_type === ContentType.Text || m.content_type === ContentType.Edit) &&
+            m.body.toLowerCase().includes(searchKeyword.toLowerCase())) {
+          acc.push(i)
+        }
+        return acc
+      }, [])
+    : []
+
+  const handleSearchPrev = () => {
+    setCurrentMatchIndex(i => (i > 0 ? i - 1 : searchMatches.length - 1))
+  }
+  const handleSearchNext = () => {
+    setCurrentMatchIndex(i => (i < searchMatches.length - 1 ? i + 1 : 0))
+  }
+  const handleSearchClose = () => {
+    setShowSearch(false)
+    setSearchKeyword('')
+    setCurrentMatchIndex(0)
+  }
+
+  // Scroll to current match
+  useEffect(() => {
+    if (searchMatches.length === 0) return
+    const targetId = `msg-${messages[searchMatches[currentMatchIndex]]?.msg_id}`
+    const el = document.getElementById(targetId)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [currentMatchIndex, searchMatches])
+
+  // --- Feature 2: Drag-drop on chat area ---
+  const handleDropOnChat = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    if (!convId) return
+    const files = Array.from(e.dataTransfer?.files || [])
+    if (files.length === 0) return
+    for (const file of files) {
+      const type = file.type.startsWith('image/') ? ('image' as const) : ('file' as const)
+      try {
+        const result = await fileService.upload(file, file.name, type === 'image' ? 0 : 1)
+        const body = JSON.stringify({ url: result.url, name: file.name, size: file.size, file_id: result.file_id })
+        chatStore.sendMessage(convId, body, type === 'image' ? ContentType.Image : ContentType.File)
+      } catch { /* ignore */ }
+    }
+  }, [convId])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer?.types?.some(t => t === 'Files')) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }, [])
+
+  // --- End drag-drop ---
 
   const conv = conversations.find(c => c.conv_id === convId)
   const isGroup = conv?.type === ConvType.Group
@@ -95,7 +158,11 @@ export default function ChatView() {
       const recall = payload as import('@/types/ws').MsgRecallPushPayload
       if (recall.conv_id === convId) chatStore.handleRecallPush(recall)
     })
-    return () => { u1?.(); u2?.(); u3?.() }
+    const u4 = wsClient.on(MessageType.MsgReadNotify, (payload: unknown) => {
+      const rn = payload as import('@/types/ws').MsgReadNotifyPayload
+      if (rn.conv_id === convId) chatStore.handleReadNotify(rn)
+    })
+    return () => { u1?.(); u2?.(); u3?.(); u4?.() }
   }, [convId])
 
   // Mark as read once messages are loaded (use max msg_id from loaded messages)
@@ -118,51 +185,117 @@ export default function ChatView() {
   const initials = displayName.charAt(0).toUpperCase()
 
   return (
-    <div className="flex h-full">
-      <div className="flex-1 flex flex-col min-w-0 relative">
+    <div
+      className="flex h-full"
+      onDragOver={handleDragOver}
+      onDrop={handleDropOnChat}
+    >
+      <div ref={containerRef} className="flex-1 flex flex-col min-w-0 relative">
       {/* Chat toolbar */}
       <div className="h-12 flex items-center px-4 border-b border-[var(--color-hairline)] flex-shrink-0 bg-[var(--color-surface-card)] gap-3">
         {/* Avatar */}
-        <div className="relative flex-shrink-0">
-          {displayAvatar ? (
-            <img src={avatarUrl(displayAvatar)} alt="" className="w-7 h-7 rounded-full object-cover" />
-          ) : (
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold"
-              style={{ background: isGroup
-                ? 'linear-gradient(135deg, var(--color-accent), #34D399)'
-                : 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
-              {initials}
+        {!showSearch ? (
+          <>
+          <div className="relative flex-shrink-0">
+            {displayAvatar ? (
+              <img src={avatarUrl(displayAvatar)} alt="" className="w-7 h-7 rounded-full object-cover" />
+            ) : (
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold"
+                style={{ background: isGroup
+                  ? 'linear-gradient(135deg, var(--color-accent), #34D399)'
+                  : 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
+                {initials}
+              </div>
+            )}
+            {isGroup && (
+              <div className="absolute -bottom-1 -right-1 w-[14px] h-[14px] rounded-full bg-[var(--color-surface-card)] flex items-center justify-center">
+                <Users size={8} className="text-[var(--color-muted)]" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="font-headline text-sm font-semibold text-[var(--color-ink)] truncate block">
+              {displayName}
+            </span>
+            {isSystem ? (
+              <div className="h-[15px]" />
+            ) : (
+            <button
+              onClick={() => { navigator.clipboard.writeText(convId); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+              className="text-[10px] text-[var(--color-muted-soft)] hover:text-[var(--color-ink)] font-mono truncate flex items-center gap-1 transition-colors cursor-pointer"
+              title={t('chat.clickCopyId')}
+            >
+              {convId}
+              {copied ? <Check size={10} className="text-[var(--success)]" /> : <Copy size={10} />}
+            </button>
+            )}
+          </div>
+          </>
+        ) : (
+          <>
+          <div className="flex-1 flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={searchKeyword}
+                onChange={e => { setSearchKeyword(e.target.value); setCurrentMatchIndex(0) }}
+                placeholder={t('chat.searchPlaceholder')}
+                className="w-full h-8 pl-3 pr-8 rounded-xl bg-[var(--color-surface-soft)] text-sm border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-ink)]"
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') handleSearchNext(); if (e.key === 'Escape') handleSearchClose() }}
+              />
+              {searchKeyword.trim() && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[11px] text-[var(--color-muted)]">
+                  <span>{searchMatches.length > 0 ? `${currentMatchIndex + 1}/${searchMatches.length}` : '0'}</span>
+                </div>
+              )}
             </div>
-          )}
-          {isGroup && (
-            <div className="absolute -bottom-1 -right-1 w-[14px] h-[14px] rounded-full bg-[var(--color-surface-card)] flex items-center justify-center">
-              <Users size={8} className="text-[var(--color-muted)]" />
-            </div>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <span className="font-headline text-sm font-semibold text-[var(--color-ink)] truncate block">
-            {displayName}
-          </span>
-          {isSystem ? (
-            <div className="h-[15px]" />
-          ) : (
-          <button
-            onClick={() => { navigator.clipboard.writeText(convId); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-            className="text-[10px] text-[var(--color-muted-soft)] hover:text-[var(--color-ink)] font-mono truncate flex items-center gap-1 transition-colors cursor-pointer"
-            title={t('chat.clickCopyId')}
-          >
-            {convId}
-            {copied ? <Check size={10} className="text-[var(--success)]" /> : <Copy size={10} />}
-          </button>
-          )}
-        </div>
+            <button
+              onClick={handleSearchPrev}
+              disabled={searchMatches.length === 0}
+              className="p-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] disabled:opacity-30 transition-colors"
+            >
+              <ChevronUp size={16} />
+            </button>
+            <button
+              onClick={handleSearchNext}
+              disabled={searchMatches.length === 0}
+              className="p-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] disabled:opacity-30 transition-colors"
+            >
+              <ChevronDown size={16} />
+            </button>
+            <button
+              onClick={handleSearchClose}
+              className="p-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex items-center gap-1">
+            {searchMatches.length > 0 && (
+              <span className="text-[11px] text-[var(--color-muted)]">
+                {searchMatches.length} 条结果
+              </span>
+            )}
+          </div>
+          </>
+        )}
+
         {!isSystem && (
+          <>
+          {!showSearch && (
+            <button onClick={() => setShowSearch(true)}
+              className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+              title={t('chat.search')}>
+              <Search size={17} />
+            </button>
+          )}
           <button onClick={() => setShowFiles(!showFiles)}
             className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
             title={t('conversation.files')}>
             <Folder size={17} />
           </button>
+          </>
         )}
         <div className="relative">
           <button onClick={() => setShowMenu(!showMenu)}
@@ -198,7 +331,7 @@ export default function ChatView() {
                     )}
                     <div className="border-t border-[var(--color-hairline)] my-1" />
                     <button onClick={handleLeave}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--destructive)]/5 text-[var(--destructive)]">
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-ink)]">
                       <LogOut size={14} /> {t('group.leave')}
                     </button>
                   </>
@@ -236,7 +369,14 @@ export default function ChatView() {
 
       {/* Messages */}
       <div className="flex-1 overflow-hidden">
-        <MessageList convId={convId} messages={messages} currentUserId={user?.user_id || ''} />
+        <MessageList
+          convId={convId}
+          messages={messages}
+          currentUserId={user?.user_id || ''}
+          searchKeyword={searchKeyword}
+          matchIndex={currentMatchIndex}
+          searchMatches={searchMatches}
+        />
       </div>
 
       {!isSystem && <InputBar convId={convId} />}
@@ -266,3 +406,4 @@ export default function ChatView() {
     </div>
   )
 }
+

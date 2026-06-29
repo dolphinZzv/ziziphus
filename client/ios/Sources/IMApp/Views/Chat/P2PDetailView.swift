@@ -58,6 +58,24 @@ struct P2PDetailView: View {
                     }
                 }
 
+                // Agent display settings
+                if !isLoading {
+                    Toggle(isOn: Binding(
+                        get: { ConversationSettings.shared.showAgentResponseOnly(convID: convID) },
+                        set: { ConversationSettings.shared.setShowAgentResponseOnly(convID: convID, value: $0) }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc("chat.agent_response_only"))
+                                .font(.subheadline)
+                            Text(loc("chat.agent_response_only_hint"))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    .padding(.horizontal)
+                }
+
                 Spacer()
             }
             .navigationTitle(loc("chat.p2p_detail"))

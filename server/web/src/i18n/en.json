@@ -61,7 +61,20 @@
     "recallConfirm": "Recall this message?",
     "recalled": "Message recalled",
     "edited": "(edited)",
-    "editHint": "Esc to cancel · Enter to save"
+    "editHint": "Esc to cancel · Enter to save",
+    "searchPlaceholder": "Search current conversation...",
+    "search": "Search",
+    "uploading": "Uploading...",
+    "dropToSend": "Drop to send file",
+    "readBy": "Read by",
+    "noReadReceipts": "No read receipts yet",
+    "preview": "Preview",
+    "hidePreview": "Hide Preview",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "openInNewTab": "Open in new tab",
+    "open": "Open",
+    "pdfNotSupported": "Your browser doesn't support PDF preview. Click the button below to open."
   },
   "conversation": {
     "title": "Messages",
@@ -94,7 +107,10 @@
     "addFriend": "Add Friend",
     "alreadyFriends": "Already Friends",
     "requestSent": "Request Sent",
-    "leaveConfirm": "Leave this conversation?"
+    "leaveConfirm": "Leave this conversation?",
+    "agentDisplay": "Agent: Show Response Only",
+    "agentDisplayHint": "Hide thinking steps and tool calls",
+    "agentStepsHidden": "{{count}} steps hidden"
   },
   "group": {
     "detail": "Group Info",

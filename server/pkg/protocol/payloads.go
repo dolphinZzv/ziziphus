@@ -99,20 +99,20 @@ type MsgRecallPayload struct {
 }
 
 type MsgEditPushPayload struct {
-	ConvID      string `json:"conv_id"`
-	MsgID       int64  `json:"msg_id"`
-	SenderID    string `json:"sender_id"`
-	NewBody     string `json:"new_body"`
-	EditedAt    int64  `json:"edited_at"`
-	Timestamp   int64  `json:"timestamp"`
+	ConvID    string `json:"conv_id"`
+	MsgID     int64  `json:"msg_id"`
+	SenderID  string `json:"sender_id"`
+	NewBody   string `json:"new_body"`
+	EditedAt  int64  `json:"edited_at"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 type MsgRecallPushPayload struct {
-	ConvID      string `json:"conv_id"`
-	MsgID       int64  `json:"msg_id"`
-	SenderID    string `json:"sender_id"`
-	RecalledAt  int64  `json:"recalled_at"`
-	Timestamp   int64  `json:"timestamp"`
+	ConvID     string `json:"conv_id"`
+	MsgID      int64  `json:"msg_id"`
+	SenderID   string `json:"sender_id"`
+	RecalledAt int64  `json:"recalled_at"`
+	Timestamp  int64  `json:"timestamp"`
 }
 
 type EmptyPayload struct{}

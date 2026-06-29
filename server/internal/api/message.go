@@ -19,13 +19,18 @@ type msgStorage interface {
 	GetHistory(ctx context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error)
 }
 
-type MsgHandler struct {
-	msgRepo msgStorage
-	convMgr convMemberChecker
+type receiptStorage interface {
+	GetByMsgID(ctx context.Context, msgID int64) ([]*model.Receipt, error)
 }
 
-func NewMsgHandler(msgRepo msgStorage, convMgr convMemberChecker) *MsgHandler {
-	return &MsgHandler{msgRepo: msgRepo, convMgr: convMgr}
+type MsgHandler struct {
+	msgRepo  msgStorage
+	receipts receiptStorage
+	convMgr  convMemberChecker
+}
+
+func NewMsgHandler(msgRepo msgStorage, receipts receiptStorage, convMgr convMemberChecker) *MsgHandler {
+	return &MsgHandler{msgRepo: msgRepo, receipts: receipts, convMgr: convMgr}
 }
 
 func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
@@ -73,4 +78,30 @@ func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	JSON(w, items)
+}
+
+// GetReceipts returns read receipts for a message (who has read it).
+func (h *MsgHandler) GetReceipts(w http.ResponseWriter, r *http.Request) {
+	msgID, err := strconv.ParseInt(chi.URLParam(r, "msg_id"), 10, 64)
+	if err != nil || msgID <= 0 {
+		Error(w, r, http.StatusBadRequest, model.ErrBadMsgContent)
+		return
+	}
+
+	receipts, err := h.receipts.GetByMsgID(r.Context(), msgID)
+	if err != nil {
+		logger.Error("get receipts failed", "msg_id", msgID, "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+
+	result := make([]map[string]interface{}, 0)
+	for _, rc := range receipts {
+		if rc.Status >= model.ReceiptRead {
+			result = append(result, map[string]interface{}{
+				"user_id": rc.UserID,
+			})
+		}
+	}
+	JSON(w, result)
 }

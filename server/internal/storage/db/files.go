@@ -38,7 +38,9 @@ func (r *FileRepo) GetByID(ctx context.Context, fileID string) (*model.FileInfo,
 		return nil, err
 	}
 	f.CreatedAt = createdAt.UnixMilli()
-	if convID != nil { f.ConvID = *convID }
+	if convID != nil {
+		f.ConvID = *convID
+	}
 	return &f, nil
 }
 
@@ -65,7 +67,9 @@ func (r *FileRepo) ListByConvID(ctx context.Context, convID string, page, size i
 			return nil, 0, err
 		}
 		f.CreatedAt = createdAt.UnixMilli()
-		if cid != nil { f.ConvID = *cid }
+		if cid != nil {
+			f.ConvID = *cid
+		}
 		files = append(files, &f)
 	}
 	return files, total, nil
@@ -100,13 +104,17 @@ func (r *FileRepo) ListFolders(ctx context.Context, convID string, parentID int6
 		`SELECT f.folder_id, f.conv_id, f.name, f.parent_id, COALESCE(u.name,''), f.created_at
 		 FROM file_folders f LEFT JOIN users u ON u.id = f.created_by
 		 WHERE f.conv_id = $1 AND f.parent_id = $2 ORDER BY f.name`, convID, parentID)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 	var folders []*model.FileFolder
 	for rows.Next() {
 		f := &model.FileFolder{}
 		var ca time.Time
-		if err := rows.Scan(&f.FolderID, &f.ConvID, &f.Name, &f.ParentID, &f.CreatedBy, &ca); err != nil { return nil, err }
+		if err := rows.Scan(&f.FolderID, &f.ConvID, &f.Name, &f.ParentID, &f.CreatedBy, &ca); err != nil {
+			return nil, err
+		}
 		f.CreatedAt = ca.UnixMilli()
 		folders = append(folders, f)
 	}
@@ -115,19 +123,25 @@ func (r *FileRepo) ListFolders(ctx context.Context, convID string, parentID int6
 
 func (r *FileRepo) ListFilesInFolder(ctx context.Context, convID string, folderID int64, page, size int) ([]*model.FileInfo, int, error) {
 	var total int
-	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM files WHERE conv_id=$1 AND folder_id=$2`, convID, folderID).Scan(&total); err != nil { return nil, 0, err }
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM files WHERE conv_id=$1 AND folder_id=$2`, convID, folderID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
 	offset := (page - 1) * size
 	rows, err := r.pool.Query(ctx,
 		`SELECT f.file_id, f.uploader_id, COALESCE(u.name,''), f.name, f.size, f.content_type, f.width, f.height, f.path, f.thumbnail_path, f.conv_id, f.folder_id, f.created_at
 		 FROM files f LEFT JOIN users u ON u.id = f.uploader_id
 		 WHERE f.conv_id=$1 AND f.folder_id=$2 ORDER BY f.created_at DESC LIMIT $3 OFFSET $4`, convID, folderID, size, offset)
-	if err != nil { return nil, 0, err }
+	if err != nil {
+		return nil, 0, err
+	}
 	defer rows.Close()
 	var files []*model.FileInfo
 	for rows.Next() {
 		var ff model.FileInfo
 		var ca time.Time
-		if err := rows.Scan(&ff.FileID, &ff.UploaderID, &ff.UploaderName, &ff.Name, &ff.Size, &ff.ContentType, &ff.Width, &ff.Height, &ff.URL, &ff.ThumbnailURL, &ff.ConvID, &ff.FolderID, &ca); err != nil { return nil, 0, err }
+		if err := rows.Scan(&ff.FileID, &ff.UploaderID, &ff.UploaderName, &ff.Name, &ff.Size, &ff.ContentType, &ff.Width, &ff.Height, &ff.URL, &ff.ThumbnailURL, &ff.ConvID, &ff.FolderID, &ca); err != nil {
+			return nil, 0, err
+		}
 		ff.CreatedAt = ca.UnixMilli()
 		files = append(files, &ff)
 	}

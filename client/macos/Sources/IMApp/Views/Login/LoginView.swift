@@ -11,6 +11,82 @@ struct LoginView: View {
     @State private var showSettings = false
 
     var body: some View {
+        Group {
+            if loginVM.mfaRequired {
+                mfaView
+            } else {
+                loginFormView
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(AppleDesign.Spacing.lg)
+        .background(Color.clear.contentShape(Rectangle()).onTapGesture { })
+        .sheet(isPresented: $showSettings) {
+            AppSettingsView()
+                .environmentObject(appSettings)
+                .environmentObject(themeManager)
+                .environmentObject(localizationManager)
+        }
+    }
+
+    private var mfaView: some View {
+        VStack(spacing: AppleDesign.Spacing.xl) {
+            Spacer()
+
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.blue)
+
+            Text(loc("mfa.title"))
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text(loginVM.mfaType == 1
+                 ? loc("mfa.totp_prompt")
+                 : String(format: loc("mfa.email_prompt"), loginVM.maskedEmail))
+                .font(.appleBody)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            TextField(loc("mfa.code_placeholder"), text: $loginVM.mfaCode)
+                .textFieldStyle(.plain)
+                .font(.system(size: 24, design: .monospaced))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color(nsColor: .controlBackgroundColor))
+                .clipShape(Capsule())
+                .frame(width: 200)
+                .onSubmit { loginVM.verifyMFA() }
+
+            if let err = loginVM.mfaError {
+                Text(err)
+                    .foregroundColor(.red)
+                    .font(.callout)
+            }
+
+            Button(action: loginVM.verifyMFA) {
+                if loginVM.isLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .scaleEffect(0.8)
+                        .tint(.white)
+                } else {
+                    Text(loc("mfa.verify_button"))
+                }
+            }
+            .buttonStyle(ApplePrimaryButtonStyle())
+            .frame(width: 200)
+            .disabled(loginVM.isLoading || loginVM.mfaCode.isEmpty)
+
+            Button(loc("common.cancel")) { loginVM.cancelMFA() }
+                .buttonStyle(AppleSecondaryPillStyle())
+
+            Spacer()
+        }
+    }
+
+    private var loginFormView: some View {
         VStack(spacing: AppleDesign.Spacing.xl) {
             HStack {
                 Spacer()
@@ -105,8 +181,6 @@ struct LoginView: View {
 
             Spacer()
         }
-        .padding(AppleDesign.Spacing.lg)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onChange(of: loginVM.errorMessage) { _, msg in
             if msg != nil { showErrorAlert = true }
         }
@@ -119,17 +193,6 @@ struct LoginView: View {
             }
         } message: {
             Text(loginVM.errorMessage ?? "")
-        }
-        .background(
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture { }
-        )
-        .sheet(isPresented: $showSettings) {
-            AppSettingsView()
-                .environmentObject(appSettings)
-                .environmentObject(themeManager)
-                .environmentObject(localizationManager)
         }
     }
 }

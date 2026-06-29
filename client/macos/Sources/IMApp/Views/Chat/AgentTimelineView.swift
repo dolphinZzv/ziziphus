@@ -5,6 +5,7 @@ import Textual
 struct AgentTimelineView: View {
     let timeline: AgentTimelineBody
     let isMine: Bool
+    let convID: String
 
     @State private var expandedEntries: Set<String> = []
     @State private var imageViewerImages: [URL] = []
@@ -15,15 +16,35 @@ struct AgentTimelineView: View {
     private var textColor: Color { isMine ? .primary : .ink }
     private var mutedColor: Color { .secondary }
 
+    private var showAgentResponseOnly: Bool {
+        ConversationSettings.shared.showAgentResponseOnly(convID: convID)
+    }
+
+    private var filteredEntries: [AgentTimelineBody.Entry] {
+        if showAgentResponseOnly {
+            return timeline.entries.filter { $0.type == .response }
+        }
+        return timeline.entries
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerView
-            if !timeline.entries.isEmpty {
+            if !filteredEntries.isEmpty {
                 Divider()
                     .padding(.vertical, 6)
             }
-            ForEach(timeline.entries) { entry in
+            ForEach(filteredEntries) { entry in
                 entryRow(entry)
+            }
+            if showAgentResponseOnly {
+                let hiddenCount = timeline.entries.count - filteredEntries.count
+                if hiddenCount > 0 {
+                    Label(loc("conversation.agentStepsHidden", Int64(hiddenCount)), systemImage: "eye.slash")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+                }
             }
         }
         .textual.textSelection(.enabled)

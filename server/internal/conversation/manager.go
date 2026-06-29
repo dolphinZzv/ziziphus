@@ -24,6 +24,7 @@ type userRepo interface {
 }
 
 type convRepo interface {
+	IsDirectChatBlocked(ctx context.Context, userID string) (bool, error)
 	Create(ctx context.Context, c *model.Conversation) error
 	CreateTx(ctx context.Context, tx pgx.Tx, c *model.Conversation) error
 	Get(ctx context.Context, convID string) (*model.Conversation, error)
@@ -266,6 +267,10 @@ func (m *Manager) GetMembers(ctx context.Context, convID string) ([]*model.ConvM
 
 func (m *Manager) IsMember(ctx context.Context, convID, userID string) (bool, error) {
 	return m.convRepo.IsMember(ctx, convID, userID)
+}
+
+func (m *Manager) IsDirectChatBlocked(ctx context.Context, userID string) (bool, error) {
+	return m.convRepo.IsDirectChatBlocked(ctx, userID)
 }
 
 func (m *Manager) GetMemberRole(ctx context.Context, convID, userID string) (model.ConvRole, error) {

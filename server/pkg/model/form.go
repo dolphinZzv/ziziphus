@@ -76,21 +76,21 @@ type FormAction struct {
 
 // FormDefinitionBody is the JSON-serialized body for ContentType=10 messages.
 type FormDefinitionBody struct {
-	FormID         string        `json:"form_id"`
-	Type           FormType      `json:"type"`
-	Title          string        `json:"title"`
-	Description    string        `json:"description,omitempty"`
-	FromUserID     string        `json:"from_user_id,omitempty"`
-	FromUserName   string        `json:"from_user_name,omitempty"`
-	FromUserAvatar string        `json:"from_user_avatar,omitempty"`
-	RequestID      int64         `json:"request_id"`
-	Message        string        `json:"message,omitempty"`
-	Fields         []FormField   `json:"fields,omitempty"`
-	Actions        []FormAction  `json:"actions"`
+	FormID         string         `json:"form_id"`
+	Type           FormType       `json:"type"`
+	Title          string         `json:"title"`
+	Description    string         `json:"description,omitempty"`
+	FromUserID     string         `json:"from_user_id,omitempty"`
+	FromUserName   string         `json:"from_user_name,omitempty"`
+	FromUserAvatar string         `json:"from_user_avatar,omitempty"`
+	RequestID      int64          `json:"request_id"`
+	Message        string         `json:"message,omitempty"`
+	Fields         []FormField    `json:"fields,omitempty"`
+	Actions        []FormAction   `json:"actions"`
 	SubmitMode     FormSubmitMode `json:"submit_mode,omitempty"`
-	Deadline       *int64        `json:"deadline,omitempty"`
-	Status         FormStatus    `json:"status"`
-	CreatedAt      int64         `json:"created_at"`
+	Deadline       *int64         `json:"deadline,omitempty"`
+	Status         FormStatus     `json:"status"`
+	CreatedAt      int64          `json:"created_at"`
 }
 
 // FormAnswer is a single field-value pair in a form response.

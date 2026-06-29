@@ -26,7 +26,6 @@ func (r *ConvRepo) Create(ctx context.Context, c *model.Conversation) error {
 	return err
 }
 
-// CreateTx is the transactional variant of Create.
 func (r *ConvRepo) CreateTx(ctx context.Context, tx pgx.Tx, c *model.Conversation) error {
 	_, err := tx.Exec(ctx,
 		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at)
@@ -40,9 +39,9 @@ func (r *ConvRepo) Get(ctx context.Context, convID string) (*model.Conversation,
 	var lastMsgAt *time.Time
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT conv_id, type, name, owner_id, avatar, cover, notice, max_members, last_msg_id, last_msg_at, created_at
+		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at
 		 FROM conversations WHERE conv_id = $1`, convID).
-		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Cover, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt)
+		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +143,7 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 
 	// For P2P conversations, resolve the partner's display name from users table
 	partnerIDs := make([]string, 0, len(items))
-	itemIndexByPartner := make(map[string][]int) // partnerID -> item indices
+	itemIndexByPartner := make(map[string][]int)
 	for i, item := range items {
 		if item.Type == model.ConvP2P {
 			parts := strings.Split(item.ConvID, ":")
@@ -153,14 +152,13 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 				if partnerID == userID {
 					partnerID = parts[1]
 				}
-				item.Name = partnerID // fallback to partner ID
+				item.Name = partnerID
 				partnerIDs = append(partnerIDs, partnerID)
 				itemIndexByPartner[partnerID] = append(itemIndexByPartner[partnerID], i)
 			}
 		}
 	}
 	if len(partnerIDs) > 0 {
-		// Resolve partner names with nickname priority (contacts.nickname > users.name)
 		type partnerInfo struct {
 			id, name, nickname string
 			userType           int
@@ -208,7 +206,6 @@ func (r *ConvRepo) AddMember(ctx context.Context, convID, userID string, role mo
 	return err
 }
 
-// AddMemberTx is the transactional variant of AddMember.
 func (r *ConvRepo) AddMemberTx(ctx context.Context, tx pgx.Tx, convID, userID string, role model.ConvRole) error {
 	_, err := tx.Exec(ctx,
 		`INSERT INTO conv_members (conv_id, user_id, role, joined_at)
@@ -253,6 +250,16 @@ func (r *ConvRepo) IsMember(ctx context.Context, convID, userID string) (bool, e
 	err := r.pool.QueryRow(ctx,
 		`SELECT COUNT(*) FROM conv_members WHERE conv_id = $1 AND user_id = $2`, convID, userID).Scan(&count)
 	return count > 0, err
+}
+
+func (r *ConvRepo) IsDirectChatBlocked(ctx context.Context, userID string) (bool, error) {
+	var allow bool
+	err := r.pool.QueryRow(ctx,
+		`SELECT COALESCE(allow_direct_chat, true) FROM users WHERE id = $1`, userID).Scan(&allow)
+	if err != nil {
+		return false, err
+	}
+	return !allow, nil
 }
 
 func (r *ConvRepo) GetMemberRole(ctx context.Context, convID, userID string) (model.ConvRole, error) {
@@ -311,15 +318,15 @@ func (r *ConvRepo) UpdateNameAvatar(ctx context.Context, convID, name, avatar st
 	return err
 }
 
-func (r *ConvRepo) UpdateNotice(ctx context.Context, convID, notice string) error {
-	_, err := r.pool.Exec(ctx,
-		`UPDATE conversations SET notice = $1 WHERE conv_id = $2`, notice, convID)
-	return err
-}
-
 func (r *ConvRepo) UpdateCover(ctx context.Context, convID, cover string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE conversations SET cover = $1 WHERE conv_id = $2`, cover, convID)
+	return err
+}
+
+func (r *ConvRepo) UpdateNotice(ctx context.Context, convID, notice string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conversations SET notice = $1 WHERE conv_id = $2`, notice, convID)
 	return err
 }
 
@@ -335,6 +342,13 @@ func (r *ConvRepo) Unpin(ctx context.Context, userID, convID string) error {
 	return err
 }
 
+func (r *ConvRepo) AreContacts(ctx context.Context, userA, userB string) (bool, error) {
+	var count int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM contacts WHERE user_id = $1 AND contact_id = $2`, userA, userB).Scan(&count)
+	return count > 0, err
+}
+
 func (r *ConvRepo) Clone(ctx context.Context, srcConvID, newConvID, ownerID string, name string, idGen func() int64) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -342,16 +356,14 @@ func (r *ConvRepo) Clone(ctx context.Context, srcConvID, newConvID, ownerID stri
 	}
 	defer tx.Rollback(ctx)
 
-	// Insert new conversation (copy avatar from source)
 	_, err = tx.Exec(ctx,
-		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, notice, max_members, created_at)
-		 SELECT $1, type, $2, $3, avatar, cover, notice, max_members, NOW() FROM conversations WHERE conv_id = $4`,
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, notice, max_members, created_at)
+		 SELECT $1, type, $2, $3, avatar, notice, max_members, NOW() FROM conversations WHERE conv_id = $4`,
 		newConvID, name, ownerID, srcConvID)
 	if err != nil {
 		return err
 	}
 
-	// Copy members: owner gets Owner role, others get Member role
 	_, err = tx.Exec(ctx,
 		`INSERT INTO conv_members (conv_id, user_id, role, nickname, mute, pinned, joined_at)
 		 SELECT $1, user_id, CASE WHEN user_id = $2 THEN 2 ELSE 0 END, nickname, mute, FALSE, NOW()
@@ -362,12 +374,4 @@ func (r *ConvRepo) Clone(ctx context.Context, srcConvID, newConvID, ownerID stri
 	}
 
 	return tx.Commit(ctx)
-}
-
-// AreContacts returns true if two users are mutual contacts.
-func (r *ConvRepo) AreContacts(ctx context.Context, userA, userB string) (bool, error) {
-	var count int
-	err := r.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM contacts WHERE user_id = $1 AND contact_id = $2`, userA, userB).Scan(&count)
-	return count > 0, err
 }

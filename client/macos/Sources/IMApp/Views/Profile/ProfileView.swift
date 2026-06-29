@@ -11,6 +11,7 @@ struct ProfileView: View {
     @State private var showSettings = false
     @State private var showSessionManage = false
     @State private var showAgentManage = false
+    @State private var showMFA = false
     @State private var isEditing = false
     @State private var editName = ""
     @State private var editAvatar = ""
@@ -140,6 +141,14 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal)
+
+                Button(action: { showMFA = true }) {
+                    Label("双重验证", systemImage: "lock.shield")
+                        .font(.appleBody)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
             }
             .padding(.vertical, AppleDesign.Spacing.md)
             }
@@ -180,6 +189,9 @@ struct ProfileView: View {
         .sheet(isPresented: $showAgentManage) {
             AgentManageView()
                 .environmentObject(localizationManager)
+        }
+        .sheet(isPresented: $showMFA) {
+            MFASettingsView()
         }
         .alert(loc("login.logout"), isPresented: $showLogoutAlert) {
             Button(loc("common.cancel"), role: .cancel) {}

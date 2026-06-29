@@ -1,8 +1,6 @@
 import { api } from '@/services/api-client'
-import { ConvType } from '@/types/conversation'
 import type { ConvListItem } from '@/types/conversation'
 import { ContentType } from '@/types/message'
-import i18n from '@/i18n'
 
 interface ConvState {
   conversations: ConvListItem[]

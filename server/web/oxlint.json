@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/refs/heads/main/crates/oxc_linter/source/schema.json",
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-unused-expressions": "warn",
+    "react-hooks/exhaustive-deps": "warn",
+    "react/only-export-components": "off",
+    "react/no-unstable-nested-components": "warn",
+    "eqeqeq": "warn",
+    "no-throw-literal": "warn",
+    "no-console": "off",
+    "no-debugger": "error",
+    "no-var": "error",
+    "prefer-const": "warn",
+    "react/jsx-no-duplicate-props": "warn",
+    "react/no-children-in-void-dom-elements": "warn",
+    "import/no-duplicates": "warn"
+  }
+}

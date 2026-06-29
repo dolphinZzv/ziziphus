@@ -1,7 +1,7 @@
 import { getItem, getDeviceId, safeUUID } from '@/lib/storage'
 import { MessageType, type WSFrame, type MsgPushPayload } from '@/types/ws'
 import type {
-  MsgSendPayload, MsgSendAckPayload, SyncReqPayload, SyncResPayload,
+  SyncResPayload,
   MsgReadNotifyPayload, SessionEventPayload, SessionRecoverPayload,
   SessionRecoverAckPayload, TypingPayload, ErrorPayload,
 } from '@/types/ws'

@@ -86,8 +86,6 @@ func (h *ConvHandler) sendSysMsgWithName(ctx context.Context, convID, key, userI
 	h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
 }
 
-
-
 type createGroupReq struct {
 	Name      string   `json:"name"`
 	MemberIDs []string `json:"member_ids"`

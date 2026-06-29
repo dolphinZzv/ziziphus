@@ -81,7 +81,6 @@ func WSAuthMiddleware(service tokenParser, keyLookup apiKeyLookup) func(ctx cont
 	}
 }
 
-
 func extractBearerToken(r *http.Request) string {
 	auth := r.Header.Get("Authorization")
 	if strings.HasPrefix(auth, "Bearer ") {

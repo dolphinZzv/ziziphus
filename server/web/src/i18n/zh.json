@@ -61,7 +61,20 @@
     "recallConfirm": "确定撤回该消息？",
     "recalled": "消息已撤回",
     "edited": "(已编辑)",
-    "editHint": "Esc 取消 · Enter 保存"
+    "editHint": "Esc 取消 · Enter 保存",
+    "searchPlaceholder": "搜索当前会话消息...",
+    "search": "搜索",
+    "uploading": "上传中...",
+    "dropToSend": "松手发送文件",
+    "readBy": "已读",
+    "noReadReceipts": "暂无已读回执",
+    "preview": "预览",
+    "hidePreview": "收起预览",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "openInNewTab": "新标签打开",
+    "open": "打开",
+    "pdfNotSupported": "浏览器不支持 PDF 预览，请点击下方按钮打开"
   },
   "conversation": {
     "title": "消息",
@@ -94,7 +107,10 @@
     "addFriend": "添加为好友",
     "alreadyFriends": "已是好友",
     "requestSent": "好友申请已发送",
-    "leaveConfirm": "确定离开该会话？"
+    "leaveConfirm": "确定离开该会话？",
+    "agentDisplay": "Agent 仅显示回复",
+    "agentDisplayHint": "隐藏思考过程和工具调用",
+    "agentStepsHidden": "已隐藏 {{count}} 个步骤"
   },
   "group": {
     "detail": "群组信息",

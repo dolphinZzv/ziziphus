@@ -248,6 +248,8 @@ func (m *mockConvManager) GetOrCreateP2P(_ context.Context, userA, userB string)
 	return m.convs[convID], nil
 }
 
+func (m *mockConvManager) IsDirectChatBlocked(_ context.Context, _ string) (bool, error) { return false, nil }
+
 func (m *mockConvManager) GetOrCreateSystemConv(_ context.Context, userID string) (*model.Conversation, error) {
 	convID := model.MakeSystemConvID(userID)
 	return &model.Conversation{ConvID: convID, Type: model.ConvSystem, OwnerID: userID}, nil

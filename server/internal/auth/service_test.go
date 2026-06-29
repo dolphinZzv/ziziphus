@@ -247,6 +247,65 @@ func TestLogin_UserNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-existent user, got nil")
 	}
+
+	var appErr *model.AppError
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected *model.AppError, got %T", err)
+	}
+	// Unified message: both "user not found" and "wrong password" return the same message
+	// to prevent user enumeration.
+	if appErr.Message != "账号或密码错误" {
+		t.Errorf("AppError.Message = %q; want %q (unified to prevent enumeration)", appErr.Message, "账号或密码错误")
+	}
+}
+
+// TestLogin_UnifiedErrorMessage verifies that Login returns the same error message
+// for both wrong password and non-existent user, preventing account enumeration.
+func TestLogin_UnifiedErrorMessage(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	_, _, _, err := svc.Register(ctx, "eve", "good-password", "eve_account", "")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	// Wrong password
+	_, _, _, _, err1 := svc.Login(ctx, "eve_account", "bad-password")
+	if err1 == nil {
+		t.Fatal("expected error for wrong password")
+	}
+	var appErr1 *model.AppError
+	if !errors.As(err1, &appErr1) {
+		t.Fatalf("expected *model.AppError for wrong password, got %T", err1)
+	}
+
+	// Non-existent account
+	_, _, _, _, err2 := svc.Login(ctx, "no_such_user", "irrelevant")
+	if err2 == nil {
+		t.Fatal("expected error for non-existent user")
+	}
+	var appErr2 *model.AppError
+	if !errors.As(err2, &appErr2) {
+		t.Fatalf("expected *model.AppError for missing user, got %T", err2)
+	}
+
+	// Both should return the same message — no enumeration possible.
+	if appErr1.Message != appErr2.Message {
+		t.Errorf("Messages differ: wrong password = %q, user not found = %q; must be identical to prevent enumeration",
+			appErr1.Message, appErr2.Message)
+	}
+}
+
+// TestRegister_PasswordMinLength verifies that passwords shorter than 8 characters are rejected.
+func TestRegister_PasswordMinLength(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	_, _, _, err := svc.Register(ctx, "short", "1234567", "short_account", "")
+	if err == nil {
+		t.Fatal("expected error for password < 8 chars, got nil")
+	}
 }
 
 // ---------------------------------------------------------------------------

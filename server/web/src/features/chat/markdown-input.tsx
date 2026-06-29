@@ -15,7 +15,6 @@ interface Props {
 export default function MarkdownInput({ value, onChange, onSend, placeholder = '', disabled }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [preview, setPreview] = useState(false)
-  const [rawMode, setRawMode] = useState(false)
 
   // Auto-resize
   useEffect(() => {
