@@ -33,7 +33,8 @@ struct MessageBubble: View {
         if message.senderID == AuthManager.shared.currentUser?.userID {
             return AuthManager.shared.currentUser?.name ?? message.senderID
         }
-        return senderUser?.name ?? message.senderID
+        let nameFromPush = !message.senderName.isEmpty ? message.senderName : nil
+        return senderUser?.name ?? nameFromPush ?? message.senderID
     }
 
     private var showAvatar: Bool {
@@ -370,7 +371,8 @@ struct MessageBubble: View {
             if msg.senderID == AuthManager.shared.currentUser?.userID {
                 return loc("chat.you")
             }
-            return senderInfo[msg.senderID]?.name ?? msg.senderID
+            let nameFromPush = !msg.senderName.isEmpty ? msg.senderName : nil
+            return senderInfo[msg.senderID]?.name ?? nameFromPush ?? msg.senderID
         }()
         return HStack(spacing: 6) {
             Rectangle()

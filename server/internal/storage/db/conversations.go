@@ -39,9 +39,9 @@ func (r *ConvRepo) Get(ctx context.Context, convID string) (*model.Conversation,
 	var lastMsgAt *time.Time
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at
+		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}')
 		 FROM conversations WHERE conv_id = $1`, convID).
-		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt)
+		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt, &c.Settings)
 	if err != nil {
 		return nil, err
 	}
@@ -328,6 +328,22 @@ func (r *ConvRepo) UpdateNotice(ctx context.Context, convID, notice string) erro
 	_, err := r.pool.Exec(ctx,
 		`UPDATE conversations SET notice = $1 WHERE conv_id = $2`, notice, convID)
 	return err
+}
+
+func (r *ConvRepo) UpdateSettings(ctx context.Context, convID string, settings map[string]any) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conversations SET settings = $1 WHERE conv_id = $2`, settings, convID)
+	return err
+}
+
+func (r *ConvRepo) GetSettings(ctx context.Context, convID string) (map[string]any, error) {
+	var settings map[string]any
+	err := r.pool.QueryRow(ctx,
+		`SELECT COALESCE(settings, '{}') FROM conversations WHERE conv_id = $1`, convID).Scan(&settings)
+	if err != nil {
+		return nil, err
+	}
+	return settings, nil
 }
 
 func (r *ConvRepo) Pin(ctx context.Context, userID, convID string) error {

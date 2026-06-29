@@ -85,6 +85,8 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/conversations/{conv_id}/pin", h.Conversation.Pin)
 		r.Post("/api/v1/conversations/{conv_id}/unpin", h.Conversation.Unpin)
 		r.Post("/api/v1/conversations/{conv_id}/clone", h.Conversation.Clone)
+			r.Get("/api/v1/conversations/{conv_id}/settings", h.Conversation.GetSettings)
+			r.Put("/api/v1/conversations/{conv_id}/settings", h.Conversation.UpdateSettings)
 		r.Get("/api/v1/conversations/{conv_id}/files", h.File.ListConvFiles)
 		r.Delete("/api/v1/conversations/{conv_id}/files/{file_id}", h.File.DeleteConvFile)
 		r.Post("/api/v1/conversations/{conv_id}/folders", h.File.CreateFolder)

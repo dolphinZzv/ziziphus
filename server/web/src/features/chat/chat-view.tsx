@@ -242,7 +242,7 @@ export default function ChatView() {
                 placeholder={t('chat.searchPlaceholder')}
                 className="w-full h-8 pl-3 pr-8 rounded-xl bg-[var(--color-surface-soft)] text-sm border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-ink)]"
                 autoFocus
-                onKeyDown={e => { if (e.key === 'Enter') handleSearchNext(); if (e.key === 'Escape') handleSearchClose() }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSearchNext(); if (e.key === 'Escape') handleSearchClose() }}
               />
               {searchKeyword.trim() && (
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[11px] text-[var(--color-muted)]">

@@ -28,6 +28,8 @@ type convDataRepo interface {
 	Clone(ctx context.Context, srcConvID, newConvID, ownerID string, name string, idGen func() int64) error
 	SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
 	AreContacts(ctx context.Context, userA, userB string) (bool, error)
+		UpdateSettings(ctx context.Context, convID string, settings map[string]any) error
+		GetSettings(ctx context.Context, convID string) (map[string]any, error)
 }
 
 type ConvHandler struct {
@@ -616,6 +618,49 @@ func (h *ConvHandler) Unpin(w http.ResponseWriter, r *http.Request) {
 
 type cloneGroupReq struct {
 	Name string `json:"name"`
+}
+
+
+func (h *ConvHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	userID := auth.UserFromCtx(r.Context())
+
+	if ok, _ := h.convMgr.IsMember(r.Context(), convID, userID); !ok {
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.not_in_conv")})
+		return
+	}
+
+	settings, err := h.convRepo.GetSettings(r.Context(), convID)
+	if err != nil {
+		settings = map[string]any{}
+	}
+	JSON(w, map[string]any{"settings": settings})
+}
+
+func (h *ConvHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	userID := auth.UserFromCtx(r.Context())
+
+	if ok, _ := h.convMgr.IsMember(r.Context(), convID, userID); !ok {
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.not_in_conv")})
+		return
+	}
+
+	var body struct {
+		Settings map[string]any `json:"settings"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_json"))
+		return
+	}
+
+	if err := h.convRepo.UpdateSettings(r.Context(), convID, body.Settings); err != nil {
+		logger.Error("update settings failed", "conv_id", convID, "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+
+	JSON(w, map[string]any{"settings": body.Settings})
 }
 
 func (h *ConvHandler) Clone(w http.ResponseWriter, r *http.Request) {

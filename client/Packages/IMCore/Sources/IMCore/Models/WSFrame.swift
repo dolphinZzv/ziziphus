@@ -107,6 +107,7 @@ public struct MsgPushPayload: Codable, Sendable {
     public let msgID: Int64
     public let convID: String
     public let senderID: String
+    public let senderName: String
     public let contentType: Int
     public let body: String
     public let replyTo: Int64?
@@ -118,6 +119,7 @@ public struct MsgPushPayload: Codable, Sendable {
         case msgID = "msg_id"
         case convID = "conv_id"
         case senderID = "sender_id"
+        case senderName = "sender_name"
         case contentType = "content_type"
         case body
         case replyTo = "reply_to"

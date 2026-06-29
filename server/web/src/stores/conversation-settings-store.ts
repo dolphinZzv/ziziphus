@@ -2,6 +2,7 @@ import { getItem, setItem } from '@/lib/storage'
 
 export interface ConvSettings {
   showAgentResponseOnly: boolean
+  fileChangeNotify?: boolean
 }
 
 const STORAGE_KEY = 'conv_settings'

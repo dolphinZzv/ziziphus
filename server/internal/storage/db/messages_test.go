@@ -230,11 +230,11 @@ func TestMessageRepo_GetMessagesSinceSeq(t *testing.T) {
 
 	repo := NewMessageRepo(mock)
 
-	rows := pgxmock.NewRows([]string{"msg_id", "conv_id", "sender_id", "content_type", "body", "mention", "reply_to", "timestamp", "conv_seq", "status"}).
-		AddRow(102, "conv_1", "u1", 1, "msg2", nil, nil, 5002, 2, 1).
-		AddRow(103, "conv_1", "u2", 1, "msg3", nil, nil, 5003, 3, 1)
+	rows := pgxmock.NewRows([]string{"msg_id", "conv_id", "sender_id", "sender_name", "content_type", "body", "mention", "reply_to", "timestamp", "conv_seq", "status"}).
+		AddRow(102, "conv_1", "u1", "user1", 1, "msg2", nil, nil, 5002, 2, 1).
+		AddRow(103, "conv_1", "u2", "user2", 1, "msg3", nil, nil, 5003, 3, 1)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT msg_id, conv_id, sender_id, content_type, body, mention, reply_to, timestamp, conv_seq, status FROM messages WHERE conv_id = $1 AND conv_seq > $2 AND deleted = false ORDER BY conv_seq ASC LIMIT $3`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status FROM messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.conv_id = $1 AND m.conv_seq > $2 AND m.deleted = false ORDER BY m.conv_seq ASC LIMIT $3`)).
 		WithArgs("conv_1", int64(1), 50).
 		WillReturnRows(rows)
 

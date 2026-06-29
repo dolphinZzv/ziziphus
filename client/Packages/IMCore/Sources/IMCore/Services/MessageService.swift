@@ -40,6 +40,7 @@ public class MessageService {
             msgID: payload.msgID,
             convID: payload.convID,
             senderID: payload.senderID,
+            senderName: payload.senderName,
             contentType: ContentType(rawValue: payload.contentType) ?? .text,
             body: payload.body,
             replyTo: payload.replyTo ?? 0,

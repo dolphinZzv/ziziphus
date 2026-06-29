@@ -110,7 +110,7 @@ func main() {
 
 	// Ingest pipeline
 	contactReqRepo := db.NewContactRequestRepo(pool)
-	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr, contactReqRepo, contactRepo)
+	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr, contactReqRepo, contactRepo, userRepo)
 
 	// Sync handler
 	syncHandler := message.NewSyncHandler(msgRepo, seqCache)
@@ -122,7 +122,7 @@ func main() {
 	// File storage (using afero for filesystem abstraction)
 	fileFs := afero.NewOsFs()
 	fileStore := file.NewStore(fileFs, cfg.Storage.LocalPath)
-	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL, convMgr)
+	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL, convMgr, ingest, userRepo)
 
 	// HTTP API handlers
 	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailer)

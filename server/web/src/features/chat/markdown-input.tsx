@@ -14,6 +14,7 @@ interface Props {
 
 export default function MarkdownInput({ value, onChange, onSend, placeholder = '', disabled }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const isComposingRef = useRef(false)
   const [preview, setPreview] = useState(false)
 
   // Auto-resize
@@ -40,8 +41,15 @@ export default function MarkdownInput({ value, onChange, onSend, placeholder = '
     })
   }, [onChange])
 
+  const handleCompositionStart = () => { isComposingRef.current = true }
+  const handleCompositionEnd = () => { isComposingRef.current = false }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+    // Ignore Enter during IME composition (e.g., Chinese input method)
+    // to prevent sending before the composition is confirmed.
+    // Check both the ref (tracks composition globally) and nativeEvent.isComposing
+    // (per-event flag) to cover all browser behaviors.
+    if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !isComposingRef.current && !e.nativeEvent.isComposing) {
       e.preventDefault()
       onSend()
     }
@@ -108,6 +116,8 @@ export default function MarkdownInput({ value, onChange, onSend, placeholder = '
           value={value}
           onChange={e => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           placeholder={placeholder}
           rows={2}
           disabled={disabled}

@@ -325,6 +325,12 @@ type mockContactCreator struct{}
 
 func (m *mockContactCreator) AddContact(_ context.Context, _, _ string) error { return nil }
 
+type mockUserGetter struct{}
+
+func (m *mockUserGetter) GetByID(_ context.Context, id string) (*model.User, error) {
+	return &model.User{Name: id}, nil
+}
+
 type mockContactRequestDB struct{}
 
 func (m *mockContactRequestDB) GetByFormMsgID(_ context.Context, _ int64) (*model.ContactRequest, error) {
@@ -398,7 +404,7 @@ func newIngestFixture(ratePerSec, burst, maxBody int, defaultID int64) (
 	router := NewRouter(sessGtr, convMgr, connReg)
 	pusher := NewPusher(connReg, receiptW)
 	contactReqDB := &mockContactRequestDB{}
-		ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{})
+		ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{}, &mockUserGetter{})
 	return
 }
 

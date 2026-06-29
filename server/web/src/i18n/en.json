@@ -110,7 +110,9 @@
     "leaveConfirm": "Leave this conversation?",
     "agentDisplay": "Agent: Show Response Only",
     "agentDisplayHint": "Hide thinking steps and tool calls",
-    "agentStepsHidden": "{{count}} steps hidden"
+    "agentStepsHidden": "{{count}} steps hidden",
+    "fileChangeNotify": "File Change Notifications",
+    "fileChangeNotifyHint": "Send system messages when files are uploaded or deleted"
   },
   "group": {
     "detail": "Group Info",

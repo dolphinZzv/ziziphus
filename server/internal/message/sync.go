@@ -54,6 +54,7 @@ func (h *SyncHandler) Handle(ctx context.Context, sessionID string, req protocol
 		syncMsgs = append(syncMsgs, protocol.SyncMessage{
 			MsgID:       m.MsgID,
 			SenderID:    m.SenderID,
+			SenderName:  m.SenderName,
 			ContentType: int(m.ContentType),
 			Body:        m.Body,
 			Timestamp:   m.Timestamp,

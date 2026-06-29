@@ -47,6 +47,9 @@ public class ChatViewModel: ObservableObject {
     @Published public var senderInfo: [String: User] = [:]
     @Published public var members: [ConvMember] = []
 
+    private let senderInfoTTL: TimeInterval = 5 * 60 // 5 minutes
+    private var senderInfoFetchTimes: [String: Date] = [:]
+
     private var typingTimer: Timer?
     private var lastTypingSend: TimeInterval = 0
     private let typingInterval: TimeInterval = 3
@@ -186,14 +189,21 @@ public class ChatViewModel: ObservableObject {
     }
 
     public func loadSenderInfo() {
-        let ids = Set(messages.map(\.senderID))
+        let now = Date()
+        let staleIDs = Set(messages.map(\.senderID))
             .subtracting([AuthManager.shared.currentUser?.userID ?? ""])
-            .subtracting(senderInfo.keys)
-        guard !ids.isEmpty else { return }
+            .filter { id in
+                guard let fetchTime = senderInfoFetchTimes[id] else { return true }
+                return now.timeIntervalSince(fetchTime) > senderInfoTTL
+            }
+        guard !staleIDs.isEmpty else { return }
         Task {
             do {
-                let info = try await contactService.batchGetUsers(userIDs: Array(ids))
-                senderInfo.merge(info) { _, new in new }
+                let info = try await contactService.batchGetUsers(userIDs: Array(staleIDs))
+                for (id, user) in info {
+                    senderInfo[id] = user
+                    senderInfoFetchTimes[id] = now
+                }
             } catch {
                 logToFile("[ChatVM] loadSenderInfo error: \(error)")
             }

@@ -50,7 +50,7 @@ export default function UserCard({ userId, onClose }: Props) {
           {/* Cover — full width behind avatar */}
           <div className="h-14 relative"
             style={{ background: user.cover
-              ? `url(${user.cover}?w=480&h=112) center/cover`
+              ? `url(${user.cover.includes('?') ? user.cover : `${user.cover}?w=480&h=112`}) center/cover`
               : `linear-gradient(135deg, ${user.primary_color || 'var(--color-primary)'}, ${user.secondary_color || user.primary_color || 'var(--color-muted)'})` }}>
             {user.cover && <div className="absolute inset-0 bg-black/10" />}
           </div>

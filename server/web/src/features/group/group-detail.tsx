@@ -10,7 +10,7 @@ import { authStore } from '@/stores/auth-store'
 import type { ConversationDetail, JoinRequest } from '@/types/conversation'
 import type { User } from '@/types/user'
 import { ConvRole } from '@/types/conversation'
-import { X, Crown, Shield, Trash2, Check, X as XIcon, Camera, Search, Cpu, UserPlus, Bell, Edit2, EyeOff } from 'lucide-react'
+import { X, Crown, Shield, Trash2, Check, X as XIcon, Camera, Search, Cpu, UserPlus, Bell, Edit2, EyeOff, FileUp } from 'lucide-react'
 
 interface Props { convId: string; onClose: () => void }
 
@@ -40,6 +40,21 @@ export default function GroupDetail({ convId, onClose }: Props) {
       setShowAgentResponseOnly(getConvSettings(convId).showAgentResponseOnly)
     })
   }, [convId])
+  const [fileChangeNotify, setFileChangeNotify] = useState(false)
+  useEffect(() => {
+    conversationService.getSettings(convId).then(res => {
+      if (res.settings?.fileChangeNotify) setFileChangeNotify(true)
+    }).catch(() => {})
+  }, [convId])
+  const handleFileChangeNotifyToggle = async () => {
+    const newVal = !fileChangeNotify
+    setFileChangeNotify(newVal)
+    try {
+      await conversationService.updateSettings(convId, { fileChangeNotify: newVal })
+    } catch {
+      setFileChangeNotify(!newVal)
+    }
+  }
 
   useEffect(() => {
     conversationService.getDetail(convId).then(async d => {
@@ -233,6 +248,23 @@ export default function GroupDetail({ convId, onClose }: Props) {
               <button onClick={() => toggleConvSetting(convId, 'showAgentResponseOnly')}
                 className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ml-3 ${showAgentResponseOnly ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-hairline)]'}`}>
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${showAgentResponseOnly ? 'left-[18px]' : 'left-0.5'}`} />
+              </button>
+            </label>
+          </div>
+
+          {/* File change notification settings */}
+          <div className="border-t border-[var(--color-hairline)] pt-3 mt-3">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <FileUp size={14} className="text-[var(--color-muted)] flex-shrink-0" />
+                <div>
+                  <div className="text-xs font-medium text-[var(--color-muted)]">{t('conversation.fileChangeNotify')}</div>
+                  <div className="text-[10px] text-[var(--color-muted-soft)]">{t('conversation.fileChangeNotifyHint')}</div>
+                </div>
+              </div>
+              <button onClick={handleFileChangeNotifyToggle}
+                className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ml-3 ${fileChangeNotify ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-hairline)]'}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${fileChangeNotify ? 'left-[18px]' : 'left-0.5'}`} />
               </button>
             </label>
           </div>

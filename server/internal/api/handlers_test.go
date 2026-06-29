@@ -3335,7 +3335,7 @@ func TestFileHandler_resizeImage_JPG(t *testing.T) {
 // =========================================================================
 
 func TestNewFileHandler(t *testing.T) {
-	h := NewFileHandler(nil, nil, nil, "http://example.com", nil)
+	h := NewFileHandler(nil, nil, nil, "http://example.com", nil, nil, nil)
 	if h == nil {
 		t.Fatal("NewFileHandler returned nil")
 	}

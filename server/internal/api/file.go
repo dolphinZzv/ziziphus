@@ -49,18 +49,25 @@ type fileDB interface {
 
 type fileConvChecker interface {
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
+	Get(ctx context.Context, convID string) (*model.Conversation, error)
+}
+
+type fileSysMsgSender interface {
+	SendSystemMessage(ctx context.Context, convID, body string, senderID ...string) (*model.Message, error)
 }
 
 type FileHandler struct {
-	store   *file.Store
-	fileDB  fileDB
-	idGen   idGenerator
-	baseURL string
-	convMgr fileConvChecker
+	store    *file.Store
+	fileDB   fileDB
+	idGen    idGenerator
+	baseURL  string
+	convMgr  fileConvChecker
+	sysMsg   fileSysMsgSender
+	userDB   userGetter
 }
 
-func NewFileHandler(store *file.Store, fileDB fileDB, idGen idGenerator, baseURL string, convMgr fileConvChecker) *FileHandler {
-	return &FileHandler{store: store, fileDB: fileDB, idGen: idGen, baseURL: baseURL, convMgr: convMgr}
+func NewFileHandler(store *file.Store, fileDB fileDB, idGen idGenerator, baseURL string, convMgr fileConvChecker, sysMsg fileSysMsgSender, userDB userGetter) *FileHandler {
+	return &FileHandler{store: store, fileDB: fileDB, idGen: idGen, baseURL: baseURL, convMgr: convMgr, sysMsg: sysMsg, userDB: userDB}
 }
 
 type uploadResp struct {
@@ -148,6 +155,11 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		logger.Error("save file metadata failed", "error", err)
 	}
 
+	// Send file change system message if the conversation setting is enabled
+	if convID != "" {
+		h.sendFileChangeNotify(r.Context(), convID, userID, header.Filename)
+	}
+
 	JSON(w, uploadResp{
 		FileID: fileID,
 		URL:    fileURL,
@@ -208,13 +220,25 @@ func (h *FileHandler) ListConvFiles(w http.ResponseWriter, r *http.Request) {
 func (h *FileHandler) DeleteConvFile(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	fileID := chi.URLParam(r, "file_id")
-	// convID := chi.URLParam(r, "conv_id") // for validation
+	convID := chi.URLParam(r, "conv_id")
+
+	// Get file info before deleting to know the file name for notification
+	fileName := fileID
+	if finfo, err := h.fileDB.GetByID(r.Context(), fileID); err == nil && finfo != nil {
+		fileName = finfo.Name
+	}
 
 	if err := h.fileDB.DeleteByID(r.Context(), fileID, userID); err != nil {
 		logger.Error("delete conv file failed", "file_id", fileID, "error", err)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
+
+	// Send file delete notification
+	if convID != "" {
+		h.sendFileDeleteNotify(r.Context(), convID, userID, fileName)
+	}
+
 	JSON(w, map[string]string{"file_id": fileID})
 }
 
@@ -485,3 +509,45 @@ func (h *FileHandler) RenameFolder(w http.ResponseWriter, r *http.Request) {
 	}
 	JSON(w, map[string]string{"status": "ok"})
 }
+
+// sendFileChangeNotify sends a system message when a file is uploaded in a conversation
+// if the conversation's file_change_notify setting is enabled.
+func (h *FileHandler) sendFileChangeNotify(ctx context.Context, convID, userID, fileName string) {
+	c, err := h.convMgr.Get(ctx, convID)
+	if err != nil {
+		return
+	}
+	enabled, _ := c.Settings["file_change_notify"].(bool)
+	if !enabled {
+		return
+	}
+
+	userName := userID
+	if u, err := h.userDB.GetByID(ctx, userID); err == nil && u != nil {
+		userName = u.Name
+	}
+
+	body := fmt.Sprintf("%s 上传了文件: %s", userName, fileName)
+	h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
+}
+
+// sendFileDeleteNotify sends a system message when a file is deleted in a conversation.
+func (h *FileHandler) sendFileDeleteNotify(ctx context.Context, convID, userID, fileName string) {
+	c, err := h.convMgr.Get(ctx, convID)
+	if err != nil {
+		return
+	}
+	enabled, _ := c.Settings["file_change_notify"].(bool)
+	if !enabled {
+		return
+	}
+
+	userName := userID
+	if u, err := h.userDB.GetByID(ctx, userID); err == nil && u != nil {
+		userName = u.Name
+	}
+
+	body := fmt.Sprintf("%s 删除了文件: %s", userName, fileName)
+	h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
+}
+

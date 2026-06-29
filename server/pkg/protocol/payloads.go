@@ -44,6 +44,7 @@ type SyncReqPayload struct {
 type SyncMessage struct {
 	MsgID       int64  `json:"msg_id"`
 	SenderID    string `json:"sender_id"`
+	SenderName  string `json:"sender_name"`
 	ContentType int    `json:"content_type"`
 	Body        string `json:"body"`
 	Timestamp   int64  `json:"timestamp"`

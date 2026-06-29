@@ -19,16 +19,23 @@ import ReplyPreview from './reply-preview'
 import UserCard from '@/components/user-card'
 import { useTranslation } from 'react-i18next'
 
-const senderCache = new Map<string, { avatar: string; type: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const senderCache = new Map<string, { avatar: string; type: number; ts: number }>()
 
 function useSenderInfo(userId: string): { avatar?: string; isAgent: boolean } {
-  const [info, setInfo] = useState<{ avatar?: string; isAgent: boolean }>(
-    senderCache.has(userId) ? { avatar: senderCache.get(userId)!.avatar, isAgent: senderCache.get(userId)!.type === 1 } : {}
-  )
+  const cached = senderCache.get(userId)
+  const initial = cached && (Date.now() - cached.ts) < CACHE_TTL
+    ? { avatar: cached.avatar, isAgent: cached.type === 1 }
+    : {}
+  const [info, setInfo] = useState<{ avatar?: string; isAgent: boolean }>(initial)
   useEffect(() => {
-    if (senderCache.has(userId)) return
+    const cached = senderCache.get(userId)
+    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+      if (!info.avatar && cached.avatar) setInfo({ avatar: cached.avatar, isAgent: cached.type === 1 })
+      return
+    }
     userService.getUser(userId).then(u => {
-      const entry = { avatar: u?.avatar || '', type: u?.type || 0 }
+      const entry = { avatar: u?.avatar || '', type: u?.type || 0, ts: Date.now() }
       senderCache.set(userId, entry)
       setInfo({ avatar: entry.avatar, isAgent: entry.type === 1 })
     }).catch(() => {})
@@ -54,6 +61,7 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
   const [hoverUser, setHoverUser] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState('')
+  const isComposingRef = useRef(false)
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>()
   const menuBtnRef = useRef<HTMLButtonElement>(null)
   const avatarRef = useRef<HTMLButtonElement>(null)
@@ -269,7 +277,9 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
             <div className="flex flex-col gap-1">
               <textarea value={editText} onChange={e => setEditText(e.target.value)}
                 className="w-full min-w-[200px] h-[60px] px-3 py-1.5 rounded-xl text-sm bg-[var(--color-surface-card)] border border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] text-[var(--color-ink)]"
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit() } if (e.key === 'Escape') handleCancelEdit() }}
+                onCompositionStart={() => { isComposingRef.current = true }}
+                onCompositionEnd={() => { isComposingRef.current = false }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !isComposingRef.current && !e.nativeEvent.isComposing) { e.preventDefault(); handleSaveEdit() } if (e.key === 'Escape') handleCancelEdit() }}
                 autoFocus />
               <div className="flex items-center gap-1 text-[10px] text-[var(--color-muted)]">
                 <span>{t('chat.editHint')}</span>

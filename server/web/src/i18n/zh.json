@@ -110,7 +110,9 @@
     "leaveConfirm": "确定离开该会话？",
     "agentDisplay": "Agent 仅显示回复",
     "agentDisplayHint": "隐藏思考过程和工具调用",
-    "agentStepsHidden": "已隐藏 {{count}} 个步骤"
+    "agentStepsHidden": "已隐藏 {{count}} 个步骤",
+    "fileChangeNotify": "文件变更通知",
+    "fileChangeNotifyHint": "文件上传或删除时在会话内发送系统消息"
   },
   "group": {
     "detail": "群组信息",

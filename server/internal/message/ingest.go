@@ -24,6 +24,11 @@ type Ingest struct {
 	convMgr      convManager
 	contactReqDB contactRequestDB
 	contactRepo  contactCreator
+	userDB       userGetter
+}
+
+type userGetter interface {
+	GetByID(ctx context.Context, id string) (*model.User, error)
 }
 
 type contactCreator interface {
@@ -64,7 +69,7 @@ type convManager interface {
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
 }
 
-func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager, contactReqDB contactRequestDB, contactRepo contactCreator) *Ingest {
+func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager, contactReqDB contactRequestDB, contactRepo contactCreator, userDB userGetter) *Ingest {
 	return &Ingest{
 		store:        store,
 		router:       router,
@@ -75,6 +80,7 @@ func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *Ra
 		convMgr:      convMgr,
 		contactReqDB: contactReqDB,
 		contactRepo:  contactRepo,
+		userDB:       userDB,
 	}
 }
 
@@ -135,10 +141,16 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 	}
 	now := time.Now().UnixMilli()
 
+	senderName := senderID
+	if user, err := in.userDB.GetByID(ctx, senderID); err == nil && user != nil {
+		senderName = user.Name
+	}
+
 	msg := &model.Message{
 		MsgID:           msgID,
 		ConvID:          payload.ConvID,
 		SenderID:        senderID,
+		SenderName:      senderName,
 		SenderSessionID: sessionID,
 		ContentType:     model.ContentType(payload.ContentType),
 		Body:            payload.Body,

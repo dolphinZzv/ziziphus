@@ -17,17 +17,18 @@ const (
 )
 
 type Conversation struct {
-	ConvID     string   `json:"conv_id"`
-	Type       ConvType `json:"type"`
-	Name       string   `json:"name"`
-	OwnerID    string   `json:"owner_id"`
-	Avatar     string   `json:"avatar,omitempty"`
-	Cover      string   `json:"cover,omitempty"`
-	Notice     string   `json:"notice,omitempty"`
-	MaxMembers int      `json:"max_members,omitempty"`
-	LastMsgID  int64    `json:"last_msg_id,omitempty"`
-	LastMsgAt  int64    `json:"last_msg_at,omitempty"`
-	CreatedAt  int64    `json:"created_at"`
+	ConvID     string         `json:"conv_id"`
+	Type       ConvType       `json:"type"`
+	Name       string         `json:"name"`
+	OwnerID    string         `json:"owner_id"`
+	Avatar     string         `json:"avatar,omitempty"`
+	Cover      string         `json:"cover,omitempty"`
+	Notice     string         `json:"notice,omitempty"`
+	MaxMembers int            `json:"max_members,omitempty"`
+	LastMsgID  int64          `json:"last_msg_id,omitempty"`
+	LastMsgAt  int64          `json:"last_msg_at,omitempty"`
+	CreatedAt  int64          `json:"created_at"`
+	Settings   map[string]any `json:"settings,omitempty"`
 }
 
 type ConvMember struct {
