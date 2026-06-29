@@ -357,6 +357,8 @@ type mockConvDataRepo struct {
 	unpinFunc            func(ctx context.Context, userID, convID string) error
 	cloneFunc            func(ctx context.Context, src, dst, owner, name string, idGen func() int64) error
 	areContactsFunc      func(ctx context.Context, userA, userB string) (bool, error)
+	getSettingsFunc      func(ctx context.Context, convID string) (map[string]any, error)
+	updateSettingsFunc   func(ctx context.Context, convID string, settings map[string]any) error
 }
 
 func (m *mockConvDataRepo) GetUserConvs(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error) {
@@ -407,6 +409,20 @@ func (m *mockConvDataRepo) AreContacts(ctx context.Context, userA, userB string)
 		return m.areContactsFunc(ctx, userA, userB)
 	}
 	return false, nil
+}
+
+func (m *mockConvDataRepo) GetSettings(ctx context.Context, convID string) (map[string]any, error) {
+	if m.getSettingsFunc != nil {
+		return m.getSettingsFunc(ctx, convID)
+	}
+	return nil, nil
+}
+
+func (m *mockConvDataRepo) UpdateSettings(ctx context.Context, convID string, settings map[string]any) error {
+	if m.updateSettingsFunc != nil {
+		return m.updateSettingsFunc(ctx, convID, settings)
+	}
+	return nil
 }
 
 func (m *mockConvDataRepo) SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error) {

@@ -46,8 +46,8 @@ func TestMessageRepo_Insert(t *testing.T) {
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO messages (msg_id, conv_id, sender_id, sender_session_id, content_type, body, mention, reply_to, timestamp, client_seq, conv_seq, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`)).
-		WithArgs(msg.MsgID, msg.ConvID, msg.SenderID, msg.SenderSessionID, msg.ContentType, msg.Body,
+	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO messages (msg_id, conv_id, sender_id, sender_name, sender_session_id, content_type, body, mention, reply_to, timestamp, client_seq, conv_seq, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`)).
+		WithArgs(msg.MsgID, msg.ConvID, msg.SenderID, msg.SenderName, msg.SenderSessionID, msg.ContentType, msg.Body,
 			msg.Mention, msg.ReplyTo, msg.Timestamp, msg.ClientSeq, msg.ConvSeq, msg.Status).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectExec(regexp.QuoteMeta(`UPDATE conversations SET last_msg_id = $1, last_msg_at = $2 WHERE conv_id = $3`)).
@@ -77,7 +77,7 @@ func TestMessageRepo_Insert_TxError(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec(`INSERT INTO messages`).
-		WithArgs(msg.MsgID, msg.ConvID, msg.SenderID, msg.SenderSessionID, msg.ContentType, msg.Body,
+		WithArgs(msg.MsgID, msg.ConvID, msg.SenderID, msg.SenderName, msg.SenderSessionID, msg.ContentType, msg.Body,
 			msg.Mention, msg.ReplyTo, msg.Timestamp, msg.ClientSeq, msg.ConvSeq, msg.Status).
 		WillReturnError(context.DeadlineExceeded)
 	mock.ExpectRollback()
@@ -152,7 +152,7 @@ func TestMessageRepo_GetHistory(t *testing.T) {
 		AddRow(102, "conv_1", "u1", "u1", 1, "msg2", nil, nil, 5002, 2, 1).
 		AddRow(101, "conv_1", "u2", "u2", 1, "msg1", nil, nil, 5001, 1, 1)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status FROM messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.conv_id = $1 AND m.deleted = false AND m.msg_id < $2 ORDER BY m.msg_id DESC LIMIT $3`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, m.sender_name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status FROM messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.conv_id = $1 AND m.deleted = false AND m.msg_id < $2 ORDER BY m.msg_id DESC LIMIT $3`)).
 		WithArgs("conv_1", int64(200), 20).
 		WillReturnRows(rows)
 
@@ -181,7 +181,7 @@ func TestMessageRepo_GetHistory_NoBefore(t *testing.T) {
 	rows := pgxmock.NewRows([]string{"msg_id", "conv_id", "sender_id", "sender_name", "content_type", "body", "mention", "reply_to", "timestamp", "conv_seq", "status"}).
 		AddRow(101, "conv_1", "u1", "u1", 1, "msg1", nil, nil, 5001, 1, 1)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status FROM messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.conv_id = $1 AND m.deleted = false ORDER BY m.msg_id DESC LIMIT $2`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, m.sender_name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status FROM messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.conv_id = $1 AND m.deleted = false ORDER BY m.msg_id DESC LIMIT $2`)).
 		WithArgs("conv_1", 20).
 		WillReturnRows(rows)
 
@@ -208,7 +208,7 @@ func TestMessageRepo_GetHistory_Empty(t *testing.T) {
 	repo := NewMessageRepo(mock)
 
 	rows := pgxmock.NewRows([]string{"msg_id", "conv_id", "sender_id", "sender_name", "content_type", "body", "mention", "reply_to", "timestamp", "conv_seq", "status"})
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status FROM messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.conv_id = $1 AND m.deleted = false ORDER BY m.msg_id DESC LIMIT $2`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, m.sender_name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status FROM messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.conv_id = $1 AND m.deleted = false ORDER BY m.msg_id DESC LIMIT $2`)).
 		WithArgs("conv_empty", 20).
 		WillReturnRows(rows)
 
@@ -234,7 +234,7 @@ func TestMessageRepo_GetMessagesSinceSeq(t *testing.T) {
 		AddRow(102, "conv_1", "u1", "user1", 1, "msg2", nil, nil, 5002, 2, 1).
 		AddRow(103, "conv_1", "u2", "user2", 1, "msg3", nil, nil, 5003, 3, 1)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status FROM messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.conv_id = $1 AND m.conv_seq > $2 AND m.deleted = false ORDER BY m.conv_seq ASC LIMIT $3`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, m.sender_name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status FROM messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.conv_id = $1 AND m.conv_seq > $2 AND m.deleted = false ORDER BY m.conv_seq ASC LIMIT $3`)).
 		WithArgs("conv_1", int64(1), 50).
 		WillReturnRows(rows)
 
