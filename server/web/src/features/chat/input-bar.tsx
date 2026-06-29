@@ -9,9 +9,9 @@ import { Send, Paperclip, Image, X, AtSign } from 'lucide-react'
 import MarkdownInput from './markdown-input'
 import { useTranslation } from 'react-i18next'
 
-interface Props { convId: string }
+interface Props { convId: string; isP2p?: boolean }
 
-export default function InputBar({ convId }: Props) {
+export default function InputBar({ convId, isP2p }: Props) {
   const { t } = useTranslation()
   const [text, setText] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -115,9 +115,10 @@ export default function InputBar({ convId }: Props) {
     setMentionFilter('')
   }
 
-  // Listen for @ in text changes
+  // Listen for @ in text changes (skip for P2P)
   const handleMentionChange = (v: string) => {
     handleChange(v)
+    if (isP2p) return
     const cursorPos = v.length
     const atIdx = v.lastIndexOf('@', cursorPos)
     if (atIdx >= 0 && (atIdx === 0 || /\s/.test(v[atIdx - 1]))) {
@@ -152,8 +153,8 @@ export default function InputBar({ convId }: Props) {
         </div>
       )}
 
-      {/* Mention popup */}
-      {showMention && members.length > 0 && (
+      {/* Mention popup — hide for P2P */}
+      {!isP2p && showMention && members.length > 0 && (
         <div className="relative">
           <div className="absolute bottom-0 left-4 right-4 z-10 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl mb-1 max-h-[160px] overflow-y-auto"
             style={{ boxShadow: 'var(--shadow-md)' }}>
@@ -180,19 +181,20 @@ export default function InputBar({ convId }: Props) {
             value={text}
             onChange={handleMentionChange}
             onSend={handleSend}
-            placeholder={t('chat.inputPlaceholder') + ' @用户名 提及'}
+            placeholder={t('chat.inputPlaceholder') + (isP2p ? '' : ' @用户名 提及')}
             disabled={uploading}
           />
 
           {/* Bottom-right action buttons */}
           <div className="flex items-center gap-1 absolute bottom-2 right-2">
-            {/* @mention button */}
+            {!isP2p && (
             <button type="button"
               onClick={() => { setMentionFilter(''); setShowMention(!showMention) }}
               className="p-1.5 rounded-xl hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
               title="@提及">
               <AtSign size={17} />
             </button>
+          )}
 
             {/* Attachment button + popover */}
             <div className="relative">

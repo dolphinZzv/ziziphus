@@ -379,7 +379,7 @@ export default function ChatView() {
         />
       </div>
 
-      {!isSystem && <InputBar convId={convId} />}
+      {!isSystem && <InputBar convId={convId} isP2p={conv?.type === ConvType.P2P} />}
 
       {/* History modal */}
       {showHistory && <HistoryView convId={convId} onClose={() => setShowHistory(false)} />}

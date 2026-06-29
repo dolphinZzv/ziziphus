@@ -98,13 +98,13 @@ export const conversationService = {
   getUnreadTotal() {
     return api.request<{ total: number }>('/api/v1/conversations/unread/total')
   },
-}
+
   getSettings(convId: string) {
-    return api.request<{ settings: Record<string, unknown> }>(\`/api/v1/conversations/\${convId}/settings\`)
+    return api.request<{ settings: Record<string, unknown> }>(`/api/v1/conversations/${convId}/settings`)
   },
 
   updateSettings(convId: string, settings: Record<string, unknown>) {
-    return api.request<{ settings: Record<string, unknown> }>(\`/api/v1/conversations/\${convId}/settings\`, {
+    return api.request<{ settings: Record<string, unknown> }>(`/api/v1/conversations/${convId}/settings`, {
       method: 'PUT',
       body: { settings },
     })
