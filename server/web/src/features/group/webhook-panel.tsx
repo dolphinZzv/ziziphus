@@ -15,13 +15,14 @@ export default function WebhookPanel({ convId }: Props) {
   const [created, setCreated] = useState<{ token: string; api_key: string } | null>(null)
   const [pendingMsgs, setPendingMsgs] = useState<any[]>([])
   const [showPending, setShowPending] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     webhookService.list(convId).then(setWebhooks).catch(() => {})
     webhookService.pendingMessages(convId).then(setPendingMsgs).catch(() => {})
   }, [convId])
 
-  const resetForm = () => setForm({ name: '', callback_url: '', cidr_whitelist: '', require_audit: false })
+  const resetForm = () => { setForm({ name: '', callback_url: '', cidr_whitelist: '', require_audit: false }); setSaveError('') }
 
   const openCreate = () => { setEditing(null); resetForm(); setShowForm(true) }
   const openEdit = (wh: ConvWebhook) => {
@@ -31,7 +32,8 @@ export default function WebhookPanel({ convId }: Props) {
   }
 
   const handleSave = async () => {
-    if (!form.name.trim()) return
+    if (!form.name.trim()) { setSaveError('名称不能为空'); return }
+    setSaveError('')
     try {
       const data = { name: form.name, callback_url: form.callback_url, cidr_whitelist: form.cidr_whitelist ? form.cidr_whitelist.split(',').map(s => s.trim()).filter(Boolean) : [], require_audit: form.require_audit }
       if (editing) {
@@ -43,7 +45,9 @@ export default function WebhookPanel({ convId }: Props) {
         setCreated({ token: result.token, api_key: result.api_key })
       }
       setShowForm(false)
-    } catch {} // api error
+    } catch (e: any) {
+      setSaveError(e?.message || '保存失败，请检查权限和输入')
+    }
   }
 
   const handleDelete = async (id: number) => {
@@ -114,6 +118,7 @@ export default function WebhookPanel({ convId }: Props) {
                 <span className="text-[11px] text-[var(--color-muted)]">{t('conversation.webhookRequireAudit')}</span>
               </label>
               {!editing && <div className="text-[10px] text-[var(--color-muted-soft)] bg-[var(--color-surface-soft)] rounded-lg p-2">{t('conversation.webhookCreatedOnce')}</div>}
+              {saveError && <div className="text-[11px] text-red-500 bg-red-50 rounded-lg px-2 py-1">{saveError}</div>}
             </div>
             <div className="flex items-center justify-end gap-2 mt-4">
               <button onClick={() => setShowForm(false)} className="px-3 py-1.5 rounded-lg text-xs text-[var(--color-muted)] hover:bg-[var(--color-hairline)]">{t('common.cancel')}</button>
