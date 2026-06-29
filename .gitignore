@@ -28,4 +28,4 @@ test-results
 
 
 *.out
-*.tmp
+*.tmp*.test
