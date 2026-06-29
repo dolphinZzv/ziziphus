@@ -246,28 +246,7 @@ func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
 	if list == nil {
 		list = []*model.ConvWebhook{}
 	}
-	// Strip sensitive fields
-	type safeWebhook struct {
-		ID            int64           `json:"id"`
-		ConvID        string          `json:"conv_id"`
-		Name          string          `json:"name"`
-		CallbackURL   string          `json:"callback_url,omitempty"`
-		Headers       []model.WebhookHeader `json:"headers,omitempty"`
-		CIDRWhitelist []string        `json:"cidr_whitelist,omitempty"`
-		RequireAudit  bool            `json:"require_audit"`
-		CreatedBy     string          `json:"created_by"`
-		CreatedAt     int64           `json:"created_at"`
-	}
-	safe := make([]safeWebhook, 0, len(list))
-	for _, wh := range list {
-		safe = append(safe, safeWebhook{
-			ID: wh.ID, ConvID: wh.ConvID, Name: wh.Name,
-			CallbackURL: wh.CallbackURL, Headers: wh.Headers,
-			CIDRWhitelist: wh.CIDRWhitelist, RequireAudit: wh.RequireAudit,
-			CreatedBy: wh.CreatedBy, CreatedAt: wh.CreatedAt,
-		})
-	}
-	JSON(w, safe)
+	JSON(w, list)
 }
 
 func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -321,6 +300,7 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ConvID:        convID,
 		Name:          body.Name,
 		Token:         token,
+		APIKeyPlain:   apiKey,
 		APIKeyHash:    hash,
 		CallbackURL:   body.CallbackURL,
 		Headers:       body.Headers,
@@ -341,16 +321,7 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	JSON(w, map[string]any{
-		"id":             created.ID,
-		"token":          token,
-		"api_key":        apiKey,
-		"name":           created.Name,
-		"callback_url":   created.CallbackURL,
-		"headers":        created.Headers,
-		"cidr_whitelist": created.CIDRWhitelist,
-		"require_audit":  created.RequireAudit,
-	})
+	JSON(w, created)
 }
 
 func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -458,7 +429,7 @@ func (h *WebhookHandler) Test(w http.ResponseWriter, r *http.Request) {
 		ConvID:      wh.ConvID,
 		SenderID:    fmt.Sprintf("webhook:%d", wh.ID),
 		SenderName:  wh.Name,
-		ContentType: model.ContentText,
+		ContentType: 0,
 		Body:        fmt.Sprintf("🔔 Webhook 测试消息 (%d)", now%10000),
 		Timestamp:   now,
 		ConvSeq:     convSeq,
@@ -516,6 +487,11 @@ func (h *WebhookHandler) RegenerateKey(w http.ResponseWriter, r *http.Request) {
 		logger.Error("regenerate key failed", "id", webhookID, "error", err)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
+	}
+	// Also update the plaintext api_key
+	wh.APIKeyPlain = apiKey
+	if err := h.webhookDB.Update(r.Context(), wh); err != nil {
+		logger.Error("update api_key_plain failed", "id", webhookID, "error", err)
 	}
 	JSON(w, map[string]string{"api_key": apiKey})
 }

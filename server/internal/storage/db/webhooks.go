@@ -47,7 +47,7 @@ func NewWebhookRepo(pool DBPool) *WebhookRepo {
 func scanWebhook(row pgx.Row) (*model.ConvWebhook, error) {
 	wh := &model.ConvWebhook{}
 	var createdAt time.Time
-	err := row.Scan(&wh.ID, &wh.ConvID, &wh.Name, &wh.Token, &wh.APIKeyHash,
+	err := row.Scan(&wh.ID, &wh.ConvID, &wh.Name, &wh.Token, &wh.APIKeyPlain, &wh.APIKeyHash,
 		&wh.CallbackURL, &wh.Headers, &wh.CIDRWhitelist, &wh.RequireAudit,
 		&wh.CreatedBy, &createdAt)
 	if err != nil {
@@ -60,17 +60,17 @@ func scanWebhook(row pgx.Row) (*model.ConvWebhook, error) {
 func (r *WebhookRepo) Create(ctx context.Context, wh *model.ConvWebhook) (*model.ConvWebhook, error) {
 	now := time.Now()
 	row := r.pool.QueryRow(ctx,
-		`INSERT INTO conv_webhooks (conv_id, name, token, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		 RETURNING id, conv_id, name, token, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at`,
-		wh.ConvID, wh.Name, wh.Token, wh.APIKeyHash, wh.CallbackURL,
+		`INSERT INTO conv_webhooks (conv_id, name, token, api_key_plain, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		 RETURNING id, conv_id, name, token, api_key_plain, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at`,
+		wh.ConvID, wh.Name, wh.Token, wh.APIKeyPlain, wh.APIKeyHash, wh.CallbackURL,
 		wh.Headers, wh.CIDRWhitelist, wh.RequireAudit, wh.CreatedBy, now)
 	return scanWebhook(row)
 }
 
 func (r *WebhookRepo) GetByID(ctx context.Context, id int64) (*model.ConvWebhook, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, conv_id, name, token, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at
+		`SELECT id, conv_id, name, token, api_key_plain, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at
 		 FROM conv_webhooks WHERE id = $1`, id)
 	wh, err := scanWebhook(row)
 	if err != nil {
@@ -82,7 +82,7 @@ func (r *WebhookRepo) GetByID(ctx context.Context, id int64) (*model.ConvWebhook
 
 func (r *WebhookRepo) GetByToken(ctx context.Context, token string) (*model.ConvWebhook, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, conv_id, name, token, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at
+		`SELECT id, conv_id, name, token, api_key_plain, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at
 		 FROM conv_webhooks WHERE token = $1`, token)
 	wh, err := scanWebhook(row)
 	if err != nil {
@@ -94,7 +94,7 @@ func (r *WebhookRepo) GetByToken(ctx context.Context, token string) (*model.Conv
 
 func (r *WebhookRepo) ListByConvID(ctx context.Context, convID string) ([]*model.ConvWebhook, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, conv_id, name, token, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at
+		`SELECT id, conv_id, name, token, api_key_plain, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at
 		 FROM conv_webhooks WHERE conv_id = $1 ORDER BY created_at ASC`, convID)
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (r *WebhookRepo) Delete(ctx context.Context, id int64) error {
 
 func (r *WebhookRepo) GetByConvIDAndName(ctx context.Context, convID, name string) (*model.ConvWebhook, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT id, conv_id, name, token, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at
+		`SELECT id, conv_id, name, token, api_key_plain, api_key_hash, callback_url, headers, cidr_whitelist, require_audit, created_by, created_at
 		 FROM conv_webhooks WHERE conv_id = $1 AND name = $2`, convID, name)
 	wh, err := scanWebhook(row)
 	if err != nil {

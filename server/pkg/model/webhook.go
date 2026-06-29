@@ -5,6 +5,7 @@ type ConvWebhook struct {
 	ConvID        string          `json:"conv_id"`
 	Name          string          `json:"name"`
 	Token         string          `json:"token,omitempty"`
+	APIKeyPlain   string          `json:"api_key,omitempty"`
 	APIKeyHash    string          `json:"-"`
 	CallbackURL   string          `json:"callback_url,omitempty"`
 	Headers       []WebhookHeader `json:"headers,omitempty"`
