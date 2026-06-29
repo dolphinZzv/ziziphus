@@ -11,6 +11,7 @@ import type { ConversationDetail, JoinRequest } from '@/types/conversation'
 import type { User } from '@/types/user'
 import { ConvRole } from '@/types/conversation'
 import { X, Crown, Shield, Trash2, Check, X as XIcon, Camera, Search, Cpu, UserPlus, Bell, Edit2, EyeOff, FileUp } from 'lucide-react'
+import WebhookPanel from './webhook-panel'
 
 interface Props { convId: string; onClose: () => void }
 
@@ -268,6 +269,8 @@ export default function GroupDetail({ convId, onClose }: Props) {
               </button>
             </label>
           </div>
+
+          <WebhookPanel convId={convId} />
         </div>
       </div>
     </div>
