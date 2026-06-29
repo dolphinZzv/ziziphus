@@ -16,6 +16,8 @@ export default function WebhookPanel({ convId }: Props) {
   const [pendingMsgs, setPendingMsgs] = useState<any[]>([])
   const [showPending, setShowPending] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [testingId, setTestingId] = useState<number | null>(null)
+  const [testResults, setTestResults] = useState<Record<number, { ok: boolean; msg: string }>>({})
 
   useEffect(() => {
     webhookService.list(convId).then(setWebhooks).catch(() => {})
@@ -55,6 +57,19 @@ export default function WebhookPanel({ convId }: Props) {
     try { await webhookService.delete(convId, id); setWebhooks(prev => prev.filter(w => w.id !== id)) } catch {}
   }
 
+  const handleTest = async (id: number) => {
+    setTestingId(id)
+    setTestResults(prev => ({ ...prev, [id]: { ok: false, msg: '测试中...' } }))
+    try {
+      const res = await webhookService.test(convId, id)
+      setTestResults(prev => ({ ...prev, [id]: { ok: true, msg: '✅ 发送成功' } }))
+    } catch (e: any) {
+      setTestResults(prev => ({ ...prev, [id]: { ok: false, msg: `❌ ${e?.message || '失败'}` } }))
+    }
+    setTestingId(null)
+    setTimeout(() => setTestResults(prev => { const n = { ...prev }; delete n[id]; return n }), 3000)
+  }
+
   const handleApprove = async (msgId: number) => {
     try { await webhookService.approveMessage(msgId); setPendingMsgs(prev => prev.filter(m => m.msg_id !== msgId)) } catch {}
   }
@@ -84,6 +99,18 @@ export default function WebhookPanel({ convId }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            <button onClick={() => handleTest(wh.id)} disabled={testingId === wh.id}
+              className="p-1 rounded hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-green-500 disabled:opacity-40"
+              title="测试">
+              {testingId === wh.id
+                ? <span className="block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>}
+            </button>
+            {testResults[wh.id] && (
+              <span className={`text-[10px] ${testResults[wh.id].ok ? 'text-green-500' : 'text-red-500'}`}>
+                {testResults[wh.id].msg}
+              </span>
+            )}
             <button onClick={() => openEdit(wh)} className="p-1 rounded hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-accent)]">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
             </button>

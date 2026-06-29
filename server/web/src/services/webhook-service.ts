@@ -46,6 +46,13 @@ export const webhookService = {
     )
   },
 
+  test(convId: string, id: number) {
+    return api.request<{ status: string; msg_id: number; body: string }>(
+      `/api/v1/conversations/${convId}/webhooks/${id}/test`,
+      { method: 'POST' }
+    )
+  },
+
   logs(convId: string, id: number, page = 1, size = 20) {
     return api.request<{ items: WebhookAuditLog[]; total: number }>(
       `/api/v1/conversations/${convId}/webhooks/${id}/logs`,

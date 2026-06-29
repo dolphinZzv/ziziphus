@@ -95,6 +95,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Put("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}", h.Webhook.Update)
 		r.Delete("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}", h.Webhook.Delete)
 		r.Post("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/regenerate-key", h.Webhook.RegenerateKey)
+r.Post("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/test", h.Webhook.Test)
 		r.Get("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/logs", h.Webhook.Logs)
 		r.Get("/api/v1/conversations/{conv_id}/webhooks/pending", h.Webhook.PendingMessages)
 		// Audit

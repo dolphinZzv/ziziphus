@@ -431,6 +431,58 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"status": "ok"})
 }
 
+func (h *WebhookHandler) Test(w http.ResponseWriter, r *http.Request) {
+	webhookID, err := strconvParseInt(chi.URLParam(r, "webhook_id"))
+	if err != nil {
+		BadRequest(w, r, "invalid webhook_id")
+		return
+	}
+	userID := auth.UserFromCtx(r.Context())
+
+	wh, err := h.webhookDB.GetByID(r.Context(), webhookID)
+	if err != nil {
+		NotFound(w, r)
+		return
+	}
+	if !h.canManageWebhook(r.Context(), wh, userID) {
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
+		return
+	}
+
+	// Send a test message using the webhook's identity
+	now := time.Now().UnixMilli()
+	msgID := h.idGen.NextID()
+	convSeq, _ := h.seqCache.GetAndIncrementConvSeq(r.Context(), wh.ConvID)
+	msg := &model.Message{
+		MsgID:       msgID,
+		ConvID:      wh.ConvID,
+		SenderID:    fmt.Sprintf("webhook:%d", wh.ID),
+		SenderName:  wh.Name,
+		ContentType: model.ContentText,
+		Body:        fmt.Sprintf("🔔 Webhook 测试消息 (%d)", now%10000),
+		Timestamp:   now,
+		ConvSeq:     convSeq,
+		Status:      model.MsgSent,
+	}
+	if err := h.store.Insert(r.Context(), msg); err != nil {
+		logger.Error("test webhook persist failed", "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+
+	// Push to conversation
+	targets := h.router.Route(r.Context(), msg)
+	if len(targets) > 0 {
+		h.pusher.Push(r.Context(), msg, targets)
+	}
+
+	JSON(w, map[string]any{
+		"status": "ok",
+		"msg_id": msgID,
+		"body":   msg.Body,
+	})
+}
+
 func (h *WebhookHandler) RegenerateKey(w http.ResponseWriter, r *http.Request) {
 	webhookID, err := strconvParseInt(chi.URLParam(r, "webhook_id"))
 	if err != nil {
