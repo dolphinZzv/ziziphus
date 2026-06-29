@@ -43,3 +43,5 @@ CREATE TABLE IF NOT EXISTS webhook_messages (
 CREATE INDEX IF NOT EXISTS idx_webhook_messages_audit ON webhook_messages(audit_status, conv_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_messages_wh ON webhook_messages(webhook_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_messages_conv ON webhook_messages(conv_id);
+
+ALTER TABLE conv_webhooks ADD COLUMN IF NOT EXISTS api_key_plain VARCHAR(128) NOT NULL DEFAULT '';
