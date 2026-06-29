@@ -21,6 +21,7 @@ type Handlers struct {
 	Contact      *ContactHandler
 	Session      *SessionHandler
 	File         *FileHandler
+	Webhook      *WebhookHandler
 	DB           *pgxpool.Pool
 	RDB          *redis.Client
 	LoginRL      *LoginRateLimiter
@@ -45,6 +46,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Get("/health", h.Health)
 		r.Get("/metrics", promhttp.Handler().ServeHTTP)
 		r.Post("/api/v1/auth/mfa/verify", h.User.MFAVerifyLogin)
+		r.Post("/api/v1/webhooks/{token}", h.Webhook.ReceiveMessage)
 	})
 
 	// Authenticated routes
@@ -85,8 +87,19 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/conversations/{conv_id}/pin", h.Conversation.Pin)
 		r.Post("/api/v1/conversations/{conv_id}/unpin", h.Conversation.Unpin)
 		r.Post("/api/v1/conversations/{conv_id}/clone", h.Conversation.Clone)
-			r.Get("/api/v1/conversations/{conv_id}/settings", h.Conversation.GetSettings)
-			r.Put("/api/v1/conversations/{conv_id}/settings", h.Conversation.UpdateSettings)
+		r.Get("/api/v1/conversations/{conv_id}/settings", h.Conversation.GetSettings)
+		r.Put("/api/v1/conversations/{conv_id}/settings", h.Conversation.UpdateSettings)
+		// Webhook management
+		r.Get("/api/v1/conversations/{conv_id}/webhooks", h.Webhook.List)
+		r.Post("/api/v1/conversations/{conv_id}/webhooks", h.Webhook.Create)
+		r.Put("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}", h.Webhook.Update)
+		r.Delete("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}", h.Webhook.Delete)
+		r.Post("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/regenerate-key", h.Webhook.RegenerateKey)
+		r.Get("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/logs", h.Webhook.Logs)
+		r.Get("/api/v1/conversations/{conv_id}/webhooks/pending", h.Webhook.PendingMessages)
+		// Audit
+		r.Post("/api/v1/webhooks/messages/{msg_id}/approve", h.Webhook.ApproveMessage)
+		r.Post("/api/v1/webhooks/messages/{msg_id}/reject", h.Webhook.RejectMessage)
 		r.Get("/api/v1/conversations/{conv_id}/files", h.File.ListConvFiles)
 		r.Delete("/api/v1/conversations/{conv_id}/files/{file_id}", h.File.DeleteConvFile)
 		r.Post("/api/v1/conversations/{conv_id}/folders", h.File.CreateFolder)

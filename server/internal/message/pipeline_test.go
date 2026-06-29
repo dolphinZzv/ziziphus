@@ -331,6 +331,12 @@ func (m *mockUserGetter) GetByID(_ context.Context, id string) (*model.User, err
 	return &model.User{Name: id}, nil
 }
 
+type mockWhForwarder struct{}
+
+func (m *mockWhForwarder) ListByConvID(_ context.Context, _ string) ([]*model.ConvWebhook, error) { return nil, nil }
+func (m *mockWhForwarder) GetByConvIDAndName(_ context.Context, _, _ string) (*model.ConvWebhook, error) { return nil, nil }
+func (m *mockWhForwarder) InsertAuditLog(_ context.Context, _ *model.WebhookAuditLog) error { return nil }
+
 type mockContactRequestDB struct{}
 
 func (m *mockContactRequestDB) GetByFormMsgID(_ context.Context, _ int64) (*model.ContactRequest, error) {
@@ -404,7 +410,7 @@ func newIngestFixture(ratePerSec, burst, maxBody int, defaultID int64) (
 	router := NewRouter(sessGtr, convMgr, connReg)
 	pusher := NewPusher(connReg, receiptW)
 	contactReqDB := &mockContactRequestDB{}
-		ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{}, &mockUserGetter{})
+		ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{})
 	return
 }
 

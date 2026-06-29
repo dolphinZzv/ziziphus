@@ -108,9 +108,12 @@ func main() {
 	// Pusher
 	pusher := message.NewPusher(gwMgr, receiptRepo)
 
+	// Webhook repo (used by both ingest forwarding and webhook handler)
+	webhookRepo := db.NewWebhookRepo(pool)
+
 	// Ingest pipeline
 	contactReqRepo := db.NewContactRequestRepo(pool)
-	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr, contactReqRepo, contactRepo, userRepo)
+	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr, contactReqRepo, contactRepo, userRepo, webhookRepo)
 
 	// Sync handler
 	syncHandler := message.NewSyncHandler(msgRepo, seqCache)
@@ -130,6 +133,7 @@ func main() {
 	msgHandler := api.NewMsgHandler(msgRepo, receiptRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
 	sessionHandler := api.NewSessionHandler(sessMgr, gwMgr)
+	webhookHandler := api.NewWebhookHandler(webhookRepo, sf, convMgr, userRepo, msgRepo, msgRouter, pusher, seqCache, ingest)
 	handlers := &api.Handlers{
 		User:         userHandler,
 		Conversation: convHandler,
@@ -137,6 +141,7 @@ func main() {
 		Contact:      contactHandler,
 		Session:      sessionHandler,
 		File:         fileHandler,
+		Webhook:      webhookHandler,
 		DB:           pool,
 		RDB:          rdb,
 	}

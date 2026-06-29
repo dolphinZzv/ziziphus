@@ -1,15 +1,21 @@
 package message
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"siciv.space/agent/panda_ai/internal/metrics"
+	"siciv.space/agent/panda_ai/pkg/logger"
 	"siciv.space/agent/panda_ai/pkg/model"
 	"siciv.space/agent/panda_ai/pkg/protocol"
 )
@@ -25,10 +31,17 @@ type Ingest struct {
 	contactReqDB contactRequestDB
 	contactRepo  contactCreator
 	userDB       userGetter
+	whDB         whForwarder
 }
 
 type userGetter interface {
 	GetByID(ctx context.Context, id string) (*model.User, error)
+}
+
+type whForwarder interface {
+	ListByConvID(ctx context.Context, convID string) ([]*model.ConvWebhook, error)
+	GetByConvIDAndName(ctx context.Context, convID, name string) (*model.ConvWebhook, error)
+	InsertAuditLog(ctx context.Context, log *model.WebhookAuditLog) error
 }
 
 type contactCreator interface {
@@ -69,7 +82,7 @@ type convManager interface {
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
 }
 
-func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager, contactReqDB contactRequestDB, contactRepo contactCreator, userDB userGetter) *Ingest {
+func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager, contactReqDB contactRequestDB, contactRepo contactCreator, userDB userGetter, whDB whForwarder) *Ingest {
 	return &Ingest{
 		store:        store,
 		router:       router,
@@ -81,6 +94,7 @@ func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *Ra
 		contactReqDB: contactReqDB,
 		contactRepo:  contactRepo,
 		userDB:       userDB,
+		whDB:         whDB,
 	}
 }
 
@@ -178,6 +192,11 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 	targets := in.router.Route(ctx, msg)
 	if len(targets) > 0 {
 		in.pusher.Push(context.Background(), msg, targets)
+	}
+
+	// 8. webhook forwarding (async, group only)
+	if in.whDB != nil {
+		go in.forwardToWebhooks(context.Background(), msg)
 	}
 
 	return &protocol.MsgSendAckPayload{
@@ -444,3 +463,125 @@ func parseP2PCounterpart(convID, senderID string) string {
 	}
 	return parts[0]
 }
+
+
+// forwardToWebhooks forwards a message to configured webhook callbacks.
+func (in *Ingest) forwardToWebhooks(ctx context.Context, msg *model.Message) {
+	conv, err := in.convMgr.Get(ctx, msg.ConvID)
+	if err != nil || conv.Type != model.ConvGroup {
+		return
+	}
+
+	whList, err := in.whDB.ListByConvID(ctx, msg.ConvID)
+	if err != nil || len(whList) == 0 {
+		return
+	}
+
+	mentioned := extractMentions(msg.Body)
+
+	for _, wh := range whList {
+		if wh.CallbackURL == "" {
+			continue
+		}
+		if len(mentioned) > 0 && !mentioned[wh.Name] {
+			continue
+		}
+		go in.sendWebhookWithRetry(ctx, wh, msg)
+	}
+}
+
+func (in *Ingest) sendWebhookWithRetry(ctx context.Context, wh *model.ConvWebhook, msg *model.Message) {
+	payload := buildWebhookPayload(wh.ID, msg)
+	body, _ := json.Marshal(payload)
+
+	maxRetries := 3
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			wait := time.Duration(1<<uint(attempt+1)-1) * time.Second
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(wait):
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", wh.CallbackURL, bytes.NewReader(body))
+		if err != nil {
+			logger.Warn("webhook forward request creation failed", "wh_id", wh.ID, "error", err)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("User-Agent", "PandaAI-Webhook/1.0")
+		req.Header.Set("X-Signature", computeSignature([]byte(wh.APIKeyHash), body))
+		for _, h := range wh.Headers {
+			req.Header.Set(h.Key, h.Value)
+		}
+
+		resp, doErr := http.DefaultClient.Do(req)
+		if doErr == nil && resp.StatusCode < 500 {
+			resp.Body.Close()
+			in.logWhAudit(ctx, wh.ID, msg.MsgID, "forward", "")
+			return
+		}
+		if doErr != nil {
+			logger.Warn("webhook forward attempt failed",
+				"wh_id", wh.ID, "attempt", attempt, "error", doErr)
+		} else {
+			resp.Body.Close()
+		}
+	}
+	in.logWhAudit(ctx, wh.ID, msg.MsgID, "forward_fail",
+		"max retries exhausted")
+}
+
+func (in *Ingest) logWhAudit(ctx context.Context, whID int64, msgID int64, action, reason string) {
+	log := &model.WebhookAuditLog{
+		WebhookID: whID,
+		MsgID:     msgID,
+		Action:    action,
+		Reason:    reason,
+		ActorID:   "system",
+		CreatedAt: time.Now().UnixMilli(),
+	}
+	if err := in.whDB.InsertAuditLog(ctx, log); err != nil {
+		logger.Warn("failed to write webhook audit log", "error", err)
+	}
+}
+
+func buildWebhookPayload(whID int64, msg *model.Message) map[string]any {
+	return map[string]any{
+		"event":    "message.created",
+		"webhook_id": whID,
+		"conv_id":  msg.ConvID,
+		"message": map[string]any{
+			"msg_id":       msg.MsgID,
+			"sender_id":    msg.SenderID,
+			"sender_name":  msg.SenderName,
+			"content_type": int(msg.ContentType),
+			"body":         msg.Body,
+			"reply_to":     msg.ReplyTo,
+			"timestamp":    msg.Timestamp,
+		},
+	}
+}
+
+func computeSignature(secret, body []byte) string {
+	mac := hmac.New(sha256.New, secret)
+	mac.Write(body)
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func extractMentions(body string) map[string]bool {
+	result := make(map[string]bool)
+	words := strings.Fields(body)
+	for _, w := range words {
+		if strings.HasPrefix(w, "@") {
+			name := strings.TrimLeft(w, "@,.!?;:")
+			if name != "" {
+				result[name] = true
+			}
+		}
+	}
+	return result
+}
+
