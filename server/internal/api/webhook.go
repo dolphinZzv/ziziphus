@@ -628,14 +628,14 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 	// Rate limit
 	ip := callerIP(r)
 	if !h.rateLmt.Allow(ip) {
-		http.Error(w, `{"code":429,"msg":"too many requests"}`, http.StatusTooManyRequests)
+		writeJSONError(w, http.StatusTooManyRequests, 429, "too many requests")
 		return
 	}
 
 	// Lookup webhook by token
 	wh, err := h.webhookDB.GetByToken(r.Context(), token)
 	if err != nil {
-		http.Error(w, `{"code":404,"msg":"not found"}`, http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, 404, "not found")
 		return
 	}
 
@@ -643,11 +643,11 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 	if wh.APIKeyHash != "" {
 		providedKey := extractBearerToken(r)
 		if providedKey == "" {
-			http.Error(w, `{"code":401,"msg":"missing api key"}`, http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, 401, "missing api key")
 			return
 		}
 		if err := bcrypt.CompareHashAndPassword([]byte(wh.APIKeyHash), []byte(providedKey)); err != nil {
-			http.Error(w, `{"code":401,"msg":"invalid api key"}`, http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, 401, "invalid api key")
 			return
 		}
 	}
@@ -661,15 +661,15 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 	// Parse body
 	var req webhookReceiveReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"code":400,"msg":"invalid json"}`, http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, 400, "invalid json")
 		return
 	}
 	if req.Body == "" {
-		http.Error(w, `{"code":400,"msg":"body is required"}`, http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, 400, "body is required")
 		return
 	}
 	if len(req.Body) > 65536 {
-		http.Error(w, `{"code":413,"msg":"body too large"}`, http.StatusRequestEntityTooLarge)
+		writeJSONError(w, http.StatusRequestEntityTooLarge, 413, "body too large")
 		return
 	}
 	if req.ContentType == 0 {
@@ -682,7 +682,7 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 	convSeq, err := h.seqCache.GetAndIncrementConvSeq(r.Context(), wh.ConvID)
 	if err != nil {
 		logger.Error("get conv seq failed", "conv_id", wh.ConvID, "error", err)
-		http.Error(w, `{"code":500,"msg":"server error"}`, http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, 500, "server error")
 		return
 	}
 
@@ -874,3 +874,8 @@ func ExtractMentions(body string) map[string]bool {
 	return result
 }
 
+func writeJSONError(w http.ResponseWriter, httpStatus, code int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(httpStatus)
+	json.NewEncoder(w).Encode(map[string]any{"code": code, "msg": msg, "data": nil})
+}

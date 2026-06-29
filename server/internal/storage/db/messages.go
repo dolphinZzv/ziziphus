@@ -27,7 +27,7 @@ func (r *MessageRepo) Insert(ctx context.Context, msg *model.Message) error {
 	_, err = tx.Exec(ctx,
 		`INSERT INTO messages (msg_id, conv_id, sender_id, sender_session_id, content_type, body, mention, reply_to, timestamp, client_seq, conv_seq, status)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		msg.MsgID, msg.ConvID, msg.SenderID, msg.SenderSessionID, msg.ContentType, msg.Body,
+		msg.MsgID, msg.ConvID, msg.SenderID, msg.SenderName, msg.SenderSessionID, msg.ContentType, msg.Body,
 		msg.Mention, msg.ReplyTo, msg.Timestamp, msg.ClientSeq, msg.ConvSeq, msg.Status)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (r *MessageRepo) GetHistory(ctx context.Context, convID string, beforeMsgID
 		return r.getHistoryAround(ctx, convID, aroundMsgID, limit, keyword, startDate, endDate)
 	}
 
-	query := `SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status
+	query := `SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, m.sender_name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status
 		 FROM messages m
 		 LEFT JOIN users u ON u.id = m.sender_id
 		 WHERE m.conv_id = $1 AND m.deleted = false`
@@ -101,7 +101,7 @@ func (r *MessageRepo) GetHistory(ctx context.Context, convID string, beforeMsgID
 }
 
 func (r *MessageRepo) getHistoryAround(ctx context.Context, convID string, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
-	q := `SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status
+	q := `SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, m.sender_name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status
 		 FROM messages m
 		 LEFT JOIN users u ON u.id = m.sender_id
 		 WHERE m.conv_id = $1 AND m.deleted = false`
@@ -166,7 +166,7 @@ func (r *MessageRepo) getHistoryAround(ctx context.Context, convID string, aroun
 
 func (r *MessageRepo) GetMessagesSinceSeq(ctx context.Context, convID string, lastSeq int64, limit int) ([]*model.Message, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status
+		`SELECT m.msg_id, m.conv_id, m.sender_id, COALESCE(u.name, m.sender_name, ''), m.content_type, m.body, m.mention, m.reply_to, m.timestamp, m.conv_seq, m.status
 		 FROM messages m
 		 LEFT JOIN users u ON u.id = m.sender_id
 		 WHERE m.conv_id = $1 AND m.conv_seq > $2 AND m.deleted = false

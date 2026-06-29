@@ -1,98 +1,96 @@
 import { test, expect } from './fixtures/coverage'
 
-const API = process.env.E2E_API_URL || 'http://localhost:8080'
+const API = process.env.E2E_API_URL || 'http://47.95.200.101:10011'
 
 const TS = Date.now()
-const TEST_USER = {
-  name: `e2e-wh-${TS}`,
-  account: `e2e-wh-${TS}`,
-  password: 'test12345678',
-}
 
 test.describe('Webhook - Real API', () => {
   let authToken = ''
   let userId = ''
-  let convId = ''
+  let userBId = ''
+  let authTokenB = ''
+  let groupId = ''
   let whToken = ''
   let whApiKey = ''
+  let whId = 0
 
   test.beforeAll(async ({ request }) => {
-    // Step 1: Register a fresh test user
-    const regRes = await request.post(`${API}/api/v1/users/register`, {
-      data: { name: TEST_USER.name, account: TEST_USER.account, password: TEST_USER.password },
+    // Register user A
+    const regA = await request.post(`${API}/api/v1/users/register`, {
+      data: { name: `e2e-a-${TS}`, account: `e2e-a-${TS}`, password: 'test12345678' },
     })
-    if (!regRes.ok()) {
-      // User may already exist — try login
-      const loginRes = await request.post(`${API}/api/v1/users/login`, {
-        data: { account: TEST_USER.account, password: TEST_USER.password },
-      })
-      expect(loginRes.ok()).toBeTruthy()
-      const loginBody = await loginRes.json()
-      expect(loginBody.code).toBe(0)
-      authToken = loginBody.data.token
-      userId = loginBody.data.user?.user_id
-    } else {
-      const regBody = await regRes.json()
-      expect(regBody.code).toBe(0)
-      authToken = regBody.data.token
-      userId = regBody.data.user?.user_id
-    }
+    // Register user B
+    const regB = await request.post(`${API}/api/v1/users/register`, {
+      data: { name: `e2e-b-${TS}`, account: `e2e-b-${TS}`, password: 'test12345678' },
+    })
+
+    const bodyA = await regA.json()
+    const bodyB = await regB.json()
+    expect(bodyA.code).toBe(0)
+    expect(bodyB.code).toBe(0)
+
+    authToken = bodyA.data.token
+    userId = bodyA.data.user_id
+    authTokenB = bodyB.data.token
+    userBId = bodyB.data.user_id
     expect(authToken).toBeTruthy()
     expect(userId).toBeTruthy()
-    console.log(`User: ${userId}, Token: ${authToken.slice(0, 20)}...`)
+    expect(userBId).toBeTruthy()
+    console.log(`User A: ${userId}, User B: ${userBId}`)
   })
 
-  test('Create P2P conversation', async ({ request }) => {
-    const convRes = await request.post(`${API}/api/v1/conversations/p2p`, {
+  test('Create group conversation', async ({ request }) => {
+    const res = await request.post(`${API}/api/v1/conversations/group`, {
       headers: { Authorization: `Bearer ${authToken}` },
-      data: { user_id: 'user_002' },
+      data: { name: `e2e-group-${TS}`, member_ids: [userBId] },
     })
-    const body = await convRes.json()
+    const body = await res.json()
     expect(body.code).toBe(0)
-    convId = body.data.conv_id
-    expect(convId).toBeTruthy()
-    console.log(`Conversation: ${convId}`)
+    groupId = body.data.conv_id
+    expect(groupId).toBeTruthy()
+    console.log(`Group: ${groupId}`)
   })
 
   test('Create webhook', async ({ request }) => {
-    expect(convId).toBeTruthy()
-    const whRes = await request.post(`${API}/api/v1/conversations/${convId}/webhooks`, {
+    expect(groupId).toBeTruthy()
+    const res = await request.post(`${API}/api/v1/conversations/${groupId}/webhooks`, {
       headers: { Authorization: `Bearer ${authToken}` },
-      data: { name: 'e2e-test-hook', callback_url: '', require_audit: false },
+      data: { name: 'e2e-hook', callback_url: '', require_audit: false },
     })
-    const body = await whRes.json()
+    const body = await res.json()
     expect(body.code).toBe(0)
     expect(body.data.token).toBeTruthy()
     expect(body.data.api_key).toBeTruthy()
     whToken = body.data.token
     whApiKey = body.data.api_key
+    whId = body.data.id
     console.log(`Webhook: token=${whToken}, key=${whApiKey}`)
   })
 
-  test('Send message via webhook (public endpoint)', async ({ request }) => {
+  test('Send message via webhook', async ({ request }) => {
     expect(whToken).toBeTruthy()
-    const msgRes = await request.post(`${API}/api/v1/webhooks/${whToken}`, {
+    const res = await request.post(`${API}/api/v1/webhooks/${whToken}`, {
       headers: { Authorization: `Bearer ${whApiKey}` },
       data: { body: `E2E webhook test ${TS}` },
     })
-    const body = await msgRes.json()
+    const body = await res.json()
     expect(body.code).toBe(0)
     expect(body.data.msg_id).toBeGreaterThan(0)
     expect(body.data.audit_status).toBe('approved')
     console.log(`Message sent: ${body.data.msg_id}`)
   })
 
-  test('Verify message in conversation', async ({ request }) => {
-    const msgsRes = await request.get(
-      `${API}/api/v1/conversations/${convId}/messages?limit=10`,
+  test('Verify message in group', async ({ request }) => {
+    const res = await request.get(
+      `${API}/api/v1/conversations/${groupId}/messages?limit=10`,
       { headers: { Authorization: `Bearer ${authToken}` } }
     )
-    const body = await msgsRes.json()
+    const body = await res.json()
     expect(body.code).toBe(0)
     const messages = Array.isArray(body.data) ? body.data : body.data?.items || []
     const found = messages.find((m: any) => m.body?.includes(`E2E webhook test ${TS}`))
     expect(found).toBeTruthy()
-    expect(found.sender_name).toBe('e2e-test-hook')
+    expect(found.sender_name).toBe('e2e-hook')
   })
 
   test('Auth error returns 401', async ({ request }) => {
@@ -104,17 +102,24 @@ test.describe('Webhook - Real API', () => {
     expect(body.code).not.toBe(0)
   })
 
-  test('Cleanup - delete webhook', async ({ request }) => {
-    const listRes = await request.get(
-      `${API}/api/v1/conversations/${convId}/webhooks`,
+  test('Webhook list shows token and api_key', async ({ request }) => {
+    const res = await request.get(
+      `${API}/api/v1/conversations/${groupId}/webhooks`,
       { headers: { Authorization: `Bearer ${authToken}` } }
     )
-    const listBody = await listRes.json()
-    const whList = Array.isArray(listBody.data) ? listBody.data : []
-    const created = whList.find((w: any) => w.name === 'e2e-test-hook')
-    if (created) {
+    const body = await res.json()
+    expect(body.code).toBe(0)
+    const list = Array.isArray(body.data) ? body.data : []
+    const wh = list.find((w: any) => w.name === 'e2e-hook')
+    expect(wh).toBeTruthy()
+    expect(wh.token).toBeTruthy()
+    expect(wh.api_key).toBeTruthy()
+  })
+
+  test('Cleanup - delete webhook', async ({ request }) => {
+    if (whId) {
       await request.delete(
-        `${API}/api/v1/conversations/${convId}/webhooks/${created.id}`,
+        `${API}/api/v1/conversations/${groupId}/webhooks/${whId}`,
         { headers: { Authorization: `Bearer ${authToken}` } }
       )
     }
