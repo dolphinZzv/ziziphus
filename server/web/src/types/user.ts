@@ -30,6 +30,7 @@ export interface User {
   ext_meta?: Record<string, unknown>
   wake_mode: WakeMode
   api_key: string
+  headline?: string
   discoverable: boolean
   allow_direct_chat: boolean
   created_at: number

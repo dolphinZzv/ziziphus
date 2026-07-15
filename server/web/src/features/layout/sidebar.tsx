@@ -61,8 +61,8 @@ export default function Sidebar() {
 
         <div className="flex items-center gap-0.5">
           <button
-            onClick={() => uiStore.setSidebarView(uiStore.state.sidebarView === 'contacts' ? null : 'contacts')}
-            className={`p-2 rounded-xl transition-colors ${uiStore.state.sidebarView === 'contacts' ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-soft)]'}`}
+            onClick={() => uiStore.openSheet('contacts')}
+            className="p-2 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
             title={t('sidebar.contacts')}>
             <User size={18} />
           </button>

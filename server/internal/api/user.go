@@ -38,10 +38,10 @@ type userRepo interface {
 	GetByID(ctx context.Context, id string) (*model.User, error)
 	GetByIDs(ctx context.Context, ids []string) (map[string]*model.User, error)
 	Search(ctx context.Context, q string, page, size int) ([]*model.User, int, error)
-	Update(ctx context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error
+	Update(ctx context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor, headline string, discoverable, allowDirectChat bool) error
 	CountAgents(ctx context.Context, uid string) (int, error)
 	ListAgents(ctx context.Context, uid string) ([]*model.User, error)
-	UpdateAgent(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error
+	UpdateAgent(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor, headline string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error
 	DeleteAgent(ctx context.Context, agentID, uid string) error
 	GetByAPIKey(ctx context.Context, apiKey string) (*model.User, error)
 	UpdateAgentAPIKey(ctx context.Context, agentID, uid, apiKey string) error
@@ -361,6 +361,7 @@ type updateMeReq struct {
 	Email           string `json:"email"`
 	PrimaryColor    string `json:"primary_color"`
 	SecondaryColor  string `json:"secondary_color"`
+	Headline        string `json:"headline"`
 	Discoverable    *bool  `json:"discoverable"`
 	AllowDirectChat *bool  `json:"allow_direct_chat"`
 }
@@ -380,7 +381,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	if req.AllowDirectChat != nil {
 		allowDirectChat = *req.AllowDirectChat
 	}
-	if err := h.userRepo.Update(r.Context(), userID, req.Name, req.Avatar, req.Cover, req.Email, req.PrimaryColor, req.SecondaryColor, discoverable, allowDirectChat); err != nil {
+	if err := h.userRepo.Update(r.Context(), userID, req.Name, req.Avatar, req.Cover, req.Email, req.PrimaryColor, req.SecondaryColor, req.Headline, discoverable, allowDirectChat); err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
@@ -392,7 +393,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		"email":             req.Email,
 		"primary_color":     req.PrimaryColor,
 		"secondary_color":   req.SecondaryColor,
-		"discoverable":      discoverable,
+			"headline":          req.Headline,		"discoverable":      discoverable,
 		"allow_direct_chat": allowDirectChat,
 	})
 }
@@ -634,7 +635,7 @@ func (h *UserHandler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	if err := h.userRepo.Update(r.Context(), userID, curr.Name, curr.Avatar, curr.Cover, ev.PendingEmail, curr.PrimaryColor, curr.SecondaryColor, curr.Discoverable, curr.AllowDirectChat); err != nil {
+	if err := h.userRepo.Update(r.Context(), userID, curr.Name, curr.Avatar, curr.Cover, ev.PendingEmail, curr.PrimaryColor, curr.SecondaryColor, curr.Headline, curr.Discoverable, curr.AllowDirectChat); err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
@@ -649,6 +650,7 @@ type createAgentReq struct {
 	Cover           string `json:"cover"`
 	PrimaryColor    string `json:"primary_color"`
 	SecondaryColor  string `json:"secondary_color"`
+	Headline        string `json:"headline"`
 	WakeMode        int    `json:"wake_mode"`
 	Discoverable    *bool  `json:"discoverable"`
 	AllowDirectChat *bool  `json:"allow_direct_chat"`
@@ -714,7 +716,7 @@ func (h *UserHandler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		UID:             userID,
 		PrimaryColor:    req.PrimaryColor,
 		SecondaryColor:  req.SecondaryColor,
-		WakeMode:        model.WakeMode(req.WakeMode),
+			Headline:        req.Headline,		WakeMode:        model.WakeMode(req.WakeMode),
 		Discoverable:    discoverable,
 		AllowDirectChat: allowDirectChat,
 		APIKey:          apiKeyStr,
@@ -748,7 +750,7 @@ func (h *UserHandler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 	if req.AllowDirectChat != nil {
 		allowDirectChat = *req.AllowDirectChat
 	}
-	if err := h.userRepo.UpdateAgent(r.Context(), agentID, userID, req.Name, req.Avatar, req.Cover, req.PrimaryColor, req.SecondaryColor, model.WakeMode(req.WakeMode), discoverable, allowDirectChat); err != nil {
+	if err := h.userRepo.UpdateAgent(r.Context(), agentID, userID, req.Name, req.Avatar, req.Cover, req.PrimaryColor, req.SecondaryColor, req.Headline, model.WakeMode(req.WakeMode), discoverable, allowDirectChat); err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}

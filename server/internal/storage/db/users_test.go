@@ -327,11 +327,11 @@ func TestUserRepo_Update(t *testing.T) {
 
 	repo := NewUserRepo(mock)
 
-	mock.ExpectExec(`UPDATE users SET name = \$1, avatar = \$2, cover = \$3, email = \$4, primary_color = \$5, secondary_color = \$6, discoverable = \$7, allow_direct_chat = \$8 WHERE id = \$9`).
+	mock.ExpectExec(`UPDATE users SET name = \$1, avatar = \$2, cover = \$3, email = \$4, primary_color = \$5, secondary_color = \$6, discoverable = \$7, allow_direct_chat = \$8, headline = \$9 WHERE id = \$10`).
 		WithArgs("NewName", "new_av.jpg", "cover.jpg", "test@email.com", "#FF0000", "#00FF00", true, true, "u1").
 		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
-	err = repo.Update(context.Background(), "u1", "NewName", "new_av.jpg", "cover.jpg", "test@email.com", "#FF0000", "#00FF00", true, true)
+	err = repo.Update(context.Background(), "u1", "NewName", "new_av.jpg", "cover.jpg", "test@email.com", "#FF0000", "#00FF00", "", true, true)
 	if err != nil {
 		t.Fatalf("Update: %v", err)
 	}
@@ -418,11 +418,11 @@ func TestUserRepo_UpdateAgent(t *testing.T) {
 
 	repo := NewUserRepo(mock)
 
-	mock.ExpectExec(`UPDATE users SET name = \$1, avatar = \$2, cover = \$3, primary_color = \$4, secondary_color = \$5, wake_mode = \$6, discoverable = \$7, allow_direct_chat = \$8 WHERE id = \$9 AND type = \$10 AND uid = \$11`).
+	mock.ExpectExec(`UPDATE users SET name = \$1, avatar = \$2, cover = \$3, primary_color = \$4, secondary_color = \$5, wake_mode = \$6, discoverable = \$7, allow_direct_chat = \$8, headline = \$9 WHERE id = \$10 AND type = \$11 AND uid = \$12`).
 		WithArgs("AgentX", "av.png", "cv.png", "#111", "#222", model.WakeModeAll, true, false, "agent_1", model.UserAgent, "owner_1").
 		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
-	err = repo.UpdateAgent(context.Background(), "agent_1", "owner_1", "AgentX", "av.png", "cv.png", "#111", "#222", model.WakeModeAll, true, false)
+	err = repo.UpdateAgent(context.Background(), "agent_1", "owner_1", "AgentX", "av.png", "cv.png", "#111", "#222", "", model.WakeModeAll, true, false)
 	if err != nil {
 		t.Fatalf("UpdateAgent: %v", err)
 	}

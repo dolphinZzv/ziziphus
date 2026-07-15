@@ -108,7 +108,7 @@ func (m *mockUserRepo) Search(ctx context.Context, q string, page, size int) ([]
 	return nil, 0, nil
 }
 
-func (m *mockUserRepo) Update(ctx context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error {
+func (m *mockUserRepo) Update(ctx context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor, headline string, discoverable, allowDirectChat bool) error {
 	if m.updateFunc != nil {
 		return m.updateFunc(ctx, id, name, avatar, cover, email, primaryColor, secondaryColor, discoverable, allowDirectChat)
 	}
@@ -129,7 +129,7 @@ func (m *mockUserRepo) ListAgents(ctx context.Context, uid string) ([]*model.Use
 	return nil, nil
 }
 
-func (m *mockUserRepo) UpdateAgent(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error {
+func (m *mockUserRepo) UpdateAgent(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor, headline string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error {
 	if m.updateAgentFunc != nil {
 		return m.updateAgentFunc(ctx, agentID, uid, name, avatar, cover, primaryColor, secondaryColor, wakeMode, discoverable, allowDirectChat)
 	}
@@ -214,7 +214,7 @@ func (m *mockConvManager) Get(ctx context.Context, convID string) (*model.Conver
 	return nil, &model.AppError{Code: model.ErrNotFound, Message: "not found"}
 }
 
-func (m *mockConvManager) CreateGroup(ctx context.Context, name, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error) {
+func (m *mockConvManager) CreateGroup(ctx context.Context, name, headline, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error) {
 	if m.createGroupFunc != nil {
 		return m.createGroupFunc(ctx, name, ownerID, memberIDs, idGen)
 	}

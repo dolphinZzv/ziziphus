@@ -155,7 +155,7 @@ func (m *Manager) GetOrCreateSystemConvTx(ctx context.Context, tx pgx.Tx, userID
 	return conv, nil
 }
 
-func (m *Manager) CreateGroup(ctx context.Context, name, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error) {
+func (m *Manager) CreateGroup(ctx context.Context, name, headline, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error) {
 	// deduplicate and remove owner from member list
 	seen := map[string]struct{}{ownerID: {}}
 	var uniqueMembers []string
@@ -261,6 +261,26 @@ func (m *Manager) Leave(ctx context.Context, convID, userID string) error {
 	return m.convRepo.RemoveMember(ctx, convID, userID)
 }
 
+
+func (m *Manager) Disband(ctx context.Context, convID, ownerID string) error {
+	role, err := m.convRepo.GetMemberRole(ctx, convID, ownerID)
+	if err != nil {
+		return &model.AppError{Code: model.ErrNoPermission, Message: "你不是群成员", Key: "err.not_in_conv"}
+	}
+	if role != model.ConvRoleOwner {
+		return &model.AppError{Code: model.ErrNoPermission, Message: "只有群主可以解散群组", Key: "err.owner_only"}
+	}
+	members, err := m.convRepo.GetMembers(ctx, convID)
+	if err != nil {
+		return err
+	}
+	for _, member := range members {
+		if err := m.convRepo.RemoveMember(ctx, convID, member.UserID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 func (m *Manager) GetMembers(ctx context.Context, convID string) ([]*model.ConvMember, error) {
 	return m.convRepo.GetMembers(ctx, convID)
 }

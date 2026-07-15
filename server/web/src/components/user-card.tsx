@@ -77,6 +77,7 @@ export default function UserCard({ userId, onClose }: Props) {
               {user.name}
               {isAgent && <Bot size={14} className="text-purple-500" />}
             </div>
+            {user.headline && <div className="text-xs text-[var(--color-muted)] mt-0.5">{user.headline}</div>}
             <div className="text-xs text-[var(--color-muted)]">@{user.account}</div>
           </div>
 

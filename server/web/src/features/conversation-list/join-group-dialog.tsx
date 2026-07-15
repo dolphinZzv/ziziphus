@@ -54,6 +54,7 @@ export default function JoinGroupDialog({ onClose }: Props) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-[var(--color-ink)]">{group.name}</div>
+                {group.headline && <div className="text-[11px] text-[var(--color-muted)] truncate">{group.headline}</div>}
               </div>
               {/* Secondary button */}
               <button onClick={() => handleJoin(group.conv_id)}

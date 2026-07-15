@@ -24,6 +24,7 @@ type Conversation struct {
 	Avatar     string         `json:"avatar,omitempty"`
 	Cover      string         `json:"cover,omitempty"`
 	Notice     string         `json:"notice,omitempty"`
+	Headline   string         `json:"headline,omitempty"`
 	MaxMembers int            `json:"max_members,omitempty"`
 	LastMsgID  int64          `json:"last_msg_id,omitempty"`
 	LastMsgAt  int64          `json:"last_msg_at,omitempty"`

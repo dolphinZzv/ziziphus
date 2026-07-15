@@ -14,6 +14,7 @@ export default function CreateGroupDialog({ onClose }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [groupName, setGroupName] = useState('')
+  const [headline, setHeadline] = useState('')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<User[]>([])
   const [selected, setSelected] = useState<User[]>([])
@@ -31,7 +32,7 @@ export default function CreateGroupDialog({ onClose }: Props) {
   const handleCreate = async () => {
     if (!groupName.trim() || selected.length === 0) return
     setCreating(true)
-    try { const r = await conversationService.createGroup(groupName.trim(), selected.map(u => u.user_id)); uiStore.closeSheet(); navigate(`/chat/${r.conv_id}`) } catch {}
+    try { const r = await conversationService.createGroup(groupName.trim(), headline.trim(), selected.map(u => u.user_id)); uiStore.closeSheet(); navigate(`/chat/${r.conv_id}`) } catch {}
     setCreating(false)
   }
 
@@ -46,7 +47,8 @@ export default function CreateGroupDialog({ onClose }: Props) {
           <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
         </div>
 
-        <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="群组名称" className={cn(inputClass, 'mb-3')} />
+        <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="群组名称" className={cn(inputClass, 'mb-2')} />
+        <input type="text" value={headline} onChange={e => setHeadline(e.target.value)} placeholder="群组简介（选填）" maxLength={120} className={cn(inputClass, 'mb-3')} />
 
         {/* Selected members — chips */}
         {selected.length > 0 && (

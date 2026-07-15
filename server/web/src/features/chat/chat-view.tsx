@@ -8,16 +8,17 @@ import { fileService } from '@/services/file-service'
 import { wsClient } from '@/services/websocket-client'
 import { MessageType } from '@/types/ws'
 import type { MsgPushPayload } from '@/types/ws'
-import { ConvType } from '@/types/conversation'
+import { ConvType, ConvRole } from '@/types/conversation'
 import { ContentType } from '@/types/message'
 import { avatarUrl } from '@/lib/file'
 import MessageList from './message-list'
 import InputBar from './input-bar'
 import P2PDetail from './p2p-detail'
-import GroupDetail from '@/features/group/group-detail'
-import MemberListView from '@/features/group/member-list-view'
+import GroupBasicInfo from '@/features/group/group-basic-info'
+import GroupSettings from '@/features/group/group-settings'
+import WebhookPanel from '@/features/group/webhook-panel'
 import HistoryView from '@/features/history/history-view'
-import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X } from 'lucide-react'
+import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import FilePanel from './file-panel'
@@ -42,11 +43,14 @@ export default function ChatView() {
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
   const conversations = useSyncExternalStore(conversationStore.subscribe, () => conversationStore.state.conversations)
   const [showDetail, setShowDetail] = useState(false)
-  const [showMembers, setShowMembers] = useState(false)
+  const [showGroupBasic, setShowGroupBasic] = useState(false)
+  const [showGroupSettings, setShowGroupSettings] = useState(false)
+  const [showWebhook, setShowWebhook] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showFiles, setShowFiles] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
   const [filePanelWidth, setFilePanelWidth] = useState(260)
   const [dragging, setDragging] = useState(false)
   const [groupNotice, setGroupNotice] = useState('')
@@ -127,6 +131,17 @@ export default function ChatView() {
     } catch {}
   }
 
+  const handleDisband = async () => {
+    if (!convId) return
+    if (!confirm(t('group.disbandConfirm'))) return
+    try {
+      await conversationService.disband(convId)
+      conversationStore.removeConversation(convId)
+      setShowMenu(false)
+      navigate('/chat')
+    } catch {}
+  }
+
   const handleLeave = async () => {
     if (!convId) return
     if (!confirm(isGroup ? t('group.leaveConfirm') : t('conversation.leaveConfirm'))) return
@@ -144,7 +159,9 @@ export default function ChatView() {
     // Fetch notice for this specific group
     conversationService.getDetail(convId).then(d => {
       setGroupNotice(d.type === ConvType.Group && d.notice ? d.notice : '')
-    }).catch(() => { setGroupNotice('') })
+      const me = d.members?.find(m => m.user_id === user?.user_id)
+      setIsOwner(me?.role === ConvRole.Owner)
+    }).catch(() => { setGroupNotice(''); setIsOwner(false) })
     // Listen for push messages
     const u1 = wsClient.on(MessageType.MsgPush, (payload: unknown) => {
       const push = payload as MsgPushPayload
@@ -309,14 +326,27 @@ export default function ChatView() {
                 style={{ boxShadow: 'var(--shadow-md)' }}>
                 {!isSystem && (
                   <>
-                    <button onClick={() => { setShowDetail(true); setShowMenu(false) }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
-                      <Info size={14} /> {t('chat.detail')}
-                    </button>
-                    {isGroup && (
-                      <button onClick={() => { setShowMembers(true); setShowMenu(false) }}
+                    {isGroup ? (
+                      <>
+                        <button onClick={() => { setShowGroupBasic(true); setShowMenu(false) }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                          <Info size={14} /> {t('group.basicInfo')}
+                        </button>
+                        <button onClick={() => { setShowGroupSettings(true); setShowMenu(false) }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                          {t('group.settingsMenu')}
+                        </button>
+                        <button onClick={() => { setShowWebhook(true); setShowMenu(false) }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                          {t('group.webhookMenu')}
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => { setShowDetail(true); setShowMenu(false) }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
-                        <Users size={14} /> {t('group.members')}
+                        <Info size={14} /> {t('chat.detail')}
                       </button>
                     )}
                     <button onClick={() => { setShowHistory(true); setShowMenu(false) }}
@@ -334,6 +364,12 @@ export default function ChatView() {
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-ink)]">
                       <LogOut size={14} /> {t('group.leave')}
                     </button>
+                    {isGroup && isOwner && (
+                      <button onClick={handleDisband}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--destructive)]/10 text-[var(--destructive)]">
+                        <Trash2 size={14} /> {t('group.disband')}
+                      </button>
+                    )}
                   </>
                 )}
                 {isSystem && (
@@ -348,12 +384,17 @@ export default function ChatView() {
         </div>
       </div>
 
-      {/* Detail dialog */}
       {showDetail && isGroup && (
-        <GroupDetail convId={convId} onClose={() => setShowDetail(false)} />
+        <GroupBasicInfo convId={convId} onClose={() => setShowDetail(false)} />
       )}
-      {showMembers && (
-        <MemberListView convId={convId} onClose={() => setShowMembers(false)} />
+      {showGroupBasic && (
+        <GroupBasicInfo convId={convId} onClose={() => setShowGroupBasic(false)} />
+      )}
+      {showGroupSettings && (
+        <GroupSettings convId={convId} onClose={() => setShowGroupSettings(false)} />
+      )}
+      {showWebhook && (
+        <WebhookPanel convId={convId} onClose={() => setShowWebhook(false)} />
       )}
       {showDetail && !isGroup && (
         <P2PDetail convId={convId} onClose={() => setShowDetail(false)} />

@@ -216,7 +216,7 @@ export const authStore = {
     }
   },
 
-  async updateProfile(data: { name?: string; avatar?: string; cover?: string; email?: string; primary_color?: string; secondary_color?: string; discoverable?: boolean; allow_direct_chat?: boolean }) {
+  async updateProfile(data: { name?: string; avatar?: string; cover?: string; email?: string; primary_color?: string; secondary_color?: string; headline?: string; discoverable?: boolean; allow_direct_chat?: boolean }) {
     const cur = state.user
     // Always send all fields so server-side UPDATE doesn't wipe unchanged columns
     const body = {
@@ -226,6 +226,7 @@ export const authStore = {
       email: data.email ?? cur?.email ?? '',
       primary_color: data.primary_color ?? cur?.primary_color ?? '',
       secondary_color: data.secondary_color ?? cur?.secondary_color ?? '',
+      headline: data.headline ?? cur?.headline ?? '',
       discoverable: data.discoverable ?? cur?.discoverable ?? true,
       allow_direct_chat: data.allow_direct_chat ?? cur?.allow_direct_chat ?? true,
     }

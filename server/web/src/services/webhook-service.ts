@@ -1,5 +1,5 @@
 import { api } from './api-client'
-import type { ConvWebhook, WebhookAuditLog, WebhookMessage } from '@/types/webhook'
+import type { ConvWebhook } from '@/types/webhook'
 
 export const webhookService = {
   list(convId: string) {
@@ -11,7 +11,6 @@ export const webhookService = {
     callback_url?: string
     headers?: { key: string; value: string }[]
     cidr_whitelist?: string[]
-    require_audit?: boolean
   }) {
     return api.request<ConvWebhook & { token: string; api_key: string }>(
       `/api/v1/conversations/${convId}/webhooks`,
@@ -24,7 +23,6 @@ export const webhookService = {
     callback_url?: string
     headers?: { key: string; value: string }[]
     cidr_whitelist?: string[]
-    require_audit?: boolean
   }) {
     return api.request<{ status: string }>(
       `/api/v1/conversations/${convId}/webhooks/${id}`,
@@ -50,33 +48,6 @@ export const webhookService = {
     return api.request<{ status: string; msg_id: number; body: string }>(
       `/api/v1/conversations/${convId}/webhooks/${id}/test`,
       { method: 'POST' }
-    )
-  },
-
-  logs(convId: string, id: number, page = 1, size = 20) {
-    return api.request<{ items: WebhookAuditLog[]; total: number }>(
-      `/api/v1/conversations/${convId}/webhooks/${id}/logs`,
-      { query: { page: String(page), size: String(size) } }
-    )
-  },
-
-  pendingMessages(convId: string) {
-    return api.request<WebhookMessage[]>(
-      `/api/v1/conversations/${convId}/webhooks/pending`
-    )
-  },
-
-  approveMessage(msgId: number, reason?: string) {
-    return api.request<{ status: string }>(
-      `/api/v1/webhooks/messages/${msgId}/approve`,
-      { method: 'POST', body: reason ? { reason } : {} }
-    )
-  },
-
-  rejectMessage(msgId: number, reason?: string) {
-    return api.request<{ status: string }>(
-      `/api/v1/webhooks/messages/${msgId}/reject`,
-      { method: 'POST', body: reason ? { reason } : {} }
     )
   },
 }

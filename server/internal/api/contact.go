@@ -112,6 +112,7 @@ func (h *ContactHandler) List(w http.ResponseWriter, r *http.Request) {
 		if u, ok := userMap[c.ContactID]; ok {
 			item["name"] = u.Name
 			item["avatar"] = u.Avatar
+			item["headline"] = u.Headline
 			if h.sessMgr.IsOnline(r.Context(), u.ID) {
 				item["status"] = model.UserOnline
 			} else {

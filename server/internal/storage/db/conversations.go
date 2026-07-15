@@ -20,17 +20,17 @@ func NewConvRepo(pool DBPool) *ConvRepo {
 
 func (r *ConvRepo) Create(ctx context.Context, c *model.Conversation) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt))
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at, headline)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt), c.Headline)
 	return err
 }
 
 func (r *ConvRepo) CreateTx(ctx context.Context, tx pgx.Tx, c *model.Conversation) error {
 	_, err := tx.Exec(ctx,
-		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt))
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at, headline)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt), c.Headline)
 	return err
 }
 
@@ -39,9 +39,9 @@ func (r *ConvRepo) Get(ctx context.Context, convID string) (*model.Conversation,
 	var lastMsgAt *time.Time
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}')
+		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline
 		 FROM conversations WHERE conv_id = $1`, convID).
-		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt, &c.Settings)
+		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt, &c.Settings, &c.Headline)
 	if err != nil {
 		return nil, err
 	}
@@ -273,6 +273,7 @@ type GroupSearchItem struct {
 	ConvID      string `json:"conv_id"`
 	Name        string `json:"name"`
 	Avatar      string `json:"avatar"`
+	Headline    string `json:"headline"`
 	OwnerID     string `json:"owner_id"`
 	MemberCount int    `json:"member_count"`
 	CreatedAt   int64  `json:"created_at"`
@@ -281,17 +282,17 @@ type GroupSearchItem struct {
 func (r *ConvRepo) SearchByName(ctx context.Context, q string, page, size int) ([]*GroupSearchItem, int, error) {
 	var total int
 	err := r.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM conversations WHERE type = $1 AND name ILIKE $2`,
+		`SELECT COUNT(*) FROM conversations WHERE type = $1 AND name ILIKE $2 AND COALESCE((settings->>'discoverable')::boolean, true) <> false`,
 		model.ConvGroup, "%"+q+"%").Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 	offset := (page - 1) * size
 	rows, err := r.pool.Query(ctx,
-		`SELECT c.conv_id, c.name, c.avatar, c.owner_id, COALESCE(mc.count, 0), c.created_at
+		`SELECT c.conv_id, c.name, c.avatar, c.headline, c.owner_id, COALESCE(mc.count, 0), c.created_at
 		 FROM conversations c
 		 LEFT JOIN (SELECT conv_id, COUNT(*) AS count FROM conv_members GROUP BY conv_id) mc ON mc.conv_id = c.conv_id
-		 WHERE c.type = $1 AND c.name ILIKE $2
+		 WHERE c.type = $1 AND c.name ILIKE $2 AND COALESCE((c.settings->>'discoverable')::boolean, true) <> false
 		 ORDER BY c.created_at DESC
 		 LIMIT $3 OFFSET $4`,
 		model.ConvGroup, "%"+q+"%", size, offset)
@@ -303,7 +304,7 @@ func (r *ConvRepo) SearchByName(ctx context.Context, q string, page, size int) (
 	for rows.Next() {
 		item := &GroupSearchItem{}
 		var createdAt time.Time
-		if err := rows.Scan(&item.ConvID, &item.Name, &item.Avatar, &item.OwnerID, &item.MemberCount, &createdAt); err != nil {
+		if err := rows.Scan(&item.ConvID, &item.Name, &item.Avatar, &item.Headline, &item.OwnerID, &item.MemberCount, &createdAt); err != nil {
 			return nil, 0, err
 		}
 		item.CreatedAt = createdAt.UnixMilli()
@@ -327,6 +328,12 @@ func (r *ConvRepo) UpdateCover(ctx context.Context, convID, cover string) error 
 func (r *ConvRepo) UpdateNotice(ctx context.Context, convID, notice string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE conversations SET notice = $1 WHERE conv_id = $2`, notice, convID)
+	return err
+}
+
+func (r *ConvRepo) UpdateHeadline(ctx context.Context, convID, headline string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conversations SET headline = $1 WHERE conv_id = $2`, headline, convID)
 	return err
 }
 
@@ -373,8 +380,8 @@ func (r *ConvRepo) Clone(ctx context.Context, srcConvID, newConvID, ownerID stri
 	defer tx.Rollback(ctx)
 
 	_, err = tx.Exec(ctx,
-		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, notice, max_members, created_at)
-		 SELECT $1, type, $2, $3, avatar, notice, max_members, NOW() FROM conversations WHERE conv_id = $4`,
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, notice, headline, max_members, created_at)
+		 SELECT $1, type, $2, $3, avatar, notice, headline, max_members, NOW() FROM conversations WHERE conv_id = $4`,
 		newConvID, name, ownerID, srcConvID)
 	if err != nil {
 		return err

@@ -20,14 +20,14 @@ export const conversationService = {
     })
   },
 
-  createGroup(name: string, memberIds: string[], avatar?: string) {
+  createGroup(name: string, headline: string, memberIds: string[], avatar?: string) {
     return api.request<{ conv_id: string }>('/api/v1/conversations/group', {
       method: 'POST',
-      body: { name, member_ids: memberIds, avatar },
+      body: { name, headline, member_ids: memberIds, avatar },
     })
   },
 
-  updateGroup(convId: string, data: { name?: string; avatar?: string; notice?: string; cover?: string }) {
+  updateGroup(convId: string, data: { name?: string; avatar?: string; notice?: string; cover?: string; headline?: string }) {
     return api.request<null>(`/api/v1/conversations/${convId}`, { method: 'PUT', body: data })
   },
 
@@ -62,6 +62,12 @@ export const conversationService = {
     })
   },
 
+  disband(convId: string) {
+    return api.request<{ status: string }>(`/api/v1/conversations/${convId}/disband`, {
+      method: 'POST',
+    })
+  },
+
   markRead(convId: string, msgId: number) {
     return api.request<null>(`/api/v1/conversations/${convId}/read`, {
       method: 'POST',
@@ -92,7 +98,7 @@ export const conversationService = {
   },
 
   searchGroups(query: string) {
-    return api.request<ConvListItem[]>('/api/v1/groups/search', { query: { q: query } })
+    return api.request<PaginatedData<ConvListItem>>('/api/v1/groups/search', { query: { q: query } }).then(d => d.items)
   },
 
   getUnreadTotal() {

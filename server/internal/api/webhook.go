@@ -53,15 +53,13 @@ type whSysMsgSender interface {
 	SendSystemMessage(ctx context.Context, convID, body string, senderID ...string) (*model.Message, error)
 }
 
-
-
 // ---------- rate limiter per IP ----------
 
 type ipRateLimiter struct {
-	mu        sync.Mutex
-	buckets   map[string]*ipBucket
-	rate      int
-	burst     int
+	mu      sync.Mutex
+	buckets map[string]*ipBucket
+	rate    int
+	burst   int
 }
 
 type ipBucket struct {
@@ -175,15 +173,15 @@ type whSeqCache interface {
 
 type WebhookHandler struct {
 	webhookDB db.ConvWebhookDB
-	idGen    whIDGen
-	convMgr  whConvManager
-	userDB   whUserGetter
-	store    whMessageStore
-	router   whRouter
-	pusher   whPusher
-	seqCache whSeqCache
-	sysMsg   whSysMsgSender
-	rateLmt  *ipRateLimiter
+	idGen     whIDGen
+	convMgr   whConvManager
+	userDB    whUserGetter
+	store     whMessageStore
+	router    whRouter
+	pusher    whPusher
+	seqCache  whSeqCache
+	sysMsg    whSysMsgSender
+	rateLmt   *ipRateLimiter
 }
 
 func NewWebhookHandler(
@@ -262,7 +260,6 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 		CallbackURL   string                `json:"callback_url"`
 		Headers       []model.WebhookHeader `json:"headers"`
 		CIDRWhitelist []string              `json:"cidr_whitelist"`
-		RequireAudit  bool                  `json:"require_audit"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_json"))
@@ -273,11 +270,6 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := generateToken("wh_")
-	if err != nil {
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
-		return
-	}
 	apiKey, err := generateToken("")
 	if err != nil {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
@@ -299,20 +291,17 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	wh := &model.ConvWebhook{
 		ConvID:        convID,
 		Name:          body.Name,
-		Token:         token,
 		APIKeyPlain:   apiKey,
 		APIKeyHash:    hash,
 		CallbackURL:   body.CallbackURL,
 		Headers:       body.Headers,
 		CIDRWhitelist: body.CIDRWhitelist,
-		RequireAudit:  body.RequireAudit,
 		CreatedBy:     userID,
 	}
 
 	created, err := h.webhookDB.Create(r.Context(), wh)
 	if err != nil {
 		logger.Error("create webhook failed", "error", err)
-		// Check for unique constraint violation
 		if strings.Contains(err.Error(), "unique") || strings.Contains(err.Error(), "duplicate") {
 			BadRequest(w, r, "webhook name already exists in this conversation")
 			return
@@ -347,7 +336,6 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 		CallbackURL   string                `json:"callback_url"`
 		Headers       []model.WebhookHeader `json:"headers"`
 		CIDRWhitelist []string              `json:"cidr_whitelist"`
-		RequireAudit  *bool                 `json:"require_audit"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_json"))
@@ -363,9 +351,6 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.CIDRWhitelist != nil {
 		wh.CIDRWhitelist = body.CIDRWhitelist
-	}
-	if body.RequireAudit != nil {
-		wh.RequireAudit = *body.RequireAudit
 	}
 
 	if err := h.webhookDB.Update(r.Context(), wh); err != nil {
@@ -420,20 +405,21 @@ func (h *WebhookHandler) Test(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send a test message using the webhook's identity
 	now := time.Now().UnixMilli()
 	msgID := h.idGen.NextID()
 	convSeq, _ := h.seqCache.GetAndIncrementConvSeq(r.Context(), wh.ConvID)
 	msg := &model.Message{
-		MsgID:       msgID,
-		ConvID:      wh.ConvID,
-		SenderID:    fmt.Sprintf("webhook:%d", wh.ID),
-		SenderName:  wh.Name,
-		ContentType: 0,
-		Body:        fmt.Sprintf("🔔 Webhook 测试消息 (%d)", now%10000),
-		Timestamp:   now,
-		ConvSeq:     convSeq,
-		Status:      model.MsgSent,
+		MsgID:           msgID,
+		ConvID:          wh.ConvID,
+		SenderID:        fmt.Sprintf("webhook:%d", wh.ID),
+		SenderSessionID: fmt.Sprintf("test:%d", now),
+		SenderName:      wh.Name,
+		ContentType:     0,
+		Body:            fmt.Sprintf("🔔 Webhook 测试消息 (%d)", now%10000),
+		Timestamp:       now,
+		ClientSeq:       now,
+		ConvSeq:         convSeq,
+		Status:          model.MsgSent,
 	}
 	if err := h.store.Insert(r.Context(), msg); err != nil {
 		logger.Error("test webhook persist failed", "error", err)
@@ -441,7 +427,6 @@ func (h *WebhookHandler) Test(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Push to conversation
 	targets := h.router.Route(r.Context(), msg)
 	if len(targets) > 0 {
 		h.pusher.Push(r.Context(), msg, targets)
@@ -488,7 +473,6 @@ func (h *WebhookHandler) RegenerateKey(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	// Also update the plaintext api_key
 	wh.APIKeyPlain = apiKey
 	if err := h.webhookDB.Update(r.Context(), wh); err != nil {
 		logger.Error("update api_key_plain failed", "id", webhookID, "error", err)
@@ -496,169 +480,38 @@ func (h *WebhookHandler) RegenerateKey(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"api_key": apiKey})
 }
 
-// ---------- audit logs ----------
-
-func (h *WebhookHandler) Logs(w http.ResponseWriter, r *http.Request) {
-	convID := chi.URLParam(r, "conv_id")
-	userID := auth.UserFromCtx(r.Context())
-	if !h.isConvAdmin(r.Context(), convID, userID) {
-		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
-		return
-	}
-	page, size := parsePageSize(r)
-	logs, total, err := h.webhookDB.ListAuditLogs(r.Context(), convID, page, size)
-	if err != nil {
-		logger.Error("list audit logs failed", "conv_id", convID, "error", err)
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
-		return
-	}
-	if logs == nil {
-		logs = []*model.WebhookAuditLog{}
-	}
-	Paginated(w, logs, total, page, size)
-}
-
-// ---------- pending messages ----------
-
-func (h *WebhookHandler) PendingMessages(w http.ResponseWriter, r *http.Request) {
-	convID := chi.URLParam(r, "conv_id")
-	userID := auth.UserFromCtx(r.Context())
-	if !h.isConvAdmin(r.Context(), convID, userID) {
-		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
-		return
-	}
-	list, err := h.webhookDB.ListPendingAudit(r.Context(), convID)
-	if err != nil {
-		logger.Error("list pending audit failed", "conv_id", convID, "error", err)
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
-		return
-	}
-	if list == nil {
-		list = []*model.WebhookMessage{}
-	}
-	JSON(w, list)
-}
-
-// ---------- approve / reject ----------
-
-type auditActionReq struct {
-	Reason string `json:"reason,omitempty"`
-}
-
-func (h *WebhookHandler) ApproveMessage(w http.ResponseWriter, r *http.Request) {
-	h.handleAudit(w, r, "approved")
-}
-
-func (h *WebhookHandler) RejectMessage(w http.ResponseWriter, r *http.Request) {
-	h.handleAudit(w, r, "rejected")
-}
-
-func (h *WebhookHandler) handleAudit(w http.ResponseWriter, r *http.Request, newStatus string) {
-	msgID, err := strconvParseInt(chi.URLParam(r, "msg_id"))
-	if err != nil {
-		BadRequest(w, r, "invalid msg_id")
-		return
-	}
-	userID := auth.UserFromCtx(r.Context())
-
-	wm, err := h.webhookDB.GetWebhookMessage(r.Context(), msgID)
-	if err != nil {
-		NotFound(w, r)
-		return
-	}
-	if wm.AuditStatus != "pending" {
-		BadRequest(w, r, "message is not pending audit")
-		return
-	}
-
-	// Verify admin
-	if !h.isConvAdmin(r.Context(), wm.ConvID, userID) {
-		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
-		return
-	}
-
-	var body auditActionReq
-	json.NewDecoder(r.Body).Decode(&body)
-
-	// Update status
-	if err := h.webhookDB.UpdateAuditStatus(r.Context(), msgID, newStatus, userID); err != nil {
-		logger.Error("update audit status failed", "msg_id", msgID, "error", err)
-		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
-		return
-	}
-
-	// Write audit log
-	h.webhookDB.InsertAuditLog(r.Context(), &model.WebhookAuditLog{
-		WebhookID: wm.WebhookID,
-		ConvID:    wm.ConvID,
-		MsgID:     msgID,
-		Action:    newStatus,
-		ActorID:   userID,
-		Reason:    body.Reason,
-		CreatedAt: time.Now().UnixMilli(),
-	})
-
-	// If approved, push to all members
-	if newStatus == "approved" {
-		h.pushWebhookMessage(r.Context(), wm.ConvID, msgID)
-	}
-
-	JSON(w, map[string]string{"status": newStatus})
-}
-
-func (h *WebhookHandler) pushWebhookMessage(ctx context.Context, convID string, msgID int64) {
-	msg := &model.Message{MsgID: msgID, ConvID: convID, Status: model.MsgSent}
-	targets := h.router.Route(ctx, msg)
-	if len(targets) > 0 {
-		h.pusher.Push(ctx, msg, targets)
-	}
-}
-
 // ---------- receive message (public) ----------
 
 type webhookReceiveReq struct {
-	ContentType int      `json:"content_type"`
-	Body        string   `json:"body"`
-	ReplyTo     int64    `json:"reply_to"`
+	ContentType int   `json:"content_type"`
+	Body        string `json:"body"`
+	ReplyTo     int64  `json:"reply_to"`
 }
 
 func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) {
-	token := chi.URLParam(r, "token")
-
-	// Rate limit
 	ip := callerIP(r)
 	if !h.rateLmt.Allow(ip) {
 		writeJSONError(w, http.StatusTooManyRequests, 429, "too many requests")
 		return
 	}
 
-	// Lookup webhook by token
-	wh, err := h.webhookDB.GetByToken(r.Context(), token)
+	providedKey := extractBearerToken(r)
+	if providedKey == "" {
+		writeJSONError(w, http.StatusUnauthorized, 401, "missing api key")
+		return
+	}
+
+	wh, err := h.webhookDB.GetByAPIKey(r.Context(), providedKey)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, 404, "not found")
 		return
 	}
 
-	// API key verification
-	if wh.APIKeyHash != "" {
-		providedKey := extractBearerToken(r)
-		if providedKey == "" {
-			writeJSONError(w, http.StatusUnauthorized, 401, "missing api key")
-			return
-		}
-		if err := bcrypt.CompareHashAndPassword([]byte(wh.APIKeyHash), []byte(providedKey)); err != nil {
-			writeJSONError(w, http.StatusUnauthorized, 401, "invalid api key")
-			return
-		}
-	}
-
-	// CIDR check
 	if !checkCIDR(wh.CIDRWhitelist, ip) {
 		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: "ip not in whitelist"})
 		return
 	}
 
-	// Parse body
 	var req webhookReceiveReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, 400, "invalid json")
@@ -673,10 +526,9 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if req.ContentType == 0 {
-		req.ContentType = 1 // default to text
+		req.ContentType = 1
 	}
 
-	// Build message
 	now := time.Now().UnixMilli()
 	msgID := h.idGen.NextID()
 	convSeq, err := h.seqCache.GetAndIncrementConvSeq(r.Context(), wh.ConvID)
@@ -688,71 +540,24 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 
 	senderID := fmt.Sprintf("webhook:%d", wh.ID)
 	msg := &model.Message{
-		MsgID:       msgID,
-		ConvID:      wh.ConvID,
-		SenderID:    senderID,
-		SenderName:  wh.Name,
-		ContentType: model.ContentType(req.ContentType),
-		Body:        req.Body,
-		ReplyTo:     req.ReplyTo,
-		Timestamp:   now,
-		ConvSeq:     convSeq,
-		Status:      model.MsgSent,
+		MsgID:           msgID,
+		ConvID:          wh.ConvID,
+		SenderID:        senderID,
+		SenderSessionID: fmt.Sprintf("wh:%d", now),
+		SenderName:      wh.Name,
+		ContentType:     model.ContentType(req.ContentType),
+		Body:            req.Body,
+		ReplyTo:         req.ReplyTo,
+		Timestamp:       now,
+		ClientSeq:       now,
+		ConvSeq:         convSeq,
+		Status:          model.MsgSent,
 	}
 
-	// Persist
 	if err := h.store.Insert(r.Context(), msg); err != nil {
 		logger.Error("persist webhook message failed", "error", err)
 		http.Error(w, `{"code":500,"msg":"server error"}`, http.StatusInternalServerError)
 		return
-	}
-
-	// Record webhook_message association
-	wm := &model.WebhookMessage{
-		MsgID:     msgID,
-		WebhookID: wh.ID,
-		ConvID:    wh.ConvID,
-		SourceIP:  ip,
-		CreatedAt: now,
-	}
-
-	// Audit flow
-	if wh.RequireAudit {
-		wm.AuditStatus = "pending"
-		if err := h.webhookDB.InsertWebhookMessage(r.Context(), wm); err != nil {
-			logger.Error("insert webhook_message failed", "error", err)
-		}
-
-		// Only push to admins
-		h.pushToAdmins(r.Context(), wh.ConvID, msg)
-
-		// Notify admins
-		h.sysMsg.SendSystemMessage(r.Context(), wh.ConvID,
-			fmt.Sprintf("webhook %s 发来一条消息待审核", wh.Name))
-
-		// Audit log
-		h.webhookDB.InsertAuditLog(r.Context(), &model.WebhookAuditLog{
-			WebhookID: wh.ID,
-			ConvID:    wh.ConvID,
-			MsgID:     msgID,
-			Action:    "send",
-			ActorID:   senderID,
-			CallerIP:  ip,
-			CreatedAt: now,
-		})
-
-		JSON(w, map[string]any{
-			"msg_id":       msgID,
-			"audit_status": "pending",
-			"timestamp":    now,
-		})
-		return
-	}
-
-	// No audit required — push to all
-	wm.AuditStatus = ""
-	if err := h.webhookDB.InsertWebhookMessage(r.Context(), wm); err != nil {
-		logger.Error("insert webhook_message failed", "error", err)
 	}
 
 	targets := h.router.Route(r.Context(), msg)
@@ -760,57 +565,12 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 		h.pusher.Push(r.Context(), msg, targets)
 	}
 
-	// Audit log
-	h.webhookDB.InsertAuditLog(r.Context(), &model.WebhookAuditLog{
-		WebhookID: wh.ID,
-		ConvID:    wh.ConvID,
-		MsgID:     msgID,
-		Action:    "send",
-		ActorID:   senderID,
-		CallerIP:  ip,
-		CreatedAt: now,
-	})
-
 	h.seqCache.SetRecentMsg(r.Context(), wh.ConvID, msgID, float64(msgID))
 
 	JSON(w, map[string]any{
-		"msg_id":       msgID,
-		"audit_status": "approved",
-		"timestamp":    now,
+		"msg_id":    msgID,
+		"timestamp": now,
 	})
-}
-
-func (h *WebhookHandler) pushToAdmins(ctx context.Context, convID string, msg *model.Message) {
-	members, err := h.convMgr.GetMembers(ctx, convID)
-	if err != nil {
-		return
-	}
-	var adminIDs []string
-	for _, m := range members {
-		if m.Role == model.ConvRoleAdmin || m.Role == model.ConvRoleOwner {
-			adminIDs = append(adminIDs, m.UserID)
-		}
-	}
-	if len(adminIDs) == 0 {
-		return
-	}
-	// Route to specific admin sessions
-	targets := h.router.Route(ctx, msg)
-	if len(targets) > 0 {
-		// Filter targets to admins only
-		var filtered []message.RouteTarget
-		for _, t := range targets {
-			for _, aid := range adminIDs {
-				if t.UserID == aid {
-					filtered = append(filtered, t)
-					break
-				}
-			}
-		}
-		if len(filtered) > 0 {
-			h.pusher.Push(ctx, msg, filtered)
-		}
-	}
 }
 
 // ---------- helpers ----------
@@ -819,7 +579,7 @@ func strconvParseInt(s string) (int64, error) {
 	var n int64
 	for _, c := range s {
 		if c < '0' || c > '9' {
-			return 0, fmt.Errorf("not a number: %s", s)
+			return 0, fmt.Errorf("not a number: %s", c)
 		}
 		n = n*10 + int64(c-'0')
 	}
@@ -850,15 +610,11 @@ func extractBearerToken(r *http.Request) string {
 	return ""
 }
 
-// ---------- HMAC signature (for outgoing callbacks) ----------
-
 func ComputeSignature(secret []byte, body []byte) string {
 	mac := hmac.New(sha256.New, secret)
 	mac.Write(body)
 	return hex.EncodeToString(mac.Sum(nil))
 }
-
-// ---------- extract @mentions from message body ----------
 
 func ExtractMentions(body string) map[string]bool {
 	result := make(map[string]bool)

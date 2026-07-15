@@ -143,7 +143,11 @@
     "webhookCIDRLabel": "CIDR",
     "webhookAuditLabel": "审核",
     "fileChangeNotify": "文件变更通知",
-    "fileChangeNotifyHint": "文件上传或删除时在会话内发送系统消息"
+    "fileChangeNotifyHint": "文件上传或删除时在会话内发送系统消息",
+    "discoverable": "可被搜索",
+    "discoverableHint": "允许用户通过搜索找到该群组",
+    "webhookUsageExamples": "使用示例",
+    "webhookHeadersHint": "每行一个，格式：Key: Value"
   },
   "group": {
     "detail": "群组信息",
@@ -173,7 +177,16 @@
     "searchMember": "搜索用户...",
     "searchBtn": "搜索",
     "cancel": "取消",
-    "me": " (我)"
+    "me": " (我)",
+    "basicInfo": "基本信息",
+    "settingsMenu": "会话设置",
+    "webhookMenu": "Webhook",
+    "settingsTitle": "会话设置",
+    "editTitle": "编辑群组",
+    "name": "群名称",
+    "headline": "群简介",
+    "disband": "解散群组",
+    "disbandConfirm": "确定解散该群组？所有成员将被移除。"
   },
   "contact": {
     "title": "联系人",
@@ -237,7 +250,9 @@
     "dangerZone": "危险操作",
     "deleteAccount": "注销账号",
     "deleteAccountConfirm": "确定注销账号？此操作不可恢复，所有数据将被清除。",
-    "deleteAccountConfirm2": "再次确认：注销后将清除你的联系人、消息记录、会话等所有信息。"
+    "deleteAccountConfirm2": "再次确认：注销后将清除你的联系人、消息记录、会话等所有信息。",
+    "headlinePlaceholder": "个性签名",
+    "editTitle": "编辑资料"
   },
   "settings": {
     "title": "应用设置",

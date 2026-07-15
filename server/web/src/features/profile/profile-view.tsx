@@ -7,6 +7,7 @@ import { avatarUrl } from '@/lib/file'
 import { fileService } from '@/services/file-service'
 import { UserType } from '@/types/user'
 import { X, Edit, LogOut, Settings, Bot, Camera, Smartphone, Copy, Check, Shield } from 'lucide-react'
+import ProfileEditView from './profile-edit-view'
 
 interface Props { onClose: () => void }
 
@@ -14,22 +15,13 @@ export default function ProfileView({ onClose }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(user?.name || '')
-  const [primaryColor, setPrimaryColor] = useState(user?.primary_color || '#0F172A')
-  const [secondaryColor, setSecondaryColor] = useState(user?.secondary_color || '#64748B')
-  const [saving, setSaving] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [copied, setCopied] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
 
-  const handleSave = async () => {
-    setSaving(true)
-    try { await authStore.updateProfile({ name, primary_color: primaryColor, secondary_color: secondaryColor }); setEditing(false) } catch {}
-    setSaving(false)
-  }
   const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     setUploading(true)
@@ -49,6 +41,7 @@ export default function ProfileView({ onClose }: Props) {
   const isAgent = user?.type === UserType.Agent
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
       <div className="w-[360px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
@@ -65,7 +58,7 @@ export default function ProfileView({ onClose }: Props) {
           </button>
           <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCover} className="hidden" />
           <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
-            <button onClick={() => setEditing(!editing)} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
+            <button onClick={() => setShowEdit(true)} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
               <Edit size={15} />
             </button>
             <button onClick={onClose} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
@@ -99,6 +92,7 @@ export default function ProfileView({ onClose }: Props) {
             {user?.name || '—'}
             {isAgent && <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-purple-500/10 text-purple-600 font-medium uppercase tracking-wider">Agent</span>}
           </div>
+          {user?.headline && <div className="text-sm text-[var(--color-muted)] mt-1">{user.headline}</div>}
           <div className="text-sm text-[var(--color-muted)]">@{user?.account || '—'}</div>
         </div>
 
@@ -111,26 +105,6 @@ export default function ProfileView({ onClose }: Props) {
             </button>
           </div>
         </div>
-
-        {/* Edit mode */}
-        {editing && (
-          <div className="px-6 mb-4 space-y-3">
-            <input type="text" value={name} onChange={e => setName(e.target.value)}
-              placeholder={t('profile.nicknamePlaceholder')}
-              className="w-full h-10 px-3.5 rounded-xl bg-[var(--color-surface-soft)] text-sm text-[var(--color-ink)] outline-none border border-[var(--color-hairline)] focus:border-[var(--color-primary)]" />
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-xs text-[var(--color-muted)]">{t('profile.primaryColor')}
-                <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer" /></label>
-              <label className="flex items-center gap-2 text-xs text-[var(--color-muted)]">{t('profile.secondaryColor')}
-                <input type="color" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer" /></label>
-            </div>
-            {uploading && <p className="text-[11px] text-[var(--color-muted)]">{t('profile.uploadingAvatar')}</p>}
-            <button onClick={handleSave} disabled={saving}
-              className="w-full h-10 rounded-xl bg-[var(--color-primary)] text-white text-sm font-medium transition-colors disabled:opacity-40">
-              {saving ? t('profile.saving') : t('profile.save')}
-            </button>
-          </div>
-        )}
 
         {/* Actions */}
         <div className="px-4 pb-4 space-y-0.5">
@@ -155,5 +129,7 @@ export default function ProfileView({ onClose }: Props) {
         </div>
       </div>
     </div>
+    {showEdit && <ProfileEditView onClose={() => setShowEdit(false)} />}
+    </>
   )
 }

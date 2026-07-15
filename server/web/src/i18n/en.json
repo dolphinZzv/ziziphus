@@ -143,7 +143,11 @@
     "webhookCIDRLabel": "CIDR",
     "webhookAuditLabel": "Review",
     "fileChangeNotify": "File Change Notifications",
-    "fileChangeNotifyHint": "Send system messages when files are uploaded or deleted"
+    "fileChangeNotifyHint": "Send system messages when files are uploaded or deleted",
+    "discoverable": "Discoverable",
+    "discoverableHint": "Allow users to find this group via search",
+    "webhookUsageExamples": "Usage Examples",
+    "webhookHeadersHint": "One per line, format: Key: Value"
   },
   "group": {
     "detail": "Group Info",
@@ -173,7 +177,16 @@
     "searchMember": "Search users...",
     "searchBtn": "Search",
     "cancel": "Cancel",
-    "me": " (me)"
+    "me": " (me)",
+    "basicInfo": "Basic Info",
+    "settingsMenu": "Settings",
+    "webhookMenu": "Webhook",
+    "settingsTitle": "Conversation Settings",
+    "editTitle": "Edit Group",
+    "name": "Name",
+    "headline": "Headline",
+    "disband": "Disband Group",
+    "disbandConfirm": "Disband this group? All members will be removed."
   },
   "contact": {
     "title": "Contacts",
@@ -237,7 +250,9 @@
     "dangerZone": "Danger Zone",
     "deleteAccount": "Delete Account",
     "deleteAccountConfirm": "Delete your account? This action cannot be undone. All data will be erased.",
-    "deleteAccountConfirm2": "Confirm again: This will permanently delete all your contacts, messages, and conversations."
+    "deleteAccountConfirm2": "Confirm again: This will permanently delete all your contacts, messages, and conversations.",
+    "headlinePlaceholder": "Headline",
+    "editTitle": "Edit Profile"
   },
   "settings": {
     "title": "App Settings",

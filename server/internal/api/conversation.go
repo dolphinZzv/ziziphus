@@ -52,11 +52,12 @@ type readMarker interface {
 
 type convManager interface {
 	Get(ctx context.Context, convID string) (*model.Conversation, error)
-	CreateGroup(ctx context.Context, name, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error)
+	CreateGroup(ctx context.Context, name, headline, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error)
 	GetOrCreateP2P(ctx context.Context, userA, userB string) (*model.Conversation, error)
 	AddMember(ctx context.Context, convID, userID, operatorID string) error
 	RemoveMember(ctx context.Context, convID, userID, operatorID string) error
 	Leave(ctx context.Context, convID, userID string) error
+	Disband(ctx context.Context, convID, ownerID string) error
 	GetMembers(ctx context.Context, convID string) ([]*model.ConvMember, error)
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
 	GetMemberRole(ctx context.Context, convID, userID string) (model.ConvRole, error)
@@ -91,6 +92,7 @@ func (h *ConvHandler) sendSysMsgWithName(ctx context.Context, convID, key, userI
 type createGroupReq struct {
 	Name      string   `json:"name"`
 	MemberIDs []string `json:"member_ids"`
+	Headline  string   `json:"headline"`
 }
 
 func (h *ConvHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -148,6 +150,7 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 		"avatar":       conv.Avatar,
 		"cover":        conv.Cover,
 		"notice":       conv.Notice,
+		"headline":     conv.Headline,
 		"members":      members,
 		"unread_count": unread,
 		"created_at":   conv.CreatedAt,
@@ -306,7 +309,7 @@ func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	req.MemberIDs = uniqueIDs
-	conv, err := h.convMgr.CreateGroup(r.Context(), req.Name, userID, req.MemberIDs, h.idGen)
+	conv, err := h.convMgr.CreateGroup(r.Context(), req.Name, req.Headline, userID, req.MemberIDs, h.idGen)
 	if err != nil {
 		logger.Error("create group failed", "error", err)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
@@ -661,6 +664,21 @@ func (h *ConvHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	JSON(w, map[string]any{"settings": body.Settings})
+}
+
+func (h *ConvHandler) Disband(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	userID := auth.UserFromCtx(r.Context())
+
+	if err := h.convMgr.Disband(r.Context(), convID, userID); err != nil {
+		if appErr, ok := err.(*model.AppError); ok {
+			Error(w, r, http.StatusForbidden, appErr)
+			return
+		}
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]string{"status": "disbanded"})
 }
 
 func (h *ConvHandler) Clone(w http.ResponseWriter, r *http.Request) {

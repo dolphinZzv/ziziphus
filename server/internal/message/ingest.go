@@ -40,8 +40,6 @@ type userGetter interface {
 
 type whForwarder interface {
 	ListByConvID(ctx context.Context, convID string) ([]*model.ConvWebhook, error)
-	GetByConvIDAndName(ctx context.Context, convID, name string) (*model.ConvWebhook, error)
-	InsertAuditLog(ctx context.Context, log *model.WebhookAuditLog) error
 }
 
 type contactCreator interface {
@@ -535,17 +533,7 @@ func (in *Ingest) sendWebhookWithRetry(ctx context.Context, wh *model.ConvWebhoo
 }
 
 func (in *Ingest) logWhAudit(ctx context.Context, whID int64, msgID int64, action, reason string) {
-	log := &model.WebhookAuditLog{
-		WebhookID: whID,
-		MsgID:     msgID,
-		Action:    action,
-		Reason:    reason,
-		ActorID:   "system",
-		CreatedAt: time.Now().UnixMilli(),
-	}
-	if err := in.whDB.InsertAuditLog(ctx, log); err != nil {
-		logger.Warn("failed to write webhook audit log", "error", err)
-	}
+	logger.Info("webhook forward", "webhook_id", whID, "msg_id", msgID, "action", action, "reason", reason)
 }
 
 func buildWebhookPayload(whID int64, msg *model.Message) map[string]any {

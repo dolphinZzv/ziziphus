@@ -46,7 +46,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Get("/health", h.Health)
 		r.Get("/metrics", promhttp.Handler().ServeHTTP)
 		r.Post("/api/v1/auth/mfa/verify", h.User.MFAVerifyLogin)
-		r.Post("/api/v1/webhooks/{token}", h.Webhook.ReceiveMessage)
+		r.Post("/api/v1/webhooks/receive", h.Webhook.ReceiveMessage)
 	})
 
 	// Authenticated routes
@@ -79,6 +79,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/conversations/{conv_id}/members", h.Conversation.AddMembers)
 		r.Delete("/api/v1/conversations/{conv_id}/members/{user_id}", h.Conversation.RemoveMember)
 		r.Post("/api/v1/conversations/{conv_id}/leave", h.Conversation.Leave)
+			r.Post("/api/v1/conversations/{conv_id}/disband", h.Conversation.Disband)
 		r.Post("/api/v1/conversations/{conv_id}/read", h.Conversation.MarkRead)
 		r.Post("/api/v1/conversations/{conv_id}/join-requests", h.Conversation.RequestJoin)
 		r.Get("/api/v1/conversations/{conv_id}/join-requests", h.Conversation.ListJoinRequests)
@@ -96,11 +97,6 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Delete("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}", h.Webhook.Delete)
 		r.Post("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/regenerate-key", h.Webhook.RegenerateKey)
 r.Post("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/test", h.Webhook.Test)
-		r.Get("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/logs", h.Webhook.Logs)
-		r.Get("/api/v1/conversations/{conv_id}/webhooks/pending", h.Webhook.PendingMessages)
-		// Audit
-		r.Post("/api/v1/webhooks/messages/{msg_id}/approve", h.Webhook.ApproveMessage)
-		r.Post("/api/v1/webhooks/messages/{msg_id}/reject", h.Webhook.RejectMessage)
 		r.Get("/api/v1/conversations/{conv_id}/files", h.File.ListConvFiles)
 		r.Delete("/api/v1/conversations/{conv_id}/files/{file_id}", h.File.DeleteConvFile)
 		r.Post("/api/v1/conversations/{conv_id}/folders", h.File.CreateFolder)

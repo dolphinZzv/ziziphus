@@ -169,6 +169,7 @@ export default function ContactList({ onClose, inline }: Props) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm text-[var(--color-ink)]">{displayName}</div>
+                {contact.headline && <div className="text-[11px] text-[var(--color-muted)] truncate">{contact.headline}</div>}
                 <div className="text-[11px] text-[var(--color-muted)]">{isOnline ? t('contact.online') : t('contact.offline')}</div>
               </div>
               <button onClick={() => handleChat(contact.user_id)}
