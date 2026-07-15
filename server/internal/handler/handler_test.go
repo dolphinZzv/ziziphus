@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"siciv.space/agent/panda_ai/internal/auth"
-	"siciv.space/agent/panda_ai/internal/gateway"
-	"siciv.space/agent/panda_ai/pkg/model"
-	"siciv.space/agent/panda_ai/pkg/protocol"
+	"ziziphus/internal/auth"
+	"ziziphus/internal/gateway"
+	"ziziphus/pkg/model"
+	"ziziphus/pkg/protocol"
 )
 
 // ---------------------------------------------------------------------------

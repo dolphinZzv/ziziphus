@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 func TestContains(t *testing.T) {

@@ -61,7 +61,7 @@ test.describe('MFA Login Flow E2E', () => {
   })
 
   test('login shows MFA code input', async ({ page }) => {
-    await page.addInitScript(`localStorage.setItem('panda_ai_language', JSON.stringify('zh'));`)
+    await page.addInitScript(`localStorage.setItem('ziziphus_language', JSON.stringify('zh'));`)
     await page.goto('/login')
     await page.waitForTimeout(500)
 

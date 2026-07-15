@@ -9,10 +9,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"siciv.space/agent/panda_ai/internal/auth"
-	"siciv.space/agent/panda_ai/pkg/i18n"
-	"siciv.space/agent/panda_ai/pkg/logger"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/internal/auth"
+	"ziziphus/pkg/i18n"
+	"ziziphus/pkg/logger"
+	"ziziphus/pkg/model"
 )
 
 type contactStorage interface {

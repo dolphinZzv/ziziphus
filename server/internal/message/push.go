@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"siciv.space/agent/panda_ai/internal/metrics"
-	"siciv.space/agent/panda_ai/pkg/logger"
-	"siciv.space/agent/panda_ai/pkg/model"
-	"siciv.space/agent/panda_ai/pkg/protocol"
+	"ziziphus/internal/metrics"
+	"ziziphus/pkg/logger"
+	"ziziphus/pkg/model"
+	"ziziphus/pkg/protocol"
 )
 
 type Pusher struct {

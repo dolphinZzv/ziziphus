@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 const sessionTTL = 24 * time.Hour

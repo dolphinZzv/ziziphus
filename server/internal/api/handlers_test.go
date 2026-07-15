@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"siciv.space/agent/panda_ai/internal/auth"
-	"siciv.space/agent/panda_ai/internal/gateway"
-	"siciv.space/agent/panda_ai/internal/storage/db"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/internal/auth"
+	"ziziphus/internal/gateway"
+	"ziziphus/internal/storage/db"
+	"ziziphus/pkg/model"
 )
 
 // ---------------------------------------------------------------------------

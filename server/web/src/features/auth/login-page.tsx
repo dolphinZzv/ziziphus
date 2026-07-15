@@ -60,7 +60,7 @@ export default function LoginPage() {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
         <div className="text-center">
-          <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">Panda AI</h1>
+          <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">Ziziphus</h1>
           <p className="text-sm text-[var(--color-muted)] mt-2">{t('auth.mfaTitle')}</p>
           <div className="inline-block mt-2 px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-medium">
             {mfaTypeLabel}
@@ -86,7 +86,7 @@ export default function LoginPage() {
     <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
       {/* Logo */}
       <div className="text-center">
-        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">Panda AI</h1>
+        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">Ziziphus</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-[320px] flex flex-col gap-4">

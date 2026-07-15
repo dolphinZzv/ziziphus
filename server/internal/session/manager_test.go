@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 // ---------------------------------------------------------------------------

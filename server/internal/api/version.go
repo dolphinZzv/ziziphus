@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"siciv.space/agent/panda_ai/pkg/version"
+	"ziziphus/pkg/version"
 )
 
 type versionResp struct {

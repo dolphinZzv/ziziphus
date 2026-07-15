@@ -1,4 +1,4 @@
-module siciv.space/agent/panda_ai
+module ziziphus
 
 go 1.26
 

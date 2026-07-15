@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	pgx "github.com/jackc/pgx/v5"
-	"siciv.space/agent/panda_ai/pkg/model"
-	"siciv.space/agent/panda_ai/pkg/protocol"
+	"ziziphus/pkg/model"
+	"ziziphus/pkg/protocol"
 )
 
 // mockContactRequestDBWithData is a configurable mock for contact request operations.

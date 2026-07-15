@@ -16,12 +16,12 @@ build-info:
 # 后端服务
 server: server-stop
 	cd server/web && npm run build
-	cd server && go build -ldflags "-X siciv.space/agent/panda_ai/pkg/version.GitCommit=$(GIT_HASH)" -o /tmp/panda_ai ./cmd/panda_ai/
-	cd server && /tmp/panda_ai -c config/config.yaml &
+	cd server && go build -ldflags "-X ziziphus/pkg/version.GitCommit=$(GIT_HASH)" -o /tmp/ziziphus ./cmd/ziziphus/
+	cd server && /tmp/ziziphus -c config/config.yaml &
 	@echo "Server started"
 
 server-stop:
-	@pkill -f "/tmp/panda_ai" 2>/dev/null || true
+	@pkill -f "/tmp/ziziphus" 2>/dev/null || true
 	@echo "Server stopped"
 
 APP_BUNDLE = client/.build/debug/IMApp-macOS.app
@@ -97,24 +97,24 @@ deploy:
 	@echo "=== 1/3 构建前端 ==="
 	cd server/web && npm run build
 	@echo "=== 2/3 交叉编译 Linux 二进制 ==="
-	cd server && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X siciv.space/agent/panda_ai/pkg/version.GitCommit=$(GIT_HASH)" -o /tmp/panda_ai-linux ./cmd/panda_ai/
+	cd server && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X ziziphus/pkg/version.GitCommit=$(GIT_HASH)" -o /tmp/ziziphus-linux ./cmd/ziziphus/
 	@echo "=== 3/3 推送到远程服务器 ==="
-	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "systemctl stop panda_ai 2>/dev/null || true; sleep 1"
+	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "systemctl stop ziziphus 2>/dev/null || true; sleep 1"
 	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "mkdir -p $(DEPLOY_PATH)/internal/storage/db/migrations"
-	scp -P $(SSH_PORT) /tmp/panda_ai-linux $(DEPLOY_USER)@$(SSH_HOST):$(DEPLOY_PATH)/panda_ai
-	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "chmod +x $(DEPLOY_PATH)/panda_ai"
-	sed 's/^  port:.*/  port: $(DEPLOY_PORT)/; s|^  dsn:.*|  dsn: "$(DEPLOY_DSN)"|' server/config/config.yaml > /tmp/panda_ai-config.yaml
-	scp -P $(SSH_PORT) /tmp/panda_ai-config.yaml $(DEPLOY_USER)@$(SSH_HOST):$(DEPLOY_PATH)/config.yaml
+	scp -P $(SSH_PORT) /tmp/ziziphus-linux $(DEPLOY_USER)@$(SSH_HOST):$(DEPLOY_PATH)/ziziphus
+	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "chmod +x $(DEPLOY_PATH)/ziziphus"
+	sed 's/^  port:.*/  port: $(DEPLOY_PORT)/; s|^  dsn:.*|  dsn: "$(DEPLOY_DSN)"|' server/config/config.yaml > /tmp/ziziphus-config.yaml
+	scp -P $(SSH_PORT) /tmp/ziziphus-config.yaml $(DEPLOY_USER)@$(SSH_HOST):$(DEPLOY_PATH)/config.yaml
 	scp -P $(SSH_PORT) server/internal/storage/db/migrations/*.sql $(DEPLOY_USER)@$(SSH_HOST):$(DEPLOY_PATH)/internal/storage/db/migrations/
-	rm -f /tmp/panda_ai-linux /tmp/panda_ai-config.yaml
-	printf '%s\n' '[Unit]' 'Description=Panda AI Server' 'After=network.target' '' '[Service]' 'Type=simple' 'WorkingDirectory=$(DEPLOY_PATH)' 'ExecStart=$(DEPLOY_PATH)/panda_ai -c $(DEPLOY_PATH)/config.yaml' 'Restart=always' 'RestartSec=5' '' '[Install]' 'WantedBy=multi-user.target' > /tmp/panda_ai.service
-	scp -P $(SSH_PORT) /tmp/panda_ai.service $(DEPLOY_USER)@$(SSH_HOST):/etc/systemd/system/panda_ai.service
-	rm -f /tmp/panda_ai.service
-	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "systemctl daemon-reload && systemctl start panda_ai"
-	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "systemctl status panda_ai --no-pager"
+	rm -f /tmp/ziziphus-linux /tmp/ziziphus-config.yaml
+	printf '%s\n' '[Unit]' 'Description=Ziziphus Server' 'After=network.target' '' '[Service]' 'Type=simple' 'WorkingDirectory=$(DEPLOY_PATH)' 'ExecStart=$(DEPLOY_PATH)/ziziphus -c $(DEPLOY_PATH)/config.yaml' 'Restart=always' 'RestartSec=5' '' '[Install]' 'WantedBy=multi-user.target' > /tmp/ziziphus.service
+	scp -P $(SSH_PORT) /tmp/ziziphus.service $(DEPLOY_USER)@$(SSH_HOST):/etc/systemd/system/ziziphus.service
+	rm -f /tmp/ziziphus.service
+	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "systemctl daemon-reload && systemctl start ziziphus"
+	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "systemctl status ziziphus --no-pager"
 
 deploy-status:
-	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "systemctl status panda_ai --no-pager"
+	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "systemctl status ziziphus --no-pager"
 
 deploy-logs:
-	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "journalctl -u panda_ai -n 100 --no-pager -f"
+	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "journalctl -u ziziphus -n 100 --no-pager -f"

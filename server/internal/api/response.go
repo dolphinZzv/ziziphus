@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"siciv.space/agent/panda_ai/pkg/i18n"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/i18n"
+	"ziziphus/pkg/model"
 )
 
 type APIResponse struct {

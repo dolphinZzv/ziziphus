@@ -28,7 +28,7 @@ func TestGenerateTOTPSecret_Unique(t *testing.T) {
 }
 
 func TestTOTPURI_Format(t *testing.T) {
-	uri := TOTPURI("testuser", "Panda AI", "SECRETKEY123")
+	uri := TOTPURI("testuser", "Ziziphus", "SECRETKEY123")
 	if !strings.HasPrefix(uri, "otpauth://totp/") {
 		t.Errorf("bad prefix: %s", uri)
 	}

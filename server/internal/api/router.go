@@ -11,7 +11,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"siciv.space/agent/panda_ai/pkg/i18n"
+	"ziziphus/pkg/i18n"
 )
 
 type Handlers struct {

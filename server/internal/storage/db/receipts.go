@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 type ReceiptRepo struct {

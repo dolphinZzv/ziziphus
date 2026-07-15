@@ -19,7 +19,7 @@ i18n
     detection: {
       order: ['localStorage', 'navigator'],
       caches: ['localStorage'],
-      lookupLocalStorage: 'panda_ai_language',
+      lookupLocalStorage: 'ziziphus_language',
     },
   })
 

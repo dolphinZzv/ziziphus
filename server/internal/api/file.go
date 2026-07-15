@@ -22,11 +22,11 @@ import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	xdraw "golang.org/x/image/draw"
-	"siciv.space/agent/panda_ai/internal/auth"
-	"siciv.space/agent/panda_ai/internal/storage/file"
-	"siciv.space/agent/panda_ai/pkg/i18n"
-	"siciv.space/agent/panda_ai/pkg/logger"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/internal/auth"
+	"ziziphus/internal/storage/file"
+	"ziziphus/pkg/i18n"
+	"ziziphus/pkg/logger"
+	"ziziphus/pkg/model"
 )
 
 type idGenerator interface {

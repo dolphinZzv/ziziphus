@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v4"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 func TestNewMessageRepo(t *testing.T) {

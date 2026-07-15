@@ -6,9 +6,9 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"siciv.space/agent/panda_ai/internal/auth"
-	"siciv.space/agent/panda_ai/pkg/logger"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/internal/auth"
+	"ziziphus/pkg/logger"
+	"ziziphus/pkg/model"
 )
 
 type convMemberChecker interface {

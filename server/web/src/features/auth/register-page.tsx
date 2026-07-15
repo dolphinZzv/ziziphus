@@ -32,7 +32,7 @@ export default function RegisterPage() {
     <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
       {/* Logo */}
       <div className="text-center">
-        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">Panda AI</h1>
+        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">Ziziphus</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-[320px] flex flex-col gap-4">

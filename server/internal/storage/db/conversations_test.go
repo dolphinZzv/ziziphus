@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/pashagolub/pgxmock/v4"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 func TestNewConvRepo(t *testing.T) {

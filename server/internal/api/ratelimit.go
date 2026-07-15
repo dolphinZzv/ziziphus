@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 // LoginRateLimiter limits failed login attempts per IP.

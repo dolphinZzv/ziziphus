@@ -1,4 +1,4 @@
-const PREFIX = 'panda_ai_'
+const PREFIX = 'ziziphus_'
 
 export function getItem<T>(key: string, fallback?: T): T | undefined {
   try {

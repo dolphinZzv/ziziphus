@@ -245,7 +245,7 @@ export const authStore = {
     removeItem('refresh_token')
     removeItem('session_id')
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('panda_ai_msg_') || key.startsWith('panda_ai_conv_')) {
+      if (key.startsWith('ziziphus_msg_') || key.startsWith('ziziphus_conv_')) {
         localStorage.removeItem(key)
       }
     }

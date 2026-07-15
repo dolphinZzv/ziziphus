@@ -1,8 +1,8 @@
 import { test, expect } from './fixtures/coverage'
 
 const AUTH_INIT = `
-  localStorage.setItem('panda_ai_token', JSON.stringify('test-mock-token'));
-  localStorage.setItem('panda_ai_user', JSON.stringify({
+  localStorage.setItem('ziziphus_token', JSON.stringify('test-mock-token'));
+  localStorage.setItem('ziziphus_user', JSON.stringify({
     user_id: 'user_001', account: 'testuser', name: '测试用户', avatar: '',
     type: 0, status: 1, uid: '', primary_color: '#0F172A', secondary_color: '#64748B',
     wake_mode: 0, api_key: '', created_at: 1700000000,

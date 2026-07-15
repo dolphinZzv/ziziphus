@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"siciv.space/agent/panda_ai/pkg/protocol"
+	"ziziphus/pkg/protocol"
 )
 
 func TestNewConnection(t *testing.T) {

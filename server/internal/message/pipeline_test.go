@@ -9,8 +9,8 @@ import (
 	"time"
 
 	pgx "github.com/jackc/pgx/v5"
-	"siciv.space/agent/panda_ai/pkg/model"
-	"siciv.space/agent/panda_ai/pkg/protocol"
+	"ziziphus/pkg/model"
+	"ziziphus/pkg/protocol"
 )
 
 // ---------------------------------------------------------------------------

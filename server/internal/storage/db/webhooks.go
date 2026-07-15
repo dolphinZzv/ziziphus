@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"siciv.space/agent/panda_ai/pkg/logger"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/logger"
+	"ziziphus/pkg/model"
 )
 
 // ConvWebhookDB is the interface satisfied by WebhookRepo.

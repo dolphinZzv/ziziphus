@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"siciv.space/agent/panda_ai/pkg/logger"
-	"siciv.space/agent/panda_ai/pkg/protocol"
+	"ziziphus/pkg/logger"
+	"ziziphus/pkg/protocol"
 )
 
 type Connection struct {

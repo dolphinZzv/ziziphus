@@ -8,7 +8,7 @@ import (
 	"net/smtp"
 	"text/template"
 
-	"siciv.space/agent/panda_ai/config"
+	"ziziphus/config"
 )
 
 //go:embed email_templates/verify_code_zh.html
@@ -67,10 +67,10 @@ func (m *Mailer) SendVerificationCodeLang(to, code, lang string) error {
 
 	// Build subject
 	subjects := map[string]string{
-		"zh": "Panda AI - 邮箱验证码",
-		"en": "Panda AI - Email Verification Code",
+		"zh": "Ziziphus - 邮箱验证码",
+		"en": "Ziziphus - Email Verification Code",
 	}
-	subject := "Panda AI - Verification Code"
+	subject := "Ziziphus - Verification Code"
 	if s, ok := subjects[lang]; ok {
 		subject = s
 	}

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"siciv.space/agent/panda_ai/pkg/version"
+	"ziziphus/pkg/version"
 )
 
 func TestGetVersion(t *testing.T) {

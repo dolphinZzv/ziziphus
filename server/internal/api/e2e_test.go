@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"siciv.space/agent/panda_ai/internal/auth"
-	"siciv.space/agent/panda_ai/internal/storage/db"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/internal/auth"
+	"ziziphus/internal/storage/db"
+	"ziziphus/pkg/model"
 )
 
 // ---------------------------------------------------------------------------
@@ -269,7 +269,7 @@ func TestE2E_AuthMiddleware_ExpiredTokenBlocked(t *testing.T) {
 	claims := jwt.MapClaims{
 		"uid": "test_user",
 		"typ": 1,
-		"iss": "panda_ai",
+		"iss": "ziziphus",
 		"exp": time.Now().Add(-1 * time.Hour).Unix(),
 		"iat": time.Now().Add(-2 * time.Hour).Unix(),
 	}
@@ -292,7 +292,7 @@ func TestE2E_AuthMiddleware_TamperedTokenBlocked(t *testing.T) {
 	claims := jwt.MapClaims{
 		"uid": "test_user",
 		"typ": 1,
-		"iss": "panda_ai",
+		"iss": "ziziphus",
 		"exp": time.Now().Add(1 * time.Hour).Unix(),
 		"iat": time.Now().Unix(),
 	}

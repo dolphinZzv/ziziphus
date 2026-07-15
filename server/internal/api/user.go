@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"siciv.space/agent/panda_ai/internal/auth"
-	"siciv.space/agent/panda_ai/pkg/i18n"
-	"siciv.space/agent/panda_ai/pkg/logger"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/internal/auth"
+	"ziziphus/pkg/i18n"
+	"ziziphus/pkg/logger"
+	"ziziphus/pkg/model"
 )
 
 type mfaStorage interface {
@@ -525,7 +525,7 @@ func (h *UserHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.MFAType == int(model.MFATOTP) {
 		resp["secret"] = secret
-		resp["uri"] = auth.TOTPURI(account, "Panda AI", secret)
+		resp["uri"] = auth.TOTPURI(account, "Ziziphus", secret)
 	}
 	// Email OTP: code is sent via email by the mailer, never returned in API response
 	JSON(w, resp)

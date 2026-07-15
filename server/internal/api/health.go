@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"siciv.space/agent/panda_ai/pkg/version"
+	"ziziphus/pkg/version"
 )
 
 var serverStartupTime = time.Now()

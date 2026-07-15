@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 type RateLimiter struct {

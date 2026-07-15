@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"siciv.space/agent/panda_ai/internal/metrics"
-	"siciv.space/agent/panda_ai/pkg/logger"
-	"siciv.space/agent/panda_ai/pkg/model"
-	"siciv.space/agent/panda_ai/pkg/protocol"
+	"ziziphus/internal/metrics"
+	"ziziphus/pkg/logger"
+	"ziziphus/pkg/model"
+	"ziziphus/pkg/protocol"
 )
 
 type Ingest struct {
@@ -509,7 +509,7 @@ func (in *Ingest) sendWebhookWithRetry(ctx context.Context, wh *model.ConvWebhoo
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", "PandaAI-Webhook/1.0")
+		req.Header.Set("User-Agent", "Ziziphus-Webhook/1.0")
 		req.Header.Set("X-Signature", computeSignature([]byte(wh.APIKeyHash), body))
 		for _, h := range wh.Headers {
 			req.Header.Set(h.Key, h.Value)

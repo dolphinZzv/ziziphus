@@ -113,10 +113,10 @@ export const uiStore = {
     setItem('language', lang)
     if (lang === 'auto') {
       // Clear stored preference so auto-detection works on reload
-      setItem('panda_ai_language', '')
+      setItem('ziziphus_language', '')
       i18n.changeLanguage(resolveAutoLang())
     } else {
-      setItem('panda_ai_language', lang)
+      setItem('ziziphus_language', lang)
       i18n.changeLanguage(lang)
     }
     state = { ...state, language: lang }; emit()

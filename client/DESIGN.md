@@ -1,6 +1,6 @@
 ## Overview
 
-PandaAI IM follows Apple's design language — **near-invisible UI, single blue accent, generous whitespace**. The interface recedes so conversations take center stage. Every interactive element speaks in the same quiet blue (`#0066cc`); surfaces are white, pearl, or parchment; typography is SF Pro at 17px body with tight negative kerning at display sizes.
+Ziziphus IM follows Apple's design language — **near-invisible UI, single blue accent, generous whitespace**. The interface recedes so conversations take center stage. Every interactive element speaks in the same quiet blue (`#0066cc`); surfaces are white, pearl, or parchment; typography is SF Pro at 17px body with tight negative kerning at display sizes.
 
 This is not a marketing site — it's a chat app — but the same visual grammar applies: no decorative gradients, no shadows on UI elements, pill-shaped action targets, and a single consistent rhythm of 8px-based spacing.
 

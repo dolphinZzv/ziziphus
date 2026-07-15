@@ -9,13 +9,13 @@ test('MFA TOTP section visible in user settings', async ({ page }) => {
   const { token, user_id: uid } = d.data
 
   await page.addInitScript(`(() => {
-    localStorage.setItem('panda_ai_token', JSON.stringify('${token}'));
-    localStorage.setItem('panda_ai_user', JSON.stringify({
+    localStorage.setItem('ziziphus_token', JSON.stringify('${token}'));
+    localStorage.setItem('ziziphus_user', JSON.stringify({
       user_id: '${uid}', account: 'mfa_ui_${ts}', name: 'MFATest', avatar: '',
       type: 0, status: 1, uid: '', primary_color: '#0F172A', secondary_color: '#64748B',
       wake_mode: 0, api_key: '', discoverable: true, allow_direct_chat: true, created_at: Date.now(),
     }));
-    localStorage.setItem('panda_ai_language', JSON.stringify('zh'));
+    localStorage.setItem('ziziphus_language', JSON.stringify('zh'));
   })()`)
 
   await page.goto('/chat')

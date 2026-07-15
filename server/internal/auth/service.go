@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v5"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 // Claims represents the JWT claims for access tokens.
@@ -215,7 +215,7 @@ func (s *Service) generateAccessToken(userID string, userType int) (string, erro
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessExpire)),
 			IssuedAt:  jwt.NewNumericDate(now),
-			Issuer:    "panda_ai",
+			Issuer:    "ziziphus",
 		},
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.jwtSecret)

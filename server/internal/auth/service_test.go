@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 // mockUserRepo is an in-memory implementation of userRepository for testing.
@@ -332,8 +332,8 @@ func TestParseToken_Valid(t *testing.T) {
 	if claims.Type != int(model.UserHuman) {
 		t.Errorf("claims.Type = %d, want %d", claims.Type, int(model.UserHuman))
 	}
-	if claims.Issuer != "panda_ai" {
-		t.Errorf("claims.Issuer = %q, want %q", claims.Issuer, "panda_ai")
+	if claims.Issuer != "ziziphus" {
+		t.Errorf("claims.Issuer = %q, want %q", claims.Issuer, "ziziphus")
 	}
 	if claims.IssuedAt == nil {
 		t.Error("expected non-nil IssuedAt")
@@ -355,7 +355,7 @@ func TestParseToken_Expired(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
-			Issuer:    "panda_ai",
+			Issuer:    "ziziphus",
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -379,7 +379,7 @@ func TestParseToken_Tampered(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "panda_ai",
+			Issuer:    "ziziphus",
 		},
 	}
 	// Sign with a different secret
@@ -404,7 +404,7 @@ func TestParseToken_WrongSigningMethod(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "panda_ai",
+			Issuer:    "ziziphus",
 		},
 	}
 	// "None" algorithm – the service should reject it.

@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures/coverage'
 
 const ZH_INIT = `
-  localStorage.setItem('panda_ai_language', JSON.stringify('zh'));
+  localStorage.setItem('ziziphus_language', JSON.stringify('zh'));
 `
 
 test.describe('Login Page', () => {
@@ -12,7 +12,7 @@ test.describe('Login Page', () => {
   })
 
   test('renders login form correctly', async ({ page }) => {
-    await expect(page.locator('h1')).toHaveText('Panda AI')
+    await expect(page.locator('h1')).toHaveText('Ziziphus')
     await expect(page.getByPlaceholder('账号')).toBeVisible()
     await expect(page.getByPlaceholder('密码')).toBeVisible()
     await expect(page.getByText('记住账号')).toBeVisible()

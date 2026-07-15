@@ -12,8 +12,8 @@ linters:
       exclude-functions:
         - "net/http.ResponseWriter.Write"
         - "(*encoding/json.Encoder).Encode"
-        - "siciv.space/agent/panda_ai/internal/message.*Ingest.*"
-        - "siciv.space/agent/panda_ai/internal/storage/db.*Repo.*"
+        - "ziziphus/internal/message.*Ingest.*"
+        - "ziziphus/internal/storage/db.*Repo.*"
     staticcheck:
       checks: ["all"]
   exclusions:

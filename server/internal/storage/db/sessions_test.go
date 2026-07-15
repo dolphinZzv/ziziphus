@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/pashagolub/pgxmock/v4"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/pkg/model"
 )
 
 func TestNewSessionRepo(t *testing.T) {

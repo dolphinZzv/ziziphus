@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"siciv.space/agent/panda_ai/internal/auth"
-	"siciv.space/agent/panda_ai/internal/gateway"
-	"siciv.space/agent/panda_ai/pkg/i18n"
-	"siciv.space/agent/panda_ai/pkg/logger"
-	"siciv.space/agent/panda_ai/pkg/model"
+	"ziziphus/internal/auth"
+	"ziziphus/internal/gateway"
+	"ziziphus/pkg/i18n"
+	"ziziphus/pkg/logger"
+	"ziziphus/pkg/model"
 )
 
 type sessionManager interface {

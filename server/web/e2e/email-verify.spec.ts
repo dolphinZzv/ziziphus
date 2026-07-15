@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures/coverage'
 
 test('register page has email input', async ({ page }) => {
-  await page.addInitScript(`localStorage.setItem('panda_ai_language', JSON.stringify('zh'));`)
+  await page.addInitScript(`localStorage.setItem('ziziphus_language', JSON.stringify('zh'));`)
   await page.goto('/register')
   await page.waitForTimeout(1000)
   await expect(page.locator('input[type="email"]')).toBeVisible({ timeout: 5000 })
@@ -16,13 +16,13 @@ test('profile page buttons visible', async ({ page }) => {
   const { token, user_id: uid } = d.data
 
   await page.addInitScript(`(() => {
-    localStorage.setItem('panda_ai_token', JSON.stringify('${token}'));
-    localStorage.setItem('panda_ai_user', JSON.stringify({
+    localStorage.setItem('ziziphus_token', JSON.stringify('${token}'));
+    localStorage.setItem('ziziphus_user', JSON.stringify({
       user_id: '${uid}', account: 'prof_${ts}', name: 'ProfTest', avatar: '',
       type: 0, status: 1, uid: '', primary_color: '#0F172A', secondary_color: '#64748B',
       wake_mode: 0, api_key: '', discoverable: true, allow_direct_chat: true, created_at: Date.now(),
     }));
-    localStorage.setItem('panda_ai_language', JSON.stringify('zh'));
+    localStorage.setItem('ziziphus_language', JSON.stringify('zh'));
   })()`)
 
   await page.goto('/chat')
@@ -51,13 +51,13 @@ test('user settings has email input', async ({ page }) => {
   const { token, user_id: uid } = d.data
 
   await page.addInitScript(`(() => {
-    localStorage.setItem('panda_ai_token', JSON.stringify('${token}'));
-    localStorage.setItem('panda_ai_user', JSON.stringify({
+    localStorage.setItem('ziziphus_token', JSON.stringify('${token}'));
+    localStorage.setItem('ziziphus_user', JSON.stringify({
       user_id: '${uid}', account: 'set_${ts}', name: 'SetTest', avatar: '',
       type: 0, status: 1, uid: '', primary_color: '#0F172A', secondary_color: '#64748B',
       wake_mode: 0, api_key: '', discoverable: true, allow_direct_chat: true, created_at: Date.now(),
     }));
-    localStorage.setItem('panda_ai_language', JSON.stringify('zh'));
+    localStorage.setItem('ziziphus_language', JSON.stringify('zh'));
   })()`)
 
   await page.goto('/chat')
