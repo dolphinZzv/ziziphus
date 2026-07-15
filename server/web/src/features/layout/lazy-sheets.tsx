@@ -13,6 +13,7 @@ const SessionList = lazy(() => import('@/features/sessions/session-list'))
 const ShortcutsView = lazy(() => import('@/features/settings/shortcuts-view'))
 const MemberListView = lazy(() => import('@/features/group/member-list-view'))
 const ContactList = lazy(() => import('@/features/contacts/contact-list'))
+const AddContactDialog = lazy(() => import('@/features/conversation-list/add-contact-dialog'))
 
 const SheetFallback = () => {
   const { t } = useTranslation()
@@ -42,6 +43,7 @@ export function SheetWrapper({ name, activeSheet, onClose }: SheetWrapperProps) 
       {name === 'agents' && <AgentList onClose={onClose} />}
       {name === 'sessions' && <SessionList onClose={onClose} />}
       {name === 'contacts' && <ContactList onClose={onClose} />}
+      {name === 'addContact' && <AddContactDialog onClose={onClose} />}
       {name === 'userSettings' && <PrivacyView onClose={onClose} />}
       {name === 'shortcuts' && <ShortcutsView onClose={onClose} />}
     </Suspense>

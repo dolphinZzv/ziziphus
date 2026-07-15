@@ -337,7 +337,8 @@
     "contacts": "联系人",
     "agents": "Agent",
     "sessions": "设备管理",
-    "settings": "设置"
+    "settings": "设置",
+    "addContact": "添加联系人"
   },
   "common": {
     "cancel": "取消",

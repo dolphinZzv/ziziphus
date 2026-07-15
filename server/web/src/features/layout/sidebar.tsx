@@ -8,7 +8,7 @@ import { MessageType } from '@/types/ws'
 import ConversationList from '@/features/conversation-list/conversation-list'
 import { SheetWrapper } from './lazy-sheets'
 import { avatarUrl } from '@/lib/file'
-import { Plus, User, Users, UserPlus, MessageCircle } from 'lucide-react'
+import { Plus, User, Users, UserPlus, MessageCircle, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export default function Sidebar() {
@@ -78,6 +78,7 @@ export default function Sidebar() {
                 style={{ boxShadow: 'var(--shadow-md)' }}>
                 {[
                   { icon: MessageCircle, label: t('sidebar.newChat'), sheet: 'newChat' },
+                  { icon: Search, label: t('sidebar.addContact'), sheet: 'addContact' },
                   { icon: Users, label: t('sidebar.createGroup'), sheet: 'createGroup' },
                   { icon: UserPlus, label: t('sidebar.joinGroup'), sheet: 'joinGroup' },
                 ].map(item => (
@@ -99,7 +100,7 @@ export default function Sidebar() {
       </div>
 
       {/* Lazy-loaded sheets */}
-      {['newChat','createGroup','joinGroup','profile','settings','userSettings','agents','sessions','contacts','shortcuts'].map(name => (
+      {['newChat','addContact','createGroup','joinGroup','profile','settings','userSettings','agents','sessions','contacts','shortcuts'].map(name => (
         <SheetWrapper key={name} name={name} activeSheet={activeSheet} onClose={() => uiStore.closeSheet()} />
       ))}
     </>

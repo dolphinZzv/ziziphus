@@ -337,7 +337,8 @@
     "contacts": "Contacts",
     "agents": "Agents",
     "sessions": "Device Mgmt",
-    "settings": "Settings"
+    "settings": "Settings",
+    "addContact": "Add Contact"
   },
   "common": {
     "cancel": "Cancel",
