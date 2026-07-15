@@ -6,8 +6,7 @@ import { formatTime } from '@/lib/time'
 import { X, Upload, Download, FileText, Image, Film, Folder, FolderPlus, ChevronRight, MoreHorizontal, Info, Edit2 } from 'lucide-react'
 
 interface Props { convId: string; onClose: () => void; width?: number; onWidthChange?: (w: number) => void }
-interface FolderNode { folder_id: number; name: string; parent_id: number; created_by: string; created_at: number }
-interface FolderExpanded { [key: number]: FolderNode[] }
+interface FolderNode { name: string; path: string; mod_time: number }
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`
@@ -20,51 +19,39 @@ const TYPE_ICONS = [Image, FileText, FileText, Film] as const
 export default function FilePanel({ convId, onClose, width }: Props) {
   const [entries, setEntries] = useState<ConvFileInfo[]>([])
   const [folders, setFolders] = useState<FolderNode[]>([])
-  const [childFolders, setChildFolders] = useState<FolderExpanded>({})
-  const [expanded, setExpanded] = useState<Set<number>>(new Set())
-  const [currentFolder, setCurrentFolder] = useState(0)
+  const [currentPath, setCurrentPath] = useState('') // "" = root
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [newFolderInput, setNewFolderInput] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [menuFileId, setMenuFileId] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
-  const [dragFolderOver, setDragFolderOver] = useState<number | null>(null)
+  const [dragFolderOver, setDragFolderOver] = useState<string | null>(null)
   const [infoFile, setInfoFile] = useState<ConvFileInfo | null>(null)
-  const [renameId, setRenameId] = useState<number | null>(null)
+  const [renamePath, setRenamePath] = useState<string | null>(null)
   const [renameName, setRenameName] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadData = async () => {
+    setLoading(true)
     try {
       const [dirs, fls] = await Promise.all([
-        api.request<FolderNode[]>(`/api/v1/conversations/${convId}/folders?parent_id=${currentFolder}`),
-        api.request<{ items: ConvFileInfo[]; total: number }>(
-          currentFolder === 0
-            ? `/api/v1/conversations/${convId}/files`
-            : `/api/v1/conversations/${convId}/folders/${currentFolder}/files`
-        ),
+        api.request<FolderNode[]>(`/api/v1/conversations/${convId}/folders?parent_path=${encodeURIComponent(currentPath)}`),
+        currentPath === ''
+          ? api.request<{ items: ConvFileInfo[]; total: number }>(`/api/v1/conversations/${convId}/files`)
+          : api.request<{ items: ConvFileInfo[]; total: number }>(`/api/v1/conversations/${convId}/folders/files?path=${encodeURIComponent(currentPath)}`),
       ])
-      setFolders(dirs); setEntries(fls.items)
+      setFolders(dirs)
+      setEntries(fls.items)
     } catch {}
     setLoading(false)
   }
 
-  useEffect(() => { loadData() }, [convId, currentFolder])
-
-  const toggleFolder = async (id: number) => {
-    const n = new Set(expanded); n.has(id) ? n.delete(id) : n.add(id); setExpanded(n)
-    if (!childFolders[id]) {
-      try {
-        const data = await api.request<FolderNode[]>(`/api/v1/conversations/${convId}/folders?parent_id=${id}`)
-        setChildFolders(p => ({ ...p, [id]: data }))
-      } catch {}
-    }
-  }
+  useEffect(() => { loadData() }, [convId, currentPath])
 
   const uploadFile = async (file: File) => {
     setUploading(true)
-    try { await fileService.upload(file, file.name, file.type.startsWith('image/') ? 0 : 1, undefined, convId, currentFolder); loadData() } catch {}
+    try { await fileService.upload(file, file.name, file.type.startsWith('image/') ? 0 : 1, undefined, convId, currentPath); loadData() } catch {}
     setUploading(false)
   }
 
@@ -84,20 +71,15 @@ export default function FilePanel({ convId, onClose, width }: Props) {
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true) }
   const handleDragLeave = () => setDragOver(false)
 
-  const goRoot = () => setCurrentFolder(0)
+  const goRoot = () => setCurrentPath('')
 
   const createFolder = async () => {
     const n = newFolderName.trim()
     if (!n) return
     try {
-      await api.request(`/api/v1/conversations/${convId}/folders`, { method: 'POST', body: { name: n, parent_id: currentFolder } })
+      await api.request(`/api/v1/conversations/${convId}/folders`, { method: 'POST', body: { name: n, parent_path: currentPath } })
       setNewFolderName(''); setNewFolderInput(false)
-      loadData(); if (currentFolder === 0) loadData()
-      else {
-        // also refresh root to catch folder if needed
-        const data = await api.request<FolderNode[]>(`/api/v1/conversations/${convId}/folders?parent_id=0`)
-        setFolders(data)
-      }
+      loadData()
     } catch {}
   }
 
@@ -106,9 +88,18 @@ export default function FilePanel({ convId, onClose, width }: Props) {
     setMenuFileId(null)
   }
 
-  const deleteFolder = async (id: number) => {
+  const deleteFolder = async (path: string) => {
     if (!confirm('删除此文件夹？')) return
-    try { await fileService.deleteFolder(convId, id); loadData() } catch {}
+    try { await fileService.deleteFolder(convId, path); loadData() } catch {}
+  }
+
+  // Breadcrumb segments
+  const pathSegments = currentPath ? currentPath.split('/').filter(Boolean) : []
+  const breadcrumbs: { label: string; path: string }[] = [{ label: '/', path: '' }]
+  let buildPath = ''
+  for (const seg of pathSegments) {
+    buildPath = buildPath ? `${buildPath}/${seg}` : seg
+    breadcrumbs.push({ label: seg, path: buildPath })
   }
 
   const rowClass = 'flex items-center gap-2 px-3 h-10 hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer group rounded'
@@ -143,17 +134,16 @@ export default function FilePanel({ convId, onClose, width }: Props) {
 
       {/* Breadcrumb path */}
       <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--color-hairline)] text-[11px] text-[var(--color-muted)] overflow-x-auto">
-        <button onClick={goRoot} className={`flex items-center gap-1 hover:text-[var(--color-ink)] whitespace-nowrap ${currentFolder === 0 ? 'text-[var(--color-ink)] font-medium' : ''}`}>
-          <Folder size={14} className="text-[var(--color-accent)] flex-shrink-0" />/
-        </button>
-        {currentFolder > 0 && (
-          <>
-            <ChevronRight size={10} />
-            <span className="text-[var(--color-ink)] font-medium whitespace-nowrap">
-              {folders.find(f => f.folder_id === currentFolder)?.name || '...'}
-            </span>
-          </>
-        )}
+        {breadcrumbs.map((b, i) => (
+          <span key={b.path} className="flex items-center gap-1">
+            {i > 0 && <ChevronRight size={10} />}
+            <button onClick={() => setCurrentPath(b.path)}
+              className={`flex items-center gap-1 hover:text-[var(--color-ink)] whitespace-nowrap ${b.path === currentPath ? 'text-[var(--color-ink)] font-medium' : ''}`}>
+              {i === 0 ? <Folder size={14} className="text-[var(--color-accent)] flex-shrink-0" /> : null}
+              {b.label}
+            </button>
+          </span>
+        ))}
       </div>
 
       {/* Content */}
@@ -169,59 +159,53 @@ export default function FilePanel({ convId, onClose, width }: Props) {
           <>
             {/* Folders */}
             {folders.map(f => {
-              const isExpanded = expanded.has(f.folder_id)
-              const children = childFolders[f.folder_id] || []
-              const isDropTarget = dragFolderOver === f.folder_id
-              const isRenaming = renameId === f.folder_id
+              const isDropTarget = dragFolderOver === f.path
+              const isRenaming = renamePath === f.path
               return (
-                <div key={f.folder_id}>
+                <div key={f.path}>
                   <div className={`${rowClass} ${isDropTarget ? 'bg-[var(--color-primary)]/10 ring-1 ring-[var(--color-primary)]' : ''}`}
                     draggable
-                    onDragStart={e => { e.dataTransfer.setData('text/folder', String(f.folder_id)); e.dataTransfer.effectAllowed = 'move' }}
-                    onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragFolderOver(f.folder_id) }}
+                    onDragStart={e => { e.dataTransfer.setData('text/folder', f.path); e.dataTransfer.effectAllowed = 'move' }}
+                    onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragFolderOver(f.path) }}
                     onDragLeave={() => setDragFolderOver(null)}
                     onDrop={async e => {
                       e.preventDefault(); setDragFolderOver(null)
                       const fileId = e.dataTransfer.getData('text/file')
-                      const folderId = e.dataTransfer.getData('text/folder')
-                      let changed = false
-                      if (fileId) { try { await fileService.moveFile(convId, fileId, f.folder_id); changed = true } catch {} }
-                      if (folderId && Number(folderId) !== f.folder_id) { try { await fileService.moveFolder(convId, Number(folderId), f.folder_id); changed = true } catch {} }
-                      if (changed) await loadData()
+                      const srcFolder = e.dataTransfer.getData('text/folder')
+                      if (fileId) { try { await fileService.moveFile(convId, fileId, f.path); } catch {} }
+                      if (srcFolder && srcFolder !== f.path) { try { await fileService.moveFolder(convId, srcFolder, f.path); } catch {} }
+                      loadData()
                     }}
-                    onClick={() => setCurrentFolder(f.folder_id)}>
-                    {isExpanded
-                      ? <ChevronRight size={11} className="text-[var(--color-muted)] rotate-90 flex-shrink-0" onClick={e => { e.stopPropagation(); toggleFolder(f.folder_id) }} />
-                      : <ChevronRight size={11} className="text-[var(--color-muted)] flex-shrink-0" onClick={e => { e.stopPropagation(); toggleFolder(f.folder_id) }} />}
+                    onClick={() => setCurrentPath(f.path)}>
                     <Folder size={15} className="text-[var(--color-accent)] flex-shrink-0" />
                     {isRenaming ? (
                       <input type="text" value={renameName}
                         onChange={e => setRenameName(e.target.value)}
                         onKeyDown={async e => {
-                          if (e.key === 'Enter') { e.stopPropagation(); const n = renameName.trim(); if (n) { await fileService.renameFolder(convId, f.folder_id, n); setRenameId(null); loadData() } }
-                          if (e.key === 'Escape') { e.stopPropagation(); setRenameId(null) }
+                          if (e.key === 'Enter') { e.stopPropagation(); const n = renameName.trim(); if (n) { await fileService.renameFolder(convId, f.path, n); setRenamePath(null); loadData() } }
+                          if (e.key === 'Escape') { e.stopPropagation(); setRenamePath(null) }
                         }}
-                        onBlur={() => setRenameId(null)}
+                        onBlur={() => setRenamePath(null)}
                         onClick={e => e.stopPropagation()}
                         className="flex-1 h-6 px-2 rounded text-xs bg-[var(--color-surface-soft)] border border-[var(--color-primary)] focus:outline-none" autoFocus />
                     ) : (
                       <span className="flex-1 text-[13px] truncate">{f.name}</span>
                     )}
                     <div className="relative flex items-center">
-                      <button onClick={e => { e.stopPropagation(); setMenuFileId(menuFileId === `folder:${f.folder_id}` ? null : `folder:${f.folder_id}`) }}
+                      <button onClick={e => { e.stopPropagation(); setMenuFileId(menuFileId === `folder:${f.path}` ? null : `folder:${f.path}`) }}
                         className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[var(--color-hairline)] text-[var(--color-muted)]">
                         <MoreHorizontal size={13} />
                       </button>
-                      {menuFileId === `folder:${f.folder_id}` && (
+                      {menuFileId === `folder:${f.path}` && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setMenuFileId(null)} />
                           <div className="absolute right-0 top-7 w-28 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-20 py-1 shadow-lg text-xs"
                             style={{ boxShadow: 'var(--shadow-md)' }}>
-                            <button onClick={e => { e.stopPropagation(); setRenameId(f.folder_id); setRenameName(f.name); setMenuFileId(null) }}
+                            <button onClick={e => { e.stopPropagation(); setRenamePath(f.path); setRenameName(f.name); setMenuFileId(null) }}
                               className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                               <Edit2 size={11} /> 重命名
                             </button>
-                            <button onClick={e => { e.stopPropagation(); deleteFolder(f.folder_id); setMenuFileId(null) }}
+                            <button onClick={e => { e.stopPropagation(); deleteFolder(f.path); setMenuFileId(null) }}
                               className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[var(--destructive)]/10 text-[var(--destructive)]">
                               <X size={11} /> 删除
                             </button>
@@ -230,63 +214,6 @@ export default function FilePanel({ convId, onClose, width }: Props) {
                       )}
                     </div>
                   </div>
-                  {isExpanded && children.map(sf => {
-                    const sfRenaming = renameId === sf.folder_id
-                    return (
-                    <div key={sf.folder_id} className={`${rowClass} ${dragFolderOver === sf.folder_id ? 'bg-[var(--color-primary)]/10 ring-1 ring-[var(--color-primary)]' : ''}`}
-                      style={{ paddingLeft: 36 }}
-                      draggable
-                      onDragStart={e => { e.dataTransfer.setData('text/folder', String(sf.folder_id)); e.dataTransfer.effectAllowed = 'move' }}
-                      onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragFolderOver(sf.folder_id) }}
-                      onDragLeave={() => setDragFolderOver(null)}
-                      onDrop={async e => {
-                        e.preventDefault(); setDragFolderOver(null)
-                        const fileId = e.dataTransfer.getData('text/file')
-                        const srcFolderId = e.dataTransfer.getData('text/folder')
-                        let changed = false
-                        if (fileId) { try { await fileService.moveFile(convId, fileId, sf.folder_id); changed = true } catch {} }
-                        if (srcFolderId && Number(srcFolderId) !== sf.folder_id) { try { await fileService.moveFolder(convId, Number(srcFolderId), sf.folder_id); changed = true } catch {} }
-                        if (changed) await loadData()
-                      }}
-                      onClick={() => setCurrentFolder(sf.folder_id)}>
-                      <Folder size={15} className="text-[var(--color-accent)] flex-shrink-0" />
-                      {sfRenaming ? (
-                        <input type="text" value={renameName}
-                          onChange={e => setRenameName(e.target.value)}
-                          onKeyDown={async e => {
-                            if (e.key === 'Enter') { e.stopPropagation(); const n = renameName.trim(); if (n) { await fileService.renameFolder(convId, sf.folder_id, n); setRenameId(null); loadData() } }
-                            if (e.key === 'Escape') { e.stopPropagation(); setRenameId(null) }
-                          }}
-                          onBlur={() => setRenameId(null)}
-                          onClick={e => e.stopPropagation()}
-                          className="flex-1 h-6 px-2 rounded text-xs bg-[var(--color-surface-soft)] border border-[var(--color-primary)] focus:outline-none" autoFocus />
-                      ) : (
-                        <span className="flex-1 text-[13px] truncate">{sf.name}</span>
-                      )}
-                      <div className="relative flex items-center">
-                        <button onClick={e => { e.stopPropagation(); setMenuFileId(menuFileId === `folder:${sf.folder_id}` ? null : `folder:${sf.folder_id}`) }}
-                          className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[var(--color-hairline)] text-[var(--color-muted)]">
-                          <MoreHorizontal size={13} />
-                        </button>
-                        {menuFileId === `folder:${sf.folder_id}` && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setMenuFileId(null)} />
-                            <div className="absolute right-0 top-7 w-28 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-20 py-1 shadow-lg text-xs"
-                              style={{ boxShadow: 'var(--shadow-md)' }}>
-                              <button onClick={e => { e.stopPropagation(); setRenameId(sf.folder_id); setRenameName(sf.name); setMenuFileId(null) }}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
-                                <Edit2 size={11} /> 重命名
-                              </button>
-                              <button onClick={e => { e.stopPropagation(); deleteFolder(sf.folder_id); setMenuFileId(null) }}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[var(--destructive)]/10 text-[var(--destructive)]">
-                                <X size={11} /> 删除
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )})}
                 </div>
               )
             })}

@@ -80,7 +80,7 @@ export function uploadFile(
   fileType: number,
   onProgress?: (progress: number) => void,
   convId?: string,
-  folderId?: number
+  folderPath?: string
 ): Promise<{ file_id: string; url: string }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -88,7 +88,7 @@ export function uploadFile(
     formData.append('file', fileData, fileName)
     formData.append('file_type', String(fileType))
     if (convId) formData.append('conv_id', convId)
-    if (folderId) formData.append('folder_id', String(folderId))
+    if (folderPath) formData.append('folder_path', folderPath)
 
     const token = getItem<string>('token', '')
     xhr.open('POST', getBaseURL() + '/api/v1/files/upload')

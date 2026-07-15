@@ -13,15 +13,6 @@ type FileInfo struct {
 	UploaderID   string `json:"uploader_id"`
 	UploaderName string `json:"uploader_name,omitempty"`
 	ConvID       string `json:"conv_id,omitempty"`
-	FolderID     int64  `json:"folder_id,omitempty"`
+	FolderPath   string `json:"folder_path,omitempty"`
 	CreatedAt    int64  `json:"created_at"`
-}
-
-type FileFolder struct {
-	FolderID  int64  `json:"folder_id"`
-	ConvID    string `json:"conv_id"`
-	Name      string `json:"name"`
-	ParentID  int64  `json:"parent_id"`
-	CreatedBy string `json:"created_by"`
-	CreatedAt int64  `json:"created_at"`
 }

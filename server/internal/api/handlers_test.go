@@ -675,219 +675,39 @@ func (m *mockSessionManager) Delete(ctx context.Context, sessionID string) error
 // ---------------------------------------------------------------------------
 
 type mockFileDB struct {
-	insertFunc          func(ctx context.Context, f *model.FileInfo) error
-	getByIDFunc         func(ctx context.Context, fileID string) (*model.FileInfo, error)
-	listByConvIDFunc    func(ctx context.Context, convID string, page, size int) ([]*model.FileInfo, int, error)
-	deleteByIDFunc      func(ctx context.Context, fileID, uploaderID string) error
-	createFolderFunc    func(ctx context.Context, folder *model.FileFolder) (int64, error)
-	listFoldersFunc     func(ctx context.Context, convID string, parentID int64) ([]*model.FileFolder, error)
-	listFilesInFolderFunc func(ctx context.Context, convID string, folderID int64, page, size int) ([]*model.FileInfo, int, error)
-	deleteFolderFunc    func(ctx context.Context, folderID int64) error
-	moveFileFunc        func(ctx context.Context, fileID string, folderID int64) error
-	moveFolderFunc      func(ctx context.Context, folderID, parentID int64) error
-	renameFolderFunc    func(ctx context.Context, folderID int64, name string) error
+	insertFunc         func(ctx context.Context, f *model.FileInfo) error
+	getByIDFunc        func(ctx context.Context, fileID string) (*model.FileInfo, error)
+	listByConvIDFunc   func(ctx context.Context, convID string, page, size int) ([]*model.FileInfo, int, error)
+	deleteByIDFunc     func(ctx context.Context, fileID, uploaderID string) error
+	listFilesInFolderFunc func(ctx context.Context, convID, folderPath string, page, size int) ([]*model.FileInfo, int, error)
+	updateFolderPathFunc  func(ctx context.Context, fileID, folderPath string) error
 }
 
 func (m *mockFileDB) Insert(ctx context.Context, f *model.FileInfo) error {
-	if m.insertFunc != nil {
-		return m.insertFunc(ctx, f)
-	}
+	if m.insertFunc != nil { return m.insertFunc(ctx, f) }
 	return nil
 }
-
 func (m *mockFileDB) GetByID(ctx context.Context, fileID string) (*model.FileInfo, error) {
-	if m.getByIDFunc != nil {
-		return m.getByIDFunc(ctx, fileID)
-	}
-	return nil, fmt.Errorf("not found")
+	if m.getByIDFunc != nil { return m.getByIDFunc(ctx, fileID) }
+	return &model.FileInfo{FileID: fileID, Name: fileID + ".png", URL: "/files/" + fileID + ".png", Size: 100, ContentType: 1}, nil
 }
-
 func (m *mockFileDB) ListByConvID(ctx context.Context, convID string, page, size int) ([]*model.FileInfo, int, error) {
-	if m.listByConvIDFunc != nil {
-		return m.listByConvIDFunc(ctx, convID, page, size)
-	}
+	if m.listByConvIDFunc != nil { return m.listByConvIDFunc(ctx, convID, page, size) }
 	return nil, 0, nil
 }
-
 func (m *mockFileDB) DeleteByID(ctx context.Context, fileID, uploaderID string) error {
-	if m.deleteByIDFunc != nil {
-		return m.deleteByIDFunc(ctx, fileID, uploaderID)
-	}
+	if m.deleteByIDFunc != nil { return m.deleteByIDFunc(ctx, fileID, uploaderID) }
 	return nil
 }
-
-func (m *mockFileDB) CreateFolder(ctx context.Context, folder *model.FileFolder) (int64, error) {
-	if m.createFolderFunc != nil {
-		return m.createFolderFunc(ctx, folder)
-	}
-	return 0, nil
-}
-
-func (m *mockFileDB) ListFolders(ctx context.Context, convID string, parentID int64) ([]*model.FileFolder, error) {
-	if m.listFoldersFunc != nil {
-		return m.listFoldersFunc(ctx, convID, parentID)
-	}
-	return nil, nil
-}
-
-func (m *mockFileDB) ListFilesInFolder(ctx context.Context, convID string, folderID int64, page, size int) ([]*model.FileInfo, int, error) {
-	if m.listFilesInFolderFunc != nil {
-		return m.listFilesInFolderFunc(ctx, convID, folderID, page, size)
-	}
+func (m *mockFileDB) ListFilesInFolder(ctx context.Context, convID, folderPath string, page, size int) ([]*model.FileInfo, int, error) {
+	if m.listFilesInFolderFunc != nil { return m.listFilesInFolderFunc(ctx, convID, folderPath, page, size) }
 	return nil, 0, nil
 }
-
-func (m *mockFileDB) DeleteFolder(ctx context.Context, folderID int64) error {
-	if m.deleteFolderFunc != nil {
-		return m.deleteFolderFunc(ctx, folderID)
-	}
+func (m *mockFileDB) UpdateFolderPath(ctx context.Context, fileID, folderPath string) error {
+	if m.updateFolderPathFunc != nil { return m.updateFolderPathFunc(ctx, fileID, folderPath) }
 	return nil
 }
 
-func (m *mockFileDB) MoveFile(ctx context.Context, fileID string, folderID int64) error {
-	if m.moveFileFunc != nil {
-		return m.moveFileFunc(ctx, fileID, folderID)
-	}
-	return nil
-}
-
-func (m *mockFileDB) MoveFolder(ctx context.Context, folderID, parentID int64) error {
-	if m.moveFolderFunc != nil {
-		return m.moveFolderFunc(ctx, folderID, parentID)
-	}
-	return nil
-}
-
-func (m *mockFileDB) RenameFolder(ctx context.Context, folderID int64, name string) error {
-	if m.renameFolderFunc != nil {
-		return m.renameFolderFunc(ctx, folderID, name)
-	}
-	return nil
-}
-
-// ---------------------------------------------------------------------------
-// Mock: idGenerator
-// ---------------------------------------------------------------------------
-
-type mockIDGenerator struct {
-	nextIDFunc func() int64
-}
-
-func (m *mockIDGenerator) NextID() int64 {
-	if m.nextIDFunc != nil {
-		return m.nextIDFunc()
-	}
-	return 1
-}
-
-// ---------------------------------------------------------------------------
-// Mock: mfaStorage, emailVerifyHandler, emailSender
-// ---------------------------------------------------------------------------
-
-type mockMFAStorage struct {
-	getFunc     func(ctx context.Context, userID string) (*model.UserMFA, error)
-	upsertFunc  func(ctx context.Context, m *model.UserMFA) error
-	disableFunc func(ctx context.Context, userID string) error
-}
-
-func (m *mockMFAStorage) Get(ctx context.Context, userID string) (*model.UserMFA, error) {
-	if m.getFunc != nil {
-		return m.getFunc(ctx, userID)
-	}
-	return nil, fmt.Errorf("mfa not found")
-}
-
-func (m *mockMFAStorage) Upsert(ctx context.Context, u *model.UserMFA) error {
-	if m.upsertFunc != nil {
-		return m.upsertFunc(ctx, u)
-	}
-	return nil
-}
-
-func (m *mockMFAStorage) Disable(ctx context.Context, userID string) error {
-	if m.disableFunc != nil {
-		return m.disableFunc(ctx, userID)
-	}
-	return nil
-}
-
-type mockEmailVerifyHandler struct {
-	upsertFunc func(ctx context.Context, ev *model.EmailVerify) error
-	getFunc    func(ctx context.Context, userID string) (*model.EmailVerify, error)
-	deleteFunc func(ctx context.Context, userID string) error
-}
-
-func (m *mockEmailVerifyHandler) Upsert(ctx context.Context, ev *model.EmailVerify) error {
-	if m.upsertFunc != nil {
-		return m.upsertFunc(ctx, ev)
-	}
-	return nil
-}
-
-func (m *mockEmailVerifyHandler) Get(ctx context.Context, userID string) (*model.EmailVerify, error) {
-	if m.getFunc != nil {
-		return m.getFunc(ctx, userID)
-	}
-	return nil, fmt.Errorf("not found")
-}
-
-func (m *mockEmailVerifyHandler) Delete(ctx context.Context, userID string) error {
-	if m.deleteFunc != nil {
-		return m.deleteFunc(ctx, userID)
-	}
-	return nil
-}
-
-type mockEmailSender struct {
-	enabledFunc                  func() bool
-	sendVerificationCodeFunc     func(to, code string) error
-}
-
-func (m *mockEmailSender) Enabled() bool {
-	if m.enabledFunc != nil {
-		return m.enabledFunc()
-	}
-	return false
-}
-
-func (m *mockEmailSender) SendVerificationCode(to, code string) error {
-	if m.sendVerificationCodeFunc != nil {
-		return m.sendVerificationCodeFunc(to, code)
-	}
-	return nil
-}
-
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
-
-func setChiURLParam(r *http.Request, key, value string) *http.Request {
-	// Preserve any URL params already set on the context (e.g. when multiple
-	// params are needed on the same request).
-	chiCtx, ok := r.Context().Value(chi.RouteCtxKey).(*chi.Context)
-	if !ok {
-		chiCtx = chi.NewRouteContext()
-	}
-	chiCtx.URLParams.Add(key, value)
-	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, chiCtx))
-}
-
-func setAuthCtx(r *http.Request, userID string) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), auth.CtxKeyUserID, userID))
-}
-
-func decodeResponse(t *testing.T, w *httptest.ResponseRecorder) APIResponse {
-	t.Helper()
-	var resp APIResponse
-	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	return resp
-}
-
-// =========================================================================
-// Tests: Response helpers
-// =========================================================================
 
 func TestJSON_writesCorrectContentTypeAndBody(t *testing.T) {
 	w := httptest.NewRecorder()

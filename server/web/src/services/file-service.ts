@@ -17,8 +17,8 @@ export interface ConvFileInfo {
 }
 
 export const fileService = {
-  upload(fileData: Blob, fileName: string, fileType: number, onProgress?: (p: number) => void, convId?: string, folderId?: number) {
-    return upload(fileData, fileName, fileType, onProgress, convId, folderId)
+  upload(fileData: Blob, fileName: string, fileType: number, onProgress?: (p: number) => void, convId?: string, folderPath?: string) {
+    return upload(fileData, fileName, fileType, onProgress, convId, folderPath)
   },
 
   getFileUrl(fileId: string): string {
@@ -37,19 +37,19 @@ export const fileService = {
     return api.request(`/api/v1/conversations/${convId}/files/${fileId}`, { method: 'DELETE' })
   },
 
-  deleteFolder(convId: string, folderId: number) {
-    return api.request(`/api/v1/conversations/${convId}/folders/${folderId}`, { method: 'DELETE' })
+  deleteFolder(convId: string, path: string) {
+    return api.request(`/api/v1/conversations/${convId}/folders`, { method: 'DELETE', query: { path } })
   },
 
-  moveFile(convId: string, fileId: string, folderId: number) {
-    return api.request(`/api/v1/conversations/${convId}/files/${fileId}/move`, { method: 'PUT', body: { folder_id: folderId } })
+  moveFile(convId: string, fileId: string, folderPath: string) {
+    return api.request(`/api/v1/conversations/${convId}/files/${fileId}/move`, { method: 'PUT', body: { folder_path: folderPath } })
   },
 
-  moveFolder(convId: string, folderId: number, parentId: number) {
-    return api.request(`/api/v1/conversations/${convId}/folders/${folderId}/move`, { method: 'PUT', body: { parent_id: parentId } })
+  moveFolder(convId: string, srcPath: string, dstParent: string) {
+    return api.request(`/api/v1/conversations/${convId}/folders/move`, { method: 'PUT', body: { src_path: srcPath, dst_parent: dstParent } })
   },
 
-  renameFolder(convId: string, folderId: number, name: string) {
-    return api.request(`/api/v1/conversations/${convId}/folders/${folderId}/rename`, { method: 'PUT', body: { name } })
+  renameFolder(convId: string, oldPath: string, newName: string) {
+    return api.request(`/api/v1/conversations/${convId}/folders/rename`, { method: 'PUT', body: { old_path: oldPath, new_name: newName } })
   },
 }
