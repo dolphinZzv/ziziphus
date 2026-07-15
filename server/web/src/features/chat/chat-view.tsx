@@ -360,10 +360,12 @@ export default function ChatView() {
                       </button>
                     )}
                     <div className="border-t border-[var(--color-hairline)] my-1" />
+                    {!isOwner && (
                     <button onClick={handleLeave}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-ink)]">
                       <LogOut size={14} /> {t('group.leave')}
                     </button>
+                    )}
                     {isGroup && isOwner && (
                       <button onClick={handleDisband}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--destructive)]/10 text-[var(--destructive)]">
