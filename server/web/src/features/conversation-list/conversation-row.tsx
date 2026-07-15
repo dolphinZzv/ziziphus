@@ -5,7 +5,8 @@ import { ConvType, type ConvListItem } from '@/types/conversation'
 import { UserType } from '@/types/user'
 import { ContentType } from '@/types/message'
 import { conversationStore } from '@/stores/conversation-store'
-import { BellOff, Cpu, Pin, PinOff, Users } from 'lucide-react'
+import { chatStore } from '@/stores/chat-store'
+import { BellOff, Cpu, Edit3, Pin, PinOff, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface Props { conversation: ConvListItem; isSelected: boolean; onClick: () => void }
@@ -47,7 +48,10 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
   const isAI = partner_type === UserType.Agent
   const initials = isSystem ? '系' : (name ? name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() || name.charAt(0).toUpperCase() : '?')
 
-  const previewText = getPreview()
+  const draft = chatStore.getDraft(conversation.conv_id)
+  const rawPreview = getPreview()
+  const previewText = draft ? draft : rawPreview
+  const hasDraft = !!(draft && draft.trim())
 
   return (
     <div
@@ -99,8 +103,11 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
         <div className="flex items-center justify-between gap-2 mt-0.5">
           <span className="text-[13px] text-[var(--color-muted)] truncate leading-snug">
             {mute && <BellOff size={10} className="inline mr-1" />}
-            <span className="text-[var(--color-muted-soft)]">{senderLabel}</span>
-            {previewText || ''}
+            {hasDraft ? (
+              <><span className="text-[var(--color-accent)] text-[11px] font-medium mr-1">[{t('chat.draft')}]</span>{draft}</>
+            ) : (
+              <><span className="text-[var(--color-muted-soft)]">{senderLabel}</span>{rawPreview || ''}</>
+            )}
           </span>
           {unread_count > 0 ? (
             <span className="flex-shrink-0 min-w-[18px] h-[18px] rounded-sm bg-[var(--color-primary)] text-white text-[10px] font-semibold uppercase tracking-wider flex items-center justify-center px-1 ml-1">

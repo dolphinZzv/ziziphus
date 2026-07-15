@@ -373,6 +373,11 @@ func (h *FileHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
 		return
 	}
+	if err := h.store.EnsureConvSpace(convID); err != nil {
+		logger.Error("ensure conv space failed", "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
 	if err := h.store.CreateFolder(r.Context(), convID, req.ParentPath, req.Name); err != nil {
 		logger.Error("create folder failed", "error", err)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
@@ -388,6 +393,13 @@ func (h *FileHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 func (h *FileHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	parentPath := r.URL.Query().Get("parent_path")
+	if parentPath == "" && r.URL.Query().Get("parent_id") == "0" {
+		parentPath = "" // root
+	}
+	if err := h.store.EnsureConvSpace(convID); err != nil {
+		JSON(w, []file.FolderInfo{})
+		return
+	}
 	folders, err := h.store.ListFolders(r.Context(), convID, parentPath)
 	if err != nil {
 		logger.Error("list folders failed", "error", err)

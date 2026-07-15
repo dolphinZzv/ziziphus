@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
 import { chatStore } from '@/stores/chat-store'
+import { api } from '@/services/api-client'
 import { fileService } from '@/services/file-service'
 import { conversationService } from '@/services/conversation-service'
 import { userService } from '@/services/user-service'
 import { ContentType } from '@/types/message'
 import { cn } from '@/lib/cn'
+import { avatarUrl } from '@/lib/file'
 import { Send, Paperclip, Image, X, AtSign } from 'lucide-react'
 import MarkdownInput from './markdown-input'
 import { useTranslation } from 'react-i18next'
@@ -15,7 +17,7 @@ export default function InputBar({ convId, isP2p }: Props) {
   const { t } = useTranslation()
   const [text, setText] = useState('')
   const [uploading, setUploading] = useState(false)
-  const [members, setMembers] = useState<Array<{ id: string; name: string }>>([])
+  const [members, setMembers] = useState<Array<{ id: string; name: string; avatar?: string }>>([])
   const [showMention, setShowMention] = useState(false)
   const [mentionFilter, setMentionFilter] = useState('')
   const [showAttachMenu, setShowAttachMenu] = useState(false)
@@ -24,16 +26,36 @@ export default function InputBar({ convId, isP2p }: Props) {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const replyTo = useSyncExternalStore(chatStore.subscribe, () => chatStore.getReplyTo(convId))
 
-  // Load members for @mention
+  // Restore draft when switching conversations
   useEffect(() => {
-    conversationService.getDetail(convId).then(d => {
-      const ids = d.members.map(m => m.user_id)
-      if (ids.length > 1) {
-        userService.batchGet(ids).then(users => {
-          setMembers(Object.entries(users).map(([id, u]) => ({ id, name: u.name || id })))
-        }).catch(() => {})
-      }
-    }).catch(() => {})
+    const draft = chatStore.getDraft(convId)
+    setText(draft)
+  }, [convId])
+
+  // Load members + webhooks for @mention
+  useEffect(() => {
+    Promise.allSettled([
+      conversationService.getDetail(convId).then(d => {
+        const ids = d.members.map(m => m.user_id)
+        if (ids.length > 1) {
+          userService.batchGet(ids).then(users => {
+            setMembers(prev => {
+              const userItems = Object.entries(users).map(([id, u]) => ({ id, name: u.name || id, avatar: u.avatar || '' }))
+              // Merge: keep existing webhook items, replace user items
+              const whItems = prev.filter(m => m.id.startsWith('wh:'))
+              return [...userItems, ...whItems]
+            })
+          }).catch(() => {})
+        }
+      }),
+      api.request<Array<{ id: number; name: string }>>(`/api/v1/conversations/${convId}/webhooks`).then(whs => {
+        setMembers(prev => {
+          const whItems = whs.map(wh => ({ id: `wh:${wh.id}`, name: `@${wh.name}` }))
+          const userItems = prev.filter(m => !m.id.startsWith('wh:'))
+          return [...userItems, ...whItems]
+        })
+      }).catch(() => {}),
+    ])
   }, [convId])
 
   const handleSend = () => {
@@ -63,7 +85,7 @@ export default function InputBar({ convId, isP2p }: Props) {
     setUploading(true)
     setShowAttachMenu(false)
     try {
-      const result = await fileService.upload(file, file.name, type === 'image' ? 0 : 1)
+      const result = await fileService.upload(file, file.name, type === 'image' ? 0 : 1, undefined, convId)
       const body = JSON.stringify({ url: result.url, name: file.name, size: file.size, file_id: result.file_id })
       chatStore.sendMessage(convId, body, type === 'image' ? ContentType.Image : ContentType.File)
     } catch { /* ignore */ }
@@ -100,7 +122,7 @@ export default function InputBar({ convId, isP2p }: Props) {
   const uploadFile = async (file: File, type: 'image' | 'file') => {
     setUploading(true)
     try {
-      const result = await fileService.upload(file, file.name, type === 'image' ? 0 : 1)
+      const result = await fileService.upload(file, file.name, type === 'image' ? 0 : 1, undefined, convId)
       const body = JSON.stringify({ url: result.url, name: file.name, size: file.size, file_id: result.file_id })
       chatStore.sendMessage(convId, body, type === 'image' ? ContentType.Image : ContentType.File)
     } catch { /* ignore */ }
@@ -162,9 +184,13 @@ export default function InputBar({ convId, isP2p }: Props) {
               <button key={m.id} type="button"
                 onClick={() => insertMention(m.name)}
                 className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[var(--color-surface-soft)] text-sm text-[var(--color-ink)]">
-                <div className="w-6 h-6 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-xs font-semibold">
-                  {m.name.charAt(0)}
-                </div>
+                {m.avatar ? (
+                  <img src={avatarUrl(m.avatar, 48)} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                    {m.name.charAt(0)}
+                  </div>
+                )}
                 <span>{m.name}</span>
               </button>
             )) : (

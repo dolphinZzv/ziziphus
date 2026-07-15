@@ -12,7 +12,7 @@ test.describe('Login Page', () => {
   })
 
   test('renders login form correctly', async ({ page }) => {
-    await expect(page.locator('h1')).toHaveText('Ziziphus')
+    await expect(page.locator('h1')).toHaveText('ziziphus')
     await expect(page.getByPlaceholder('账号')).toBeVisible()
     await expect(page.getByPlaceholder('密码')).toBeVisible()
     await expect(page.getByText('记住账号')).toBeVisible()

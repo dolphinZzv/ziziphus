@@ -18,7 +18,7 @@ server: server-stop
 	cd server/web && npm run build
 	mkdir -p bin
 	cd server && go build -ldflags "-X ziziphus/pkg/version.GitCommit=$(GIT_HASH)" -o ../bin/ziziphus ./cmd/ziziphus/
-	./bin/ziziphus -c server/config/config.yaml &
+	cd server && ../bin/ziziphus -c config/config.yaml &
 	@echo "Server started"
 
 server-stop:

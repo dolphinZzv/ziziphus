@@ -2,9 +2,12 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '@/features/layout/sidebar'
+import { authStore } from '@/stores/auth-store'
 import { uiStore } from '@/stores/ui-store'
 import { wsClient } from '@/services/websocket-client'
+import { MessageType } from '@/types/ws'
 import type { ConnectionStatus } from '@/services/websocket-client'
+import type { MsgPushPayload } from '@/types/ws'
 import { cn } from '@/lib/cn'
 
 export default function AppLayout() {
@@ -17,6 +20,27 @@ export default function AppLayout() {
   useEffect(() => {
     setConnStatus(wsClient.connectionStatus)
     return wsClient.onStatusChange(setConnStatus)
+  }, [])
+
+  // Desktop notifications
+  useEffect(() => {
+    if (!('Notification' in window)) return
+    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission()
+    }
+    const user = authStore.state.user
+    const handler = wsClient.on(MessageType.MsgPush, (payload: unknown) => {
+      const push = payload as MsgPushPayload
+      if (document.hasFocus()) return
+      if (push.sender_id === user?.user_id) return
+      if (Notification.permission !== 'granted') return
+      const body = push.body || ''
+      new Notification(push.sender_name || '新消息', {
+        body: body.length > 120 ? body.slice(0, 120) + '...' : body,
+        icon: '/favicon.ico',
+      })
+    })
+    return () => handler?.()
   }, [])
 
   // Global keyboard shortcuts
