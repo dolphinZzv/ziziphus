@@ -16,12 +16,13 @@ build-info:
 # 后端服务
 server: server-stop
 	cd server/web && npm run build
-	cd server && go build -ldflags "-X ziziphus/pkg/version.GitCommit=$(GIT_HASH)" -o /tmp/ziziphus ./cmd/ziziphus/
-	cd server && /tmp/ziziphus -c config/config.yaml &
+	mkdir -p bin
+	cd server && go build -ldflags "-X ziziphus/pkg/version.GitCommit=$(GIT_HASH)" -o ../bin/ziziphus ./cmd/ziziphus/
+	./bin/ziziphus -c server/config/config.yaml &
 	@echo "Server started"
 
 server-stop:
-	@pkill -f "/tmp/ziziphus" 2>/dev/null || true
+	@pkill -f "bin/ziziphus" 2>/dev/null || true
 	@echo "Server stopped"
 
 APP_BUNDLE = client/.build/debug/IMApp-macOS.app
