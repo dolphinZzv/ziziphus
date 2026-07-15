@@ -99,7 +99,7 @@ export default function ProfileView({ onClose }: Props) {
         {/* ID */}
         <div className="px-6 mb-4">
           <div className="flex items-center justify-center gap-1 text-[11px] text-[var(--color-muted-soft)] font-mono select-all">
-            {user?.user_id?.slice(0, 18)}...
+            {user?.user_id}
             <button onClick={copyId} className="hover:text-[var(--color-ink)]">
               {copied ? <Check size={11} className="text-[var(--success)]" /> : <Copy size={11} />}
             </button>
