@@ -1,3 +1,5 @@
--- 025_drop_webhook_token: Remove NOT NULL from token after dropping token usage
-ALTER TABLE conv_webhooks ALTER COLUMN token DROP NOT NULL;
-ALTER TABLE conv_webhooks ALTER COLUMN token SET DEFAULT '';
+-- 025_drop_webhook_token: Remove token and require_audit columns
+DROP INDEX IF EXISTS idx_conv_webhooks_token;
+ALTER TABLE conv_webhooks DROP CONSTRAINT IF EXISTS conv_webhooks_token_key;
+ALTER TABLE conv_webhooks DROP COLUMN IF EXISTS token;
+ALTER TABLE conv_webhooks DROP COLUMN IF EXISTS require_audit;
