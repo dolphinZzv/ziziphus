@@ -17,6 +17,7 @@ server/config/config.yaml
 .venv
 .env
 env
+ROBOT.md
 .omo
 data
 panda_ai
