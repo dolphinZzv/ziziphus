@@ -7,7 +7,7 @@
 # Application identity (displayed in emails, page titles, TOTP, etc.)
 app:
   name: "Ziziphus"          # Application name used in email subjects, page titles, TOTP issuer
-  headline: "IM App"        # Short tagline / description
+  headline: "Connect. Communicate. Create."  # Tagline shown on login/register pages
   env: "development"        # Runtime environment: development, staging, production
 
 server:
