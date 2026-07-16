@@ -54,9 +54,9 @@ All tests are in `server/web/e2e/`.
 | 新建聊天 UI | new chat dialog opens | `conversation-dialogs.spec.ts` | ✅ |
 | 解散群组 | disband group from menu | `group-actions.spec.ts` | ✅ |
 | 退出群组 | leave group from menu | `group-actions.spec.ts` | ✅ |
-| 群设置 | settings accessible from group detail | 待补充 | ❌ |
-| 加人/踢人 | add/remove member | 待补充 | ❌ |
-| 成员列表 | member list view | 待补充 | ❌ |
+| 群设置 | settings accessible from group detail | 待补充 | 🚧 |
+| 加人/踢人 | add/remove member | 待补充 | 🚧 |
+| 成员列表 | member list view | 待补充 | 🚧 |
 
 ---
 
@@ -108,7 +108,7 @@ All tests are in `server/web/e2e/`.
 
 | Feature | E2E Test | File | Status |
 |---------|----------|------|--------|
-| MFA 设置 | register user for MFA | `mfa.spec.ts` | ✅ |
+| MFA 设置 — TOTP 开启/关闭 | register, open privacy, enable TOTP setup, verify UI | `mfa.spec.ts` | ✅ |
 | MFA 登录流 | register for MFA login | `mfa-login-flow.spec.ts` | ✅ |
 
 ---
