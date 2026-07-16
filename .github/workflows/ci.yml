@@ -28,11 +28,11 @@ jobs:
       - name: Create web dist dir with placeholder (for //go:embed)
         run: mkdir -p internal/webembed/dist && touch internal/webembed/dist/.gitkeep
 
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.12.2
+
       - name: Lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.12.2
-          working-directory: server
+        run: golangci-lint run ./...
 
       - name: Build
         run: go build ./...
