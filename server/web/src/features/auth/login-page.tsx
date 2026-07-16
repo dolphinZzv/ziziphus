@@ -21,12 +21,16 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true)
   const [savedAccounts, setSavedAccounts] = useState(getSavedAccounts)
   const [appName, setAppName] = useState('Ziziphus')
+  const [appHeadline, setAppHeadline] = useState('')
 
-  // Fetch app name from server
+  // Fetch app info from server
   useEffect(() => {
     fetch('/api/v1/app/info')
       .then(r => r.json())
-      .then(d => { if (d.data?.name) setAppName(d.data.name) })
+      .then(d => {
+        if (d.data?.name) setAppName(d.data.name)
+        if (d.data?.headline) setAppHeadline(d.data.headline)
+      })
       .catch(() => { /* use default */ })
   }, [])
 
@@ -70,23 +74,22 @@ export default function LoginPage() {
       <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
         <div className="text-center">
           <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
+          {appHeadline && <p className="text-xs text-[var(--color-muted)] -mt-1 mb-1">{appHeadline}</p>}
           <p className="text-sm text-[var(--color-muted)] mt-2">{t('auth.mfaTitle')}</p>
           <div className="inline-block mt-2 px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-medium">
             {mfaTypeLabel}
           </div>
           <p className="text-xs text-[var(--color-muted)] mt-3">{mfaHint}</p>
         </div>
-        <form onSubmit={handleMfaVerify} className="w-full max-w-[320px] flex flex-col gap-4">
-          <input type="text" value={mfaCode} onChange={e => setMfaCode(e.target.value)}
-            placeholder={t('auth.mfaCode')} maxLength={6}
-            className={`${inputClass} text-center tracking-[6px] font-mono text-lg`} autoFocus />
-          {error && <span className="text-xs text-[var(--destructive)] text-center">{error}</span>}
-          <button type="submit" disabled={isLoading || !mfaCode.trim()}
-            className="w-full h-11 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40">
-            {isLoading ? t('auth.verifying') : t('auth.verify')}
-          </button>
-        </form>
-        <AuthFooter />
+
+        {/* Back button */}
+        <button
+          onClick={() => authStore.logout()}
+          className="absolute top-4 left-4 w-9 h-9 flex items-center justify-center rounded-xl text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-soft)] transition-colors"
+          aria-label={t('common.back')}
+        >
+          <X size={18} />
+        </button>
       </div>
     )
   }
@@ -96,21 +99,40 @@ export default function LoginPage() {
       {/* Logo */}
       <div className="text-center">
         <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
+        {appHeadline && <p className="text-xs text-[var(--color-muted)] mt-1">{appHeadline}</p>}
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-[320px] flex flex-col gap-4">
         {/* Account */}
         <div className="relative">
-          <input type="text" value={account} onChange={e => setAccount(e.target.value)}
-            placeholder={t("auth.account")} className={inputClass} autoComplete="username" />
-          {savedAccounts.length > 0 && !account && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl z-10 overflow-hidden"
-              style={{ boxShadow: 'var(--shadow-md)' }}>
+          <input
+            className={inputClass + ' pr-10'}
+            type="text"
+            placeholder={t('auth.account')}
+            value={account}
+            onChange={e => setAccount(e.target.value)}
+            disabled={isLoading}
+            autoFocus
+            autoComplete="username"
+            onFocus={() => setSavedAccounts(getSavedAccounts())}
+          />
+          {/* Saved accounts dropdown */}
+          {!account && savedAccounts.length > 0 && !isLoading && (
+            <div className="absolute top-full left-0 right-0 mt-1 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border)] shadow-lg z-10 overflow-hidden">
               {savedAccounts.map(acc => (
-                <button key={acc} type="button" onClick={() => fillAccount(acc)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[var(--color-surface-soft)] text-sm text-[var(--color-ink)]">
-                  {acc}
-                  <X size={13} className="text-[var(--color-muted)] hover:text-[var(--destructive)]" onClick={e => deleteAccount(acc, e)} />
+                <button
+                  key={acc}
+                  type="button"
+                  className="w-full px-4 py-2.5 text-left text-sm text-[var(--color-ink)] hover:bg-[var(--color-surface-soft)] transition-colors flex items-center justify-between group"
+                  onClick={() => fillAccount(acc)}
+                >
+                  <span>{acc}</span>
+                  <span
+                    className="text-[var(--color-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    onClick={e => deleteAccount(acc, e)}
+                  >
+                    <X size={14} />
+                  </span>
                 </button>
               ))}
             </div>
@@ -119,34 +141,45 @@ export default function LoginPage() {
 
         {/* Password */}
         <div className="relative">
-          <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-            placeholder={t("auth.password")} className={`${inputClass} pr-10`} autoComplete="current-password" />
-          <button type="button" onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-ink)]">
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          <input
+            className={inputClass + ' pr-10'}
+            type={showPassword ? 'text' : 'password'}
+            placeholder={t('auth.password')}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            disabled={isLoading}
+            autoComplete="current-password"
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+            onClick={() => setShowPassword(!showPassword)}
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
 
-        {/* Remember + Error */}
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-1.5 text-xs text-[var(--color-muted)] cursor-pointer">
-            <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
-              className="w-3.5 h-3.5 rounded accent-[var(--color-primary)]" />
-            {t("auth.rememberAccount")}
-          </label>
-          {error && <span className="text-xs text-[var(--destructive)]">{error}</span>}
-        </div>
-
-        {/* Submit */}
-        <button type="submit" disabled={isLoading}
-          className="w-full h-11 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40">
+        {/* Login button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full h-12 rounded-xl bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer mt-1"
+        >
           {isLoading ? t('auth.loggingIn') : t('auth.login')}
         </button>
-      </form>
 
-      <Link to="/register" className="text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors">
-        {t('auth.switchToRegister')}
-      </Link>
+        {/* Error */}
+        {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+
+        {/* Register link */}
+        <p className="text-xs text-[var(--color-muted)] text-center">
+          {t('auth.noAccount')}{' '}
+          <Link to="/register" className="text-[var(--color-primary)] hover:underline font-medium">
+            {t('auth.register')}
+          </Link>
+        </p>
+      </form>
 
       <AuthFooter />
     </div>

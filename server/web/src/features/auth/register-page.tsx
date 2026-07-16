@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [appName, setAppName] = useState('Ziziphus')
+  const [appHeadline, setAppHeadline] = useState('')
   const [email, setEmail] = useState('')
   const [localError, setLocalError] = useState('')
 
@@ -32,7 +33,10 @@ export default function RegisterPage() {
   useEffect(() => {
     fetch('/api/v1/app/info')
       .then(r => r.json())
-      .then(d => { if (d.data?.name) setAppName(d.data.name) })
+      .then(d => {
+        if (d.data?.name) setAppName(d.data.name)
+        if (d.data?.headline) setAppHeadline(d.data.headline)
+      })
       .catch(() => { /* use default */ })
   }, [])
 
