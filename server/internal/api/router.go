@@ -67,6 +67,10 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/webhooks/receive", h.Webhook.ReceiveMessage)
 	})
 
+	// Password reset routes (no login rate limiting)
+	r.Post("/api/v1/users/password-reset/send-code", h.User.SendPasswordResetCode)
+	r.Post("/api/v1/users/password-reset/reset", h.User.ResetPassword)
+
 	// Authenticated routes
 	r.Group(func(r chi.Router) {
 		r.Use(authMW)

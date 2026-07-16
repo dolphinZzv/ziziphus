@@ -7,6 +7,7 @@ import AppLayout from '@/features/layout/app-layout'
 import AnnouncementBanner from '@/components/announcement-banner'
 import LoginPage from '@/features/auth/login-page'
 import RegisterPage from '@/features/auth/register-page'
+import ForgotPasswordPage from '@/features/auth/forgot-password-page'
 import EmptyChat from '@/features/chat/empty-chat'
 import ErrorBoundary from '@/components/error-boundary'
 
@@ -47,6 +48,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={isLoggedIn ? <Navigate to="/chat" replace /> : <LoginPage />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/chat" replace /> : <RegisterPage />} />
+        <Route path="/forgot-password" element={isLoggedIn ? <Navigate to="/chat" replace /> : <ForgotPasswordPage />} />
         <Route path="/" element={<AuthGuard><ErrorBoundary><AppLayout /></ErrorBoundary></AuthGuard>}>
           <Route index element={<Navigate to="/chat" replace />} />
           <Route path="chat" element={<Suspense fallback={<PageFallback />}><EmptyChat /></Suspense>} />

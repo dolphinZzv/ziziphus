@@ -20,10 +20,20 @@ var verifyCodeZH string
 //go:embed email_templates/verify_code_en.html
 var verifyCodeEN string
 
+//go:embed email_templates/reset_password_zh.html
+var resetPasswordZH string
+
+//go:embed email_templates/reset_password_en.html
+var resetPasswordEN string
+
 var emailTemplates = map[string]map[string]string{
 	"verify_code": {
 		"zh": verifyCodeZH,
 		"en": verifyCodeEN,
+	},
+	"reset_password": {
+		"zh": resetPasswordZH,
+		"en": resetPasswordEN,
 	},
 }
 
@@ -73,6 +83,48 @@ func (m *Mailer) cfgVal() config.SMTPConfig {
 func (m *Mailer) Enabled() bool {
 	c := m.cfgVal()
 	return c.Host != "" && c.User != ""
+}
+
+// SendPasswordResetCode sends a password reset code via email (default lang: zh).
+func (m *Mailer) SendPasswordResetCode(to, code string) error {
+	return m.SendPasswordResetCodeLang(to, code, "zh")
+}
+
+// SendPasswordResetCodeLang sends a password reset code in the specified language.
+func (m *Mailer) SendPasswordResetCodeLang(to, code, lang string) error {
+	if !m.Enabled() {
+		return fmt.Errorf("mailer disabled")
+	}
+
+	appName := m.appNameVal()
+
+	subjects := map[string]string{
+		"zh": appName + " - 密码重置验证码",
+		"en": appName + " - Password Reset Code",
+	}
+	subject := appName + " - Password Reset Code"
+	if s, ok := subjects[lang]; ok {
+		subject = s
+	}
+
+	tmplBody := resetPasswordZH
+	if templates, ok := emailTemplates["reset_password"]; ok {
+		if t, ok := templates[lang]; ok {
+			tmplBody = t
+		}
+	}
+
+	tmpl, err := template.New("email").Parse(tmplBody)
+	if err != nil {
+		return fmt.Errorf("parse template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, TemplateData{AppName: appName, Code: code}); err != nil {
+		return fmt.Errorf("execute template: %w", err)
+	}
+
+	return m.send(to, subject, buf.String())
 }
 
 // SendVerificationCode sends a 6-digit code via email (default lang: zh).

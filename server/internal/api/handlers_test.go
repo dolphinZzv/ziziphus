@@ -61,6 +61,18 @@ func (r *testAuthUserRepo) GetByAccount(_ context.Context, account string) (*mod
 	return nil, fmt.Errorf("user not found")
 }
 
+func (r *testAuthUserRepo) GetByEmail(_ context.Context, email string) (*model.User, error) {
+	if r.users == nil {
+		return nil, fmt.Errorf("user not found")
+	}
+	for _, u := range r.users {
+		if u.Email == email {
+			return u, nil
+		}
+	}
+	return nil, fmt.Errorf("user not found")
+}
+
 // ---------------------------------------------------------------------------
 // Mock: userRepo (for UserHandler)
 // ---------------------------------------------------------------------------
@@ -77,8 +89,11 @@ type mockUserRepo struct {
 	deleteAgentFunc       func(ctx context.Context, agentID, uid string) error
 	getByAPIKeyFunc       func(ctx context.Context, apiKey string) (*model.User, error)
 	updateAgentAPIKeyFunc func(ctx context.Context, agentID, uid, apiKey string) error
-	deleteAccountFunc     func(ctx context.Context, userID string) error
-	updateLanguageFunc    func(ctx context.Context, userID, language string) error
+	deleteAccountFunc       func(ctx context.Context, userID string) error
+	updateLanguageFunc      func(ctx context.Context, userID, language string) error
+	getByEmailFunc          func(ctx context.Context, email string) (*model.User, error)
+	updatePasswordFunc      func(ctx context.Context, userID, password string) error
+	getByAccountFunc        func(ctx context.Context, account string) (*model.User, error)
 }
 
 func (m *mockUserRepo) Create(ctx context.Context, u *model.User) error {
@@ -170,6 +185,27 @@ func (m *mockUserRepo) UpdateLanguage(ctx context.Context, userID, language stri
 		return m.updateLanguageFunc(ctx, userID, language)
 	}
 	return nil
+}
+
+func (m *mockUserRepo) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	if m.getByEmailFunc != nil {
+		return m.getByEmailFunc(ctx, email)
+	}
+	return nil, fmt.Errorf("not found")
+}
+
+func (m *mockUserRepo) UpdatePassword(ctx context.Context, userID, password string) error {
+	if m.updatePasswordFunc != nil {
+		return m.updatePasswordFunc(ctx, userID, password)
+	}
+	return nil
+}
+
+func (m *mockUserRepo) GetByAccount(ctx context.Context, account string) (*model.User, error) {
+	if m.getByAccountFunc != nil {
+		return m.getByAccountFunc(ctx, account)
+	}
+	return nil, fmt.Errorf("not found")
 }
 
 // ---------------------------------------------------------------------------
@@ -781,8 +817,9 @@ func (m *mockEmailVerifyHandler) Delete(_ context.Context, _ string) error { ret
 
 type mockEmailSender struct{}
 
-func (m *mockEmailSender) Enabled() bool                          { return false }
-func (m *mockEmailSender) SendVerificationCode(_, _ string) error { return nil }
+func (m *mockEmailSender) Enabled() bool                              { return false }
+func (m *mockEmailSender) SendVerificationCode(_, _ string) error     { return nil }
+func (m *mockEmailSender) SendPasswordResetCode(_, _ string) error    { return nil }
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -931,7 +968,7 @@ func newTestUserHandler(authUserRepo *testAuthUserRepo) (*UserHandler, *auth.Ser
 	authSvc := auth.NewService("test-jwt-secret", 24, 168, authUserRepo, nil, func() int64 { return time.Now().UnixNano() })
 	userRepo := &mockUserRepo{}
 	sessMgr := &mockSessionChecker{}
-	return NewUserHandler(authSvc, userRepo, sessMgr, func() int64 { return time.Now().UnixNano() }, &mockMFAStorage{}, &mockEmailVerifyHandler{}, &mockEmailSender{}, true, "Ziziphus"), authSvc, userRepo, sessMgr
+	return NewUserHandler(authSvc, userRepo, sessMgr, func() int64 { return time.Now().UnixNano() }, &mockMFAStorage{}, &mockEmailVerifyHandler{}, &mockEmailSender{}, nil, true, "Ziziphus"), authSvc, userRepo, sessMgr
 }
 
 func TestUserHandler_Register_Success(t *testing.T) {

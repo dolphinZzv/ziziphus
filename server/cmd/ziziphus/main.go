@@ -162,7 +162,8 @@ func main() {
 	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL, convMgr, ingest, userRepo)
 
 	// HTTP API handlers
-	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailer, cfg.Server.RegistrationAllowed(), cfg.App.Name)
+	passwordResetRepo := db.NewPasswordResetRepo(pool)
+userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailer, passwordResetRepo, cfg.Server.RegistrationAllowed(), cfg.App.Name)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, receiptRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)

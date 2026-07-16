@@ -40,6 +40,18 @@ func (m *mockUserRepo) GetByID(_ context.Context, id string) (*model.User, error
 	return u, nil
 }
 
+func (m *mockUserRepo) GetByEmail(_ context.Context, email string) (*model.User, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	for _, u := range m.users {
+		if u.Email == email {
+			return u, nil
+		}
+	}
+	return nil, errors.New("user not found")
+}
+
 func (m *mockUserRepo) GetByAccount(_ context.Context, account string) (*model.User, error) {
 	if m.err != nil {
 		return nil, m.err
@@ -417,5 +429,296 @@ func TestParseToken_WrongSigningMethod(t *testing.T) {
 	_, err = svc.ParseToken(tokenStr)
 	if err == nil {
 		t.Fatal("expected error for None signing method, got nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Password Reset
+// ---------------------------------------------------------------------------
+
+type mockPasswordResetStore struct {
+	resets map[string]*model.PasswordReset
+	err    error
+}
+
+func newMockPasswordResetStore() *mockPasswordResetStore {
+	return &mockPasswordResetStore{resets: make(map[string]*model.PasswordReset)}
+}
+
+func (m *mockPasswordResetStore) Upsert(_ context.Context, pr *model.PasswordReset) error {
+	if m.err != nil {
+		return m.err
+	}
+	cp := *pr
+	m.resets[pr.UserID] = &cp
+	return nil
+}
+
+func (m *mockPasswordResetStore) Get(_ context.Context, userID string) (*model.PasswordReset, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	pr, ok := m.resets[userID]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	cp := *pr
+	return &cp, nil
+}
+
+func (m *mockPasswordResetStore) Delete(_ context.Context, userID string) error {
+	delete(m.resets, userID)
+	return m.err
+}
+
+type mockPasswordUpdater struct {
+	err error
+}
+
+func (m *mockPasswordUpdater) UpdatePassword(_ context.Context, userID, password string) error {
+	return m.err
+}
+
+type mockPasswordResetMailer struct {
+	err error
+}
+
+func (m *mockPasswordResetMailer) Enabled() bool {
+	return m.err == nil
+}
+
+func (m *mockPasswordResetMailer) SendPasswordResetCode(_, _ string) error {
+	return m.err
+}
+
+func TestRequestPasswordReset_Success(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	// Register a user with email
+	user, _, _, err := svc.Register(ctx, "alice", "password123", "alice_reset", "alice@example.com", "")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	resetStore := newMockPasswordResetStore()
+	mailer := &mockPasswordResetMailer{}
+
+	userID, code, err := svc.RequestPasswordReset(ctx, "alice_reset", resetStore, mailer)
+	if err != nil {
+		t.Fatalf("RequestPasswordReset: %v", err)
+	}
+	if userID != user.ID {
+		t.Errorf("userID = %q, want %q", userID, user.ID)
+	}
+	if code == "" {
+		t.Error("expected non-empty reset code")
+	}
+
+	// Verify the code was stored
+	stored, err := resetStore.Get(ctx, userID)
+	if err != nil {
+		t.Fatalf("Get stored reset: %v", err)
+	}
+	if stored.Code != code {
+		t.Errorf("stored code = %q, want %q", stored.Code, code)
+	}
+	if stored.ExpiresAt.Before(time.Now()) {
+		t.Error("stored ExpiresAt is in the past")
+	}
+}
+
+func TestRequestPasswordReset_ByEmail(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	// Register a user with email
+	user, _, _, err := svc.Register(ctx, "bob", "password123", "bob_reset_email", "bob@example.com", "")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	resetStore := newMockPasswordResetStore()
+	mailer := &mockPasswordResetMailer{}
+
+	// Look up by email instead of account
+	userID, code, err := svc.RequestPasswordReset(ctx, "bob@example.com", resetStore, mailer)
+	if err != nil {
+		t.Fatalf("RequestPasswordReset by email: %v", err)
+	}
+	if userID != user.ID {
+		t.Errorf("userID = %q, want %q", userID, user.ID)
+	}
+	if code == "" {
+		t.Error("expected non-empty reset code")
+	}
+}
+
+func TestRequestPasswordReset_NoEmail(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	// Register a user without email
+	_, _, _, err := svc.Register(ctx, "charlie", "password123", "charlie_noemail", "", "")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	resetStore := newMockPasswordResetStore()
+	mailer := &mockPasswordResetMailer{}
+
+	_, _, err = svc.RequestPasswordReset(ctx, "charlie_noemail", resetStore, mailer)
+	if err == nil {
+		t.Fatal("expected error for user without email, got nil")
+	}
+	var appErr *model.AppError
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected *model.AppError, got %T", err)
+	}
+	if appErr.Code != model.ErrBadMessage {
+		t.Errorf("code = %d, want %d", appErr.Code, model.ErrBadMessage)
+	}
+}
+
+func TestRequestPasswordReset_UserNotFound(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	resetStore := newMockPasswordResetStore()
+	mailer := &mockPasswordResetMailer{}
+
+	_, _, err := svc.RequestPasswordReset(ctx, "nonexistent_user", resetStore, mailer)
+	if err == nil {
+		t.Fatal("expected error for non-existent user, got nil")
+	}
+	var appErr *model.AppError
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected *model.AppError, got %T", err)
+	}
+}
+
+func TestRequestPasswordReset_NotFoundByEmail(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	resetStore := newMockPasswordResetStore()
+	mailer := &mockPasswordResetMailer{}
+
+	_, _, err := svc.RequestPasswordReset(ctx, "nonexistent@example.com", resetStore, mailer)
+	if err == nil {
+		t.Fatal("expected error for non-existent email, got nil")
+	}
+}
+
+func TestResetPassword_Success(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	user, _, _, err := svc.Register(ctx, "dave", "oldpassword", "dave_reset", "dave@example.com", "")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	resetStore := newMockPasswordResetStore()
+	pwUpdater := &mockPasswordUpdater{}
+	mailer := &mockPasswordResetMailer{}
+	newPassword := "newpassword456"
+
+	// Request reset
+	_, code, err := svc.RequestPasswordReset(ctx, "dave_reset", resetStore, mailer)
+	if err != nil {
+		t.Fatalf("RequestPasswordReset: %v", err)
+	}
+
+	// Reset password
+	if err := svc.ResetPassword(ctx, user.ID, code, newPassword, resetStore, pwUpdater); err != nil {
+		t.Fatalf("ResetPassword: %v", err)
+	}
+
+	// Verify the code was deleted after use
+	_, err = resetStore.Get(ctx, user.ID)
+	if err == nil {
+		t.Error("expected reset code to be deleted after use")
+	}
+}
+
+func TestResetPassword_WrongCode(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	user, _, _, err := svc.Register(ctx, "eve", "oldpassword", "eve_wrong", "eve@example.com", "")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	resetStore := newMockPasswordResetStore()
+	pwUpdater := &mockPasswordUpdater{}
+	mailer := &mockPasswordResetMailer{}
+
+	// Request reset
+	_, code, err := svc.RequestPasswordReset(ctx, "eve_wrong", resetStore, mailer)
+	if err != nil {
+		t.Fatalf("RequestPasswordReset: %v", err)
+	}
+
+	// Try to reset with wrong code
+	wrongCode := "000000"
+	if wrongCode == code {
+		wrongCode = "000001"
+	}
+	err = svc.ResetPassword(ctx, user.ID, wrongCode, "newpassword456", resetStore, pwUpdater)
+	if err == nil {
+		t.Fatal("expected error for wrong code, got nil")
+	}
+	var appErr *model.AppError
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected *model.AppError, got %T", err)
+	}
+}
+
+func TestResetPassword_ExpiredCode(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	user, _, _, err := svc.Register(ctx, "frank", "oldpassword", "frank_exp", "frank@example.com", "")
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	resetStore := newMockPasswordResetStore()
+	pwUpdater := &mockPasswordUpdater{}
+	mailer := &mockPasswordResetMailer{}
+
+	// Request reset and store the code
+	_, code, err := svc.RequestPasswordReset(ctx, "frank_exp", resetStore, mailer)
+	if err != nil {
+		t.Fatalf("RequestPasswordReset: %v", err)
+	}
+
+	// Manually expire the code
+	stored, _ := resetStore.Get(ctx, user.ID)
+	stored.ExpiresAt = time.Now().Add(-1 * time.Minute)
+	resetStore.resets[user.ID] = stored
+
+	err = svc.ResetPassword(ctx, user.ID, code, "newpassword456", resetStore, pwUpdater)
+	if err == nil {
+		t.Fatal("expected error for expired code, got nil")
+	}
+	var appErr *model.AppError
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected *model.AppError, got %T", err)
+	}
+}
+
+func TestResetPassword_ShortPassword(t *testing.T) {
+	svc, _, _ := setupService(t)
+	ctx := context.Background()
+
+	resetStore := newMockPasswordResetStore()
+	pwUpdater := &mockPasswordUpdater{}
+
+	err := svc.ResetPassword(ctx, "any_user", "123456", "short", resetStore, pwUpdater)
+	if err == nil {
+		t.Fatal("expected error for short password, got nil")
 	}
 }

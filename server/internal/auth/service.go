@@ -42,6 +42,17 @@ type userRepository interface {
 	Create(ctx context.Context, u *model.User) error
 	GetByID(ctx context.Context, id string) (*model.User, error)
 	GetByAccount(ctx context.Context, account string) (*model.User, error)
+	GetByEmail(ctx context.Context, email string) (*model.User, error)
+}
+
+type passwordResetStore interface {
+	Upsert(ctx context.Context, pr *model.PasswordReset) error
+	Get(ctx context.Context, userID string) (*model.PasswordReset, error)
+	Delete(ctx context.Context, userID string) error
+}
+
+type passwordUpdater interface {
+	UpdatePassword(ctx context.Context, userID, password string) error
 }
 
 const (
@@ -259,3 +270,83 @@ func (s *Service) generateRefreshToken(ctx context.Context, userID string) (stri
 // ctxTODO is a background context for blacklist checks where the request
 // context isn't available. Only used in ParseToken for blacklist lookups.
 var ctxTODO = context.Background()
+
+// ---------------------------------------------------------------------------
+// Password reset
+// ---------------------------------------------------------------------------
+
+// RequestPasswordReset generates a 6-digit reset code, stores it, and sends it via email.
+// Returns the user ID (so the frontend can track the reset session) and the code for dev mode.
+// If mailer is nil or its Enabled() returns false, returns an error.
+func (s *Service) RequestPasswordReset(ctx context.Context, accountOrEmail string, resetStore passwordResetStore, mailer interface{ Enabled() bool; SendPasswordResetCode(to, code string) error }) (string, string, error) {
+	// Look up by account first, then by email
+	user, err := s.userRepo.GetByAccount(ctx, accountOrEmail)
+	if err != nil {
+		user, err = s.userRepo.GetByEmail(ctx, accountOrEmail)
+		if err != nil {
+			return "", "", &model.AppError{Code: model.ErrNotFound, Message: "account or email not found", Key: "auth.reset_user_not_found"}
+		}
+	}
+	if user.Email == "" {
+		return "", "", &model.AppError{Code: model.ErrBadMessage, Message: "no email on file", Key: "auth.reset_no_email"}
+	}
+
+	code := GenerateEmailOTP()
+	pr := &model.PasswordReset{
+		UserID:    user.ID,
+		Code:      code,
+		ExpiresAt: time.Now().Add(10 * time.Minute),
+	}
+	if err := resetStore.Upsert(ctx, pr); err != nil {
+		return "", "", fmt.Errorf("store reset code: %w", err)
+	}
+
+	// Send email
+	if mailer == nil || !mailer.Enabled() {
+		return "", "", &model.AppError{Code: model.ErrNoPermission, Message: "mail service not available", Key: "err.mailer_disabled"}
+	}
+	go func() { _ = mailer.SendPasswordResetCode(user.Email, code) }()
+
+	return user.ID, code, nil
+}
+
+// VerifyResetCode checks if the reset code is valid for the given user.
+func (s *Service) VerifyResetCode(ctx context.Context, userID, code string, resetStore passwordResetStore) error {
+	pr, err := resetStore.Get(ctx, userID)
+	if err != nil {
+		return &model.AppError{Code: model.ErrBadMessage, Message: "no reset code found", Key: "auth.reset_code_invalid"}
+	}
+	if time.Now().After(pr.ExpiresAt) {
+		resetStore.Delete(ctx, userID)
+		return &model.AppError{Code: model.ErrBadMessage, Message: "reset code expired", Key: "auth.reset_code_expired"}
+	}
+	if pr.Code != code {
+		return &model.AppError{Code: model.ErrBadMessage, Message: "invalid reset code", Key: "auth.reset_code_invalid"}
+	}
+	return nil
+}
+
+// ResetPassword verifies the code and updates the password.
+func (s *Service) ResetPassword(ctx context.Context, userID, code, newPassword string, resetStore passwordResetStore, pwUpdater passwordUpdater) error {
+	if len(newPassword) < 8 {
+		return &model.AppError{Code: model.ErrBadMessage, Message: "password must be at least 8 characters", Key: "auth.password_too_short"}
+	}
+
+	if err := s.VerifyResetCode(ctx, userID, code, resetStore); err != nil {
+		return err
+	}
+
+	hashed, err := HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+
+	if err := pwUpdater.UpdatePassword(ctx, userID, hashed); err != nil {
+		return fmt.Errorf("update password: %w", err)
+	}
+
+	// Clean up used code
+	_ = resetStore.Delete(ctx, userID)
+
+	return nil
+}

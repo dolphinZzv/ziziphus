@@ -54,9 +54,9 @@ All tests are in `server/web/e2e/`.
 | 新建聊天 UI | new chat dialog opens | `conversation-dialogs.spec.ts` | ✅ |
 | 解散群组 | disband group from menu | `group-actions.spec.ts` | ✅ |
 | 退出群组 | leave group from menu | `group-actions.spec.ts` | ✅ |
-| 群设置 | settings accessible from group detail | 待补充 | 🚧 |
-| 加人/踢人 | add/remove member | 待补充 | 🚧 |
-| 成员列表 | member list view | 待补充 | 🚧 |
+| 群设置 | settings accessible from group detail | `group-detail.spec.ts` | ✅ |
+| 加人/踢人 | add/remove member via dialog and member list | `group-detail.spec.ts` | ✅ |
+| 成员列表 | member list view | `group-detail.spec.ts` | ✅ |
 
 ---
 
@@ -133,18 +133,27 @@ All tests are in `server/web/e2e/`.
 
 ---
 
+## 11. 密码重置 (Password Reset)
+
+| Feature | E2E Test | File | Status |
+|---------|----------|------|--------|
+| 注册并重置密码 | register, reset via forgot-password flow, login with new password | `password-reset.spec.ts` | ✅ |
+
+---
+
 ## Coverage Status
 
 | Category | Total Features | Tested | Coverage |
 |----------|---------------|--------|:--------:|
-| 认证 | 8 | 8 | 100% |
+| 认证 | 9 | 9 | 100% |
 | 消息 | 13 | 13 | 100% |
 | 会话列表 | 7 | 7 | 100% |
-| 群组详情 | 5 | 2 | 40% |
+| 群组详情 | 5 | 5 | 100% |
 | 联系人 | 3 | 3 | 100% |
 | 文件 | 2 | 2 | 100% |
 | 个人资料 | 6 | 6 | 100% |
 | MFA | 2 | 2 | 100% |
 | 路由 | 5 | 5 | 100% |
 | 布局 | 1 | 1 | 100% |
-| **总计** | **55** | **48** | **87%** |
+| 密码重置 | 1 | 1 | 100% |
+| **总计** | **56** | **52** | **93%** |

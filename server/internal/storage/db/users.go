@@ -91,6 +91,19 @@ func (r *UserRepo) Search(ctx context.Context, q string, page, size int) ([]*mod
 	return users, count, nil
 }
 
+func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	u := &model.User{}
+	var createdAt time.Time
+	err := r.pool.QueryRow(ctx,
+		`SELECT `+userAllCols+` FROM users WHERE email = $1`, email).
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language)
+	if err != nil {
+		return nil, err
+	}
+	u.CreatedAt = createdAt.UnixMilli()
+	return u, nil
+}
+
 func (r *UserRepo) GetByAccount(ctx context.Context, account string) (*model.User, error) {
 	u := &model.User{}
 	var createdAt time.Time
@@ -192,6 +205,11 @@ func (r *UserRepo) UnbanUser(ctx context.Context, userID string) error {
 }
 
 // UpdateLanguage updates the language preference for a user.
+func (r *UserRepo) UpdatePassword(ctx context.Context, userID, password string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE users SET password = $1 WHERE id = $2`, password, userID)
+	return err
+}
+
 func (r *UserRepo) UpdateLanguage(ctx context.Context, userID, language string) error {
 	_, err := r.pool.Exec(ctx, `UPDATE users SET language = $1 WHERE id = $2`, language, userID)
 	return err

@@ -195,6 +195,13 @@ export default function LoginPage() {
         {/* Error */}
         {error && <p className="text-xs text-red-500 text-center">{error}</p>}
 
+        {/* Forgot password link */}
+        <div className="flex justify-end -mt-2">
+          <Link to="/forgot-password" className="text-xs text-[var(--color-primary)] hover:underline">
+            {t('auth.forgotPassword', '忘记密码？')}
+          </Link>
+        </div>
+
         {/* Register link */}
         <p className="text-xs text-[var(--color-muted)] text-center">
           {t('auth.noAccount')}{' '}
