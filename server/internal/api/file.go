@@ -512,10 +512,10 @@ func (h *FileHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !isValidRelPath(parentPath) {
-			BadRequest(w, r, "invalid path")
-			return
-		}
-		folders, err := h.store.ListFolders(r.Context(), convID, parentPath)
+		BadRequest(w, r, "invalid path")
+		return
+	}
+	folders, err := h.store.ListFolders(r.Context(), convID, parentPath)
 	if err != nil {
 		logger.Error("list folders failed", "error", err)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
@@ -548,10 +548,10 @@ func (h *FileHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !isValidRelPath(folderPath) {
-			BadRequest(w, r, "invalid path")
-			return
-		}
-		if err := h.store.DeleteFolder(r.Context(), convID, folderPath); err != nil {
+		BadRequest(w, r, "invalid path")
+		return
+	}
+	if err := h.store.DeleteFolder(r.Context(), convID, folderPath); err != nil {
 		logger.Error("delete folder failed", "error", err)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
@@ -635,10 +635,10 @@ func (h *FileHandler) MoveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !isValidRelPath(req.FolderPath) {
-			BadRequest(w, r, "invalid path")
-			return
-		}
-		srcRel := filepath.Join(convID, finfo.FolderPath, fileID+ext)
+		BadRequest(w, r, "invalid path")
+		return
+	}
+	srcRel := filepath.Join(convID, finfo.FolderPath, fileID+ext)
 	dstRel := filepath.Join(convID, req.FolderPath, fileID+ext)
 
 	if err := h.store.MoveFile(r.Context(), srcRel, dstRel); err != nil {
@@ -678,10 +678,10 @@ func (h *FileHandler) MoveFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !isValidRelPath(req.SrcPath) || !isValidRelPath(req.DstParent) {
-			BadRequest(w, r, "invalid path")
-			return
-		}
-		if err := h.store.MoveFolder(r.Context(), convID, req.SrcPath, req.DstParent); err != nil {
+		BadRequest(w, r, "invalid path")
+		return
+	}
+	if err := h.store.MoveFolder(r.Context(), convID, req.SrcPath, req.DstParent); err != nil {
 		logger.Error("move folder failed", "error", err)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
@@ -722,10 +722,10 @@ func (h *FileHandler) RenameFolder(w http.ResponseWriter, r *http.Request) {
 	newPath += req.NewName
 
 	if !isValidRelPath(req.OldPath) || !isValidRelPath(req.NewName) {
-			BadRequest(w, r, "invalid path")
-			return
-		}
-		if err := h.store.RenameFolder(r.Context(), convID, req.OldPath, newPath); err != nil {
+		BadRequest(w, r, "invalid path")
+		return
+	}
+	if err := h.store.RenameFolder(r.Context(), convID, req.OldPath, newPath); err != nil {
 		logger.Error("rename folder failed", "error", err)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
