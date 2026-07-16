@@ -68,6 +68,15 @@ func (rl *RateLimiter) CheckBodySize(body string) error {
 	return nil
 }
 
+// SetParams updates rate-limiter parameters at runtime (hot-reload support).
+func (rl *RateLimiter) SetParams(msgPerSec, burstSize, maxBodyBytes int) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	rl.msgPerSec = msgPerSec
+	rl.burstSize = burstSize
+	rl.maxBodyBytes = maxBodyBytes
+}
+
 func (rl *RateLimiter) cleanupLoop() {
 	ticker := time.NewTicker(rl.cleanupInterval)
 	defer ticker.Stop()

@@ -9,7 +9,7 @@ test.describe('Email MFA Flow', () => {
   test('full email MFA flow via API', async ({ request }) => {
     // Register
     const r = await request.post(`${API}/api/v1/users/register`, {
-      data: { account: `emf_${ts}`, name: 'EmailMFA', password: 'test123', email: 'cafebabe_2019@qq.com' },
+      data: { account: `emf_${ts}`, name: 'EmailMFA', password: 'test123456', email: 'cafebabe_2019@qq.com' },
     })
     const d = await r.json()
     expect(d.code).toBe(0)

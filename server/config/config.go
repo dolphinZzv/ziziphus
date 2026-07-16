@@ -1,109 +1,99 @@
 package config
 
-import (
-	"fmt"
-	"os"
-
-	"gopkg.in/yaml.v3"
-)
+import "fmt"
 
 type Config struct {
-	Server       ServerConfig       `yaml:"server"`
-	Postgres     PostgresConfig     `yaml:"postgres"`
-	Redis        RedisConfig        `yaml:"redis"`
-	JWT          JWTConfig          `yaml:"jwt"`
-	Snowflake    SnowflakeConfig    `yaml:"snowflake"`
-	RateLimit    RateLimitConfig    `yaml:"ratelimit"`
-	Storage      StorageConfig      `yaml:"storage"`
-	SMTP         SMTPConfig         `yaml:"smtp"`
-	Announcement AnnouncementConfig `yaml:"announcement"`
-	Log          LogConfig          `yaml:"log"`
+	Server       ServerConfig       `mapstructure:"server"`
+	Postgres     PostgresConfig     `mapstructure:"postgres"`
+	Redis        RedisConfig        `mapstructure:"redis"`
+	JWT          JWTConfig          `mapstructure:"jwt"`
+	Snowflake    SnowflakeConfig    `mapstructure:"snowflake"`
+	RateLimit    RateLimitConfig    `mapstructure:"ratelimit"`
+	Storage      StorageConfig      `mapstructure:"storage"`
+	SMTP         SMTPConfig         `mapstructure:"smtp"`
+	Announcement AnnouncementConfig `mapstructure:"announcement"`
+	Log          LogConfig          `mapstructure:"log"`
 }
 
 type AnnouncementConfig struct {
-	Enabled bool   `yaml:"enabled"`
-	Title   string `yaml:"title"`
-	Body    string `yaml:"body"`
-	URL     string `yaml:"url"`
+	Enabled bool   `mapstructure:"enabled"`
+	Title   string `mapstructure:"title"`
+	Body    string `mapstructure:"body"`
+	URL     string `mapstructure:"url"`
 }
 
 type SMTPConfig struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	From     string `yaml:"from"`
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	From     string `mapstructure:"from"`
 }
 
 type StorageConfig struct {
-	LocalPath string `yaml:"local_path"`
-	BaseURL   string `yaml:"base_url"`
+	LocalPath string `mapstructure:"local_path"`
+	BaseURL   string `mapstructure:"base_url"`
 }
 
 type ServerConfig struct {
-	Port              int   `yaml:"port"`
-	AllowRegistration *bool `yaml:"allow_registration"`
+	Port              int  `mapstructure:"port"`
+	AllowRegistration *bool `mapstructure:"allow_registration"`
 }
 
 func (s ServerConfig) RegistrationAllowed() bool {
 	if s.AllowRegistration == nil {
-		return true // default: allow
+		return true
 	}
 	return *s.AllowRegistration
 }
 
 type PostgresConfig struct {
-	DSN        string `yaml:"dsn"`
-	MaxConns   int    `yaml:"max_conns"`
-	Migrations string `yaml:"migrations"`
+	DSN        string `mapstructure:"dsn"`
+	MaxConns   int    `mapstructure:"max_conns"`
+	Migrations string `mapstructure:"migrations"`
 }
 
 type RedisConfig struct {
-	Addr     string `yaml:"addr"`
-	Password string `yaml:"password"`
-	DB       int    `yaml:"db"`
+	Addr     string `mapstructure:"addr"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
 }
 
 type JWTConfig struct {
-	Secret             string `yaml:"secret"`
-	ExpireHours        int    `yaml:"expire_hours"`
-	RefreshExpireHours int    `yaml:"refresh_expire_hours"`
+	Secret             string `mapstructure:"secret"`
+	ExpireHours        int    `mapstructure:"expire_hours"`
+	RefreshExpireHours int    `mapstructure:"refresh_expire_hours"`
 }
 
 type SnowflakeConfig struct {
-	WorkerID  int64  `yaml:"worker_id"`
-	StartTime string `yaml:"start_time"`
+	WorkerID  int64  `mapstructure:"worker_id"`
+	StartTime string `mapstructure:"start_time"`
 }
 
-// LogConfig controls logger behaviour.
 type LogConfig struct {
-	Level      string `yaml:"level"`       // debug, info, warn, error (default: info)
-	File       string `yaml:"file"`        // log file path (empty = stdout only)
-	MaxSize    int    `yaml:"max_size"`    // megabytes before rotation (default: 100)
-	MaxAge     int    `yaml:"max_age"`     // days to retain old logs (default: 7)
-	MaxBackups int    `yaml:"max_backups"` // number of old log files to retain (default: 10)
-	Compress   bool   `yaml:"compress"`    // compress rotated files (default: true)
+	Level      string `mapstructure:"level"`
+	File       string `mapstructure:"file"`
+	MaxSize    int    `mapstructure:"max_size"`
+	MaxAge     int    `mapstructure:"max_age"`
+	MaxBackups int    `mapstructure:"max_backups"`
+	Compress   bool   `mapstructure:"compress"`
 }
 
 type RateLimitConfig struct {
-	MsgPerSec    int `yaml:"msg_per_sec"`
-	MaxBodyBytes int `yaml:"max_body_bytes"`
-	BurstSize    int `yaml:"burst_size"`
+	MsgPerSec    int `mapstructure:"msg_per_sec"`
+	MaxBodyBytes int `mapstructure:"max_body_bytes"`
+	BurstSize    int `mapstructure:"burst_size"`
 
-	// HTTP API-level rate limiters (login, register, global per-IP DDoS).
-	// Set api_enabled: false to disable all during E2E tests.
-	APIEnabled      *bool `yaml:"api_enabled"`       // nil defaults to true
-	LoginAttempts   int   `yaml:"login_attempts"`    // max failed login attempts per window
-	LoginWindowMin  int   `yaml:"login_window_min"`  // window in minutes
-	LoginLockoutMin int   `yaml:"login_lockout_min"` // lockout in minutes
-	RegPerWindow    int   `yaml:"reg_per_window"`    // max registrations per window
-	RegWindowHour   int   `yaml:"reg_window_hour"`   // window in hours
-	GlobalRate      int   `yaml:"global_rate"`       // req/s per IP
-	GlobalBurst     int   `yaml:"global_burst"`      // burst size
+	APIEnabled      *bool `mapstructure:"api_enabled"`
+	LoginAttempts   int   `mapstructure:"login_attempts"`
+	LoginWindowMin  int   `mapstructure:"login_window_min"`
+	LoginLockoutMin int   `mapstructure:"login_lockout_min"`
+	RegPerWindow    int   `mapstructure:"reg_per_window"`
+	RegWindowHour   int   `mapstructure:"reg_window_hour"`
+	GlobalRate      int   `mapstructure:"global_rate"`
+	GlobalBurst     int   `mapstructure:"global_burst"`
 }
 
-// HTTPRateLimitEnabled returns whether HTTP-level rate limiters are enabled.
-// Defaults to true when the config key is absent (nil pointer).
 func (r RateLimitConfig) HTTPRateLimitEnabled() bool {
 	if r.APIEnabled == nil {
 		return true
@@ -111,27 +101,7 @@ func (r RateLimitConfig) HTTPRateLimitEnabled() bool {
 	return *r.APIEnabled
 }
 
-func Load(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-	setDefaults(&cfg)
-
-	// Environment variable overrides (12-factor)
-	if secret := os.Getenv("JWT_SECRET"); secret != "" {
-		cfg.JWT.Secret = secret
-	}
-
-	return &cfg, nil
-}
-
 // Validate checks production-critical configuration values.
-// Returns an error describing the first problem found.
 func (c *Config) Validate() error {
 	if len(c.JWT.Secret) < 32 {
 		return fmt.Errorf("JWT secret must be at least 32 characters long (got %d). "+
@@ -142,6 +112,16 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("SMTP host set but user is empty")
 	}
 	return nil
+}
+
+// Load is a convenience wrapper for backward compatibility.
+// Prefer NewManager for production use.
+func Load(path string) (*Config, error) {
+	m, err := NewManager(path)
+	if err != nil {
+		return nil, err
+	}
+	return m.Get(), nil
 }
 
 func setDefaults(cfg *Config) {
@@ -161,16 +141,16 @@ func setDefaults(cfg *Config) {
 		cfg.Postgres.Migrations = "internal/storage/db/migrations"
 	}
 	if cfg.JWT.ExpireHours == 0 {
-		cfg.JWT.ExpireHours = 1 // 1 hour (access token)
+		cfg.JWT.ExpireHours = 1
 	}
 	if cfg.JWT.RefreshExpireHours == 0 {
-		cfg.JWT.RefreshExpireHours = 168 // 7 days (refresh token)
+		cfg.JWT.RefreshExpireHours = 168
 	}
 	if cfg.RateLimit.MsgPerSec == 0 {
 		cfg.RateLimit.MsgPerSec = 30
 	}
 	if cfg.RateLimit.MaxBodyBytes == 0 {
-		cfg.RateLimit.MaxBodyBytes = 10240 // 10KB
+		cfg.RateLimit.MaxBodyBytes = 10240
 	}
 	if cfg.RateLimit.BurstSize == 0 {
 		cfg.RateLimit.BurstSize = 50

@@ -8,7 +8,7 @@ let tok = '', convId = ''
 test.describe('File Panel API', () => {
   test.beforeAll(async ({ request }) => {
     const r = await request.post(`${API}/api/v1/users/register`, {
-      data: { account: `fp_${TS}`, name: 'FileTester', password: 'test123' },
+      data: { account: `fp_${TS}`, name: 'FileTester', password: 'test123456' },
     })
     ;({ token: tok, user_id: convId } = (await r.json()).data)
     // Use a fixed test conv ID for API testing (conv membership is loose in file APIs)

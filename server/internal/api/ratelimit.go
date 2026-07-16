@@ -52,6 +52,15 @@ func NewLoginRateLimiter(maxAttempts int, window, lockout time.Duration, rdb red
 }
 
 // Allow checks whether a request from the given IP should be allowed.
+// SetParams updates login rate-limiter parameters at runtime (hot-reload).
+func (rl *LoginRateLimiter) SetParams(maxAttempts int, window, lockout time.Duration) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	rl.maxPerWindow = maxAttempts
+	rl.windowDur = window
+	rl.lockoutDur = lockout
+}
+
 func (rl *LoginRateLimiter) Allow(key string) error {
 	if rl.rdb != nil {
 		return rl.allowRedis(key)

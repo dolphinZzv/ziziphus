@@ -1,6 +1,32 @@
 import { test, expect } from './fixtures/coverage'
+import * as crypto from 'crypto'
 
 const API = 'http://localhost:8080'
+
+// TOTP generation using Node.js crypto (works over HTTP where crypto.subtle is unavailable)
+function generateTOTP(secret: string): string {
+  const base32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+  const upper = secret.toUpperCase()
+  let bits = ''
+  for (const ch of upper) {
+    const idx = base32.indexOf(ch)
+    if (idx >= 0) bits += idx.toString(2).padStart(5, '0')
+  }
+  const key = Buffer.alloc(Math.floor(bits.length / 8))
+  for (let i = 0; i < key.length; i++) key[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2)
+
+  const counter = BigInt(Math.floor(Date.now() / 30000))
+  const msg = Buffer.alloc(8)
+  for (let i = 7; i >= 0; i--) msg[i] = Number((counter >> BigInt((7 - i) * 8)) & BigInt(0xff))
+
+  const hmac = crypto.createHmac('sha1', key)
+  hmac.update(msg)
+  const hash = hmac.digest()
+
+  const offset = hash[hash.length - 1] & 0x0f
+  const binary = ((hash[offset] & 0x7f) << 24) | (hash[offset + 1] << 16) | (hash[offset + 2] << 8) | hash[offset + 3]
+  return (binary % 1000000).toString().padStart(6, '0')
+}
 
 test.describe('MFA Login Flow E2E', () => {
   let token = ''
@@ -24,32 +50,9 @@ test.describe('MFA Login Flow E2E', () => {
     expect(secret).toBeTruthy()
   })
 
-  test('verify MFA with TOTP code via page evaluate', async ({ page }) => {
-    // Use page context to generate TOTP
-    const code = await page.evaluate((s) => {
-      const base32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-      const upper = s.toUpperCase()
-      let bits = ''
-      for (const ch of upper) {
-        const idx = base32.indexOf(ch)
-        if (idx >= 0) bits += idx.toString(2).padStart(5, '0')
-      }
-      const key = new Uint8Array(Math.floor(bits.length / 8))
-      for (let i = 0; i < key.length; i++) key[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2)
-
-      const counter = BigInt(Math.floor(Date.now() / 30000))
-      const msg = new Uint8Array(8)
-      for (let i = 7; i >= 0; i--) msg[i] = Number((counter >> BigInt((7 - i) * 8)) & BigInt(0xff))
-
-      return crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign'])
-        .then(k => crypto.subtle.sign('HMAC', k, msg))
-        .then(sig => {
-          const hash = new Uint8Array(sig)
-          const offset = hash[hash.length - 1] & 0x0f
-          const binary = ((hash[offset] & 0x7f) << 24) | (hash[offset + 1] << 16) | (hash[offset + 2] << 8) | hash[offset + 3]
-          return (binary % 1000000).toString().padStart(6, '0')
-        })
-    }, secret)
+  test('verify MFA with TOTP code', async ({ request }) => {
+    expect(secret).toBeTruthy()
+    const code = generateTOTP(secret)
     expect(code).toMatch(/^\d{6}$/)
 
     // Verify to enable MFA
@@ -75,31 +78,8 @@ test.describe('MFA Login Flow E2E', () => {
     const mfaInput = page.locator('input[placeholder*="验证码"]')
     await expect(mfaInput).toBeVisible({ timeout: 5000 })
 
-    // Generate TOTP code and fill
-    const code = await page.evaluate((s) => {
-      const base32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-      const upper = s.toUpperCase()
-      let bits = ''
-      for (const ch of upper) {
-        const idx = base32.indexOf(ch)
-        if (idx >= 0) bits += idx.toString(2).padStart(5, '0')
-      }
-      const key = new Uint8Array(Math.floor(bits.length / 8))
-      for (let i = 0; i < key.length; i++) key[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2)
-
-      const counter = BigInt(Math.floor(Date.now() / 30000))
-      const msg = new Uint8Array(8)
-      for (let i = 7; i >= 0; i--) msg[i] = Number((counter >> BigInt((7 - i) * 8)) & BigInt(0xff))
-
-      return crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign'])
-        .then(k => crypto.subtle.sign('HMAC', k, msg))
-        .then(sig => {
-          const hash = new Uint8Array(sig)
-          const offset = hash[hash.length - 1] & 0x0f
-          const binary = ((hash[offset] & 0x7f) << 24) | (hash[offset + 1] << 16) | (hash[offset + 2] << 8) | hash[offset + 3]
-          return (binary % 1000000).toString().padStart(6, '0')
-        })
-    }, secret)
+    // Generate TOTP code using Node.js crypto
+    const code = generateTOTP(secret)
     expect(code).toMatch(/^\d{6}$/)
 
     await mfaInput.fill(code)

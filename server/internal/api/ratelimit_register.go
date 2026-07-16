@@ -43,6 +43,14 @@ func NewRegisterLimiter(maxPerWindow int, window time.Duration, rdb redis.Cmdabl
 	return rl
 }
 
+// SetParams updates register limiter parameters at runtime (hot-reload).
+func (rl *RegisterLimiter) SetParams(maxPerWindow int, window time.Duration) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	rl.maxPerWin = maxPerWindow
+	rl.windowDur = window
+}
+
 func (rl *RegisterLimiter) Allow(ip string) error {
 	if rl.rdb != nil {
 		return rl.allowRedis(ip)

@@ -133,8 +133,12 @@ test.describe('Sender Display & UserCard', () => {
     // Wait for messages to render
     await expect(page.locator('button').filter({ hasText: '小明' }).first()).toBeVisible({ timeout: 5000 })
 
-    // Hover over user_002's sender avatar (first non-own message avatar)
-    const avatarBtn = page.locator('button').filter({ hasText: /^[A-Z一-鿿]$/ }).first()
+    // Find the message row containing "小明" and hover its avatar button
+    // (Messages are reversed by chat-store, so we target by sender name not DOM order)
+    const xiaomingRow = page.locator('.flex.gap-2.group').filter({
+      has: page.locator('button', { hasText: '小明' })
+    }).first()
+    const avatarBtn = xiaomingRow.locator('button').first()
     await expect(avatarBtn).toBeVisible({ timeout: 3000 })
     await avatarBtn.hover()
     await page.waitForTimeout(500)

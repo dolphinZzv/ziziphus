@@ -14,14 +14,16 @@ type announcementResp struct {
 }
 
 // Announcement returns the global application announcement.
+// Uses the config manager so the announcement can be hot-reloaded at runtime.
 //
 //	@summary		Get global announcement
 //	@tags			system
 //	@produce		json
 //	@success		200	{object}	APIResponse{data=announcementResp}
 //	@router			/announcement [get]
-func Announcement(cfg config.AnnouncementConfig) http.HandlerFunc {
+func Announcement(cfgMgr *config.Manager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cfg := cfgMgr.Get().Announcement
 		JSON(w, announcementResp{
 			Enabled: cfg.Enabled,
 			Title:   cfg.Title,

@@ -12,7 +12,7 @@ function auth(userId: string, name: string, token: string) {
 }
 
 async function register(request: any, account: string, name: string) {
-  const r = await request.post(`${API}/api/v1/users/register`, { data: { account, name, password: 'test123' } })
+  const r = await request.post(`${API}/api/v1/users/register`, { data: { account, name, password: 'test123456' } })
   const j = await r.json()
   expect(j.code).toBe(0)
   return { id: j.data.user_id, token: j.data.token }

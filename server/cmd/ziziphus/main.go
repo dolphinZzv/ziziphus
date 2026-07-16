@@ -44,15 +44,19 @@ import (
 func main() {
 	configPath := flag.String("c", "config/config.yaml", "config file path")
 	flag.Parse()
-	cfg, err := config.Load(*configPath)
+
+	// ConfigManager (viper-backed, supports hot-reload)
+	cfgMgr, err := config.NewManager(*configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load config: %v\n", err)
 		os.Exit(1)
 	}
+	cfg := cfgMgr.Get()
 	if err := cfg.Validate(); err != nil {
 		fmt.Fprintf(os.Stderr, "config validation failed: %v\n", err)
 		os.Exit(1)
 	}
+
 	logger.Init(logger.Config{
 		Level:      cfg.Log.Level,
 		File:       cfg.Log.File,
@@ -117,7 +121,7 @@ func main() {
 	}
 	sf := model.NewSnowflake(cfg.Snowflake.WorkerID, startTime)
 
-	// Auth service (bcrypt password hashing + JWT with refresh tokens)
+	// Auth service
 	authSvc := auth.NewService(cfg.JWT.Secret, cfg.JWT.ExpireHours, cfg.JWT.RefreshExpireHours, userRepo, rdb, sf.NextID)
 
 	// Session manager
@@ -129,7 +133,7 @@ func main() {
 	// Gateway
 	gwMgr := gateway.NewManager()
 
-	// Rate limiter
+	// Rate limiter (WebSocket)
 	rl := message.NewRateLimiter(cfg.RateLimit.MsgPerSec, cfg.RateLimit.BurstSize, cfg.RateLimit.MaxBodyBytes)
 
 	// Message router
@@ -138,7 +142,7 @@ func main() {
 	// Pusher
 	pusher := message.NewPusher(gwMgr, receiptRepo)
 
-	// Webhook repo (used by both ingest forwarding and webhook handler)
+	// Webhook repo
 	webhookRepo := db.NewWebhookRepo(pool)
 
 	// Ingest pipeline
@@ -149,10 +153,10 @@ func main() {
 	syncHandler := message.NewSyncHandler(msgRepo, seqCache)
 
 	// Receipt handler
-	readReceiptRepo := receiptRepo // satisfies receiptWriter interface
+	readReceiptRepo := receiptRepo
 	receiptHandler := message.NewReceiptHandler(msgRepo, seqCache, convRepo, gwMgr, readReceiptRepo)
 
-	// File storage (using afero for filesystem abstraction)
+	// File storage
 	fileFs := afero.NewOsFs()
 	fileStore := file.NewStore(fileFs, cfg.Storage.LocalPath)
 	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL, convMgr, ingest, userRepo)
@@ -164,7 +168,8 @@ func main() {
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
 	sessionHandler := api.NewSessionHandler(sessMgr, gwMgr)
 	webhookHandler := api.NewWebhookHandler(webhookRepo, sf, convMgr, userRepo, msgRepo, msgRouter, pusher, seqCache, ingest)
-	// Rate limiters (Redis-backed) — disabled when config.api_enabled is false (E2E)
+
+	// Rate limiters (Redis-backed)
 	var loginRL *api.LoginRateLimiter
 	var registerRL *api.RegisterLimiter
 	var globalRL *api.GlobalRateLimiter
@@ -193,7 +198,7 @@ func main() {
 		Session:      sessionHandler,
 		File:         fileHandler,
 		Webhook:      webhookHandler,
-		Announcement: api.Announcement(cfg.Announcement),
+		Announcement: api.Announcement(cfgMgr),
 		DB:           pool,
 		RDB:          rdb,
 		LoginRL:      loginRL,
@@ -240,7 +245,46 @@ func main() {
 		}
 	}()
 
-	// Graceful shutdown
+	// --- Hot-reload support ---
+
+	// Register runtime callbacks for hot-reloadable config sections
+	cfgMgr.OnChange(func(cfg *config.Config) {
+		// WebSocket rate limiter
+		rl.SetParams(cfg.RateLimit.MsgPerSec, cfg.RateLimit.BurstSize, cfg.RateLimit.MaxBodyBytes)
+
+		// Log level
+		logger.SetLevel(cfg.Log.Level)
+
+		logger.Info("configuration reloaded", "event", "config_change")
+	})
+
+	if loginRL != nil {
+		cfgMgr.OnChange(func(cfg *config.Config) {
+			loginRL.SetParams(cfg.RateLimit.LoginAttempts,
+				time.Duration(cfg.RateLimit.LoginWindowMin)*time.Minute,
+				time.Duration(cfg.RateLimit.LoginLockoutMin)*time.Minute)
+			registerRL.SetParams(cfg.RateLimit.RegPerWindow,
+				time.Duration(cfg.RateLimit.RegWindowHour)*time.Hour)
+			globalRL.SetParams(cfg.RateLimit.GlobalRate, cfg.RateLimit.GlobalBurst)
+		})
+	}
+
+	// Watch config file changes (viper inotify)
+	cfgMgr.Watch()
+
+	// SIGHUP triggers manual reload
+	go func() {
+		hupCh := make(chan os.Signal, 1)
+		signal.Notify(hupCh, syscall.SIGHUP)
+		for range hupCh {
+			logger.Info("received SIGHUP — reloading config")
+			if err := cfgMgr.Reload(); err != nil {
+				logger.Error("config reload failed", "error", err)
+			}
+		}
+	}()
+
+	// Wait for graceful shutdown signal (SIGINT/SIGTERM)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

@@ -70,6 +70,14 @@ func NewGlobalRateLimiter(rate, burst int, rdb redis.Cmdable) *GlobalRateLimiter
 	return rl
 }
 
+// SetParams updates global rate-limiter parameters at runtime (hot-reload).
+func (rl *GlobalRateLimiter) SetParams(rate, burst int) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	rl.rate = rate
+	rl.burst = burst
+}
+
 func (rl *GlobalRateLimiter) Allow(ip string) error {
 	if rl.rdb != nil {
 		return rl.allowRedis(ip)
