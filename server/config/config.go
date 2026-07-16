@@ -43,7 +43,7 @@ type StorageConfig struct {
 }
 
 type ServerConfig struct {
-	Port              int  `mapstructure:"port"`
+	Port              int   `mapstructure:"port"`
 	AllowRegistration *bool `mapstructure:"allow_registration"`
 }
 

@@ -82,6 +82,29 @@ export default function LoginPage() {
           <p className="text-xs text-[var(--color-muted)] mt-3">{mfaHint}</p>
         </div>
 
+        {/* MFA code input */}
+        <form onSubmit={handleMfaVerify} className="w-full max-w-[320px] flex flex-col gap-4">
+          <input
+            className={inputClass}
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            placeholder={t('auth.mfaCode') || '验证码'}
+            value={mfaCode}
+            onChange={e => setMfaCode(e.target.value)}
+            autoFocus
+          />
+          <button
+            type="submit"
+            disabled={!mfaCode.trim() || isLoading}
+            className="w-full h-12 rounded-xl bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer"
+          >
+            {isLoading ? t('auth.verifying') : t('auth.verify') || '验证'}
+          </button>
+          {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+        </form>
+
         {/* Back button */}
         <button
           onClick={() => authStore.logout()}

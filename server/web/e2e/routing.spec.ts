@@ -29,7 +29,7 @@ test.describe('Routing & Auth Guard', () => {
     await page.addInitScript(ZH_INIT)
     await page.goto('/login')
     await expect(page).toHaveURL('/login')
-    await expect(page.locator('h1')).toHaveText('ziziphus')
+    await expect(page.locator('h1')).toHaveText('Ziziphus')
   })
 
   test('register route is accessible without auth', async ({ page }) => {

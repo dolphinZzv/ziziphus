@@ -46,6 +46,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/app/info": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Get app info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/api.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/api.appInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/auth/mfa/verify": {
             "post": {
                 "consumes": [
@@ -4223,6 +4254,20 @@ const docTemplate = `{
                 }
             }
         },
+        "api.appInfoResp": {
+            "type": "object",
+            "properties": {
+                "env": {
+                    "type": "string"
+                },
+                "headline": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "api.batchReq": {
             "type": "object",
             "properties": {
@@ -4536,6 +4581,9 @@ const docTemplate = `{
                     "additionalProperties": {}
                 },
                 "headline": {
+                    "type": "string"
+                },
+                "language": {
                     "type": "string"
                 },
                 "name": {

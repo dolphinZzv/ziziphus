@@ -522,7 +522,7 @@ func (in *Ingest) sendWebhookWithRetry(ctx context.Context, wh *model.ConvWebhoo
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", in.appName + "-Webhook/1.0")
+		req.Header.Set("User-Agent", in.appName+"-Webhook/1.0")
 		req.Header.Set("X-Signature", computeSignature([]byte(wh.APIKeyHash), body))
 		for _, h := range wh.Headers {
 			req.Header.Set(h.Key, h.Value)

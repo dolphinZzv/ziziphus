@@ -12,12 +12,11 @@ test.describe('Login Page', () => {
   })
 
   test('renders login form correctly', async ({ page }) => {
-    await expect(page.locator('h1')).toHaveText('ziziphus')
+    await expect(page.locator('h1')).toHaveText('Ziziphus')
     await expect(page.getByPlaceholder('账号')).toBeVisible()
     await expect(page.getByPlaceholder('密码')).toBeVisible()
-    await expect(page.getByText('记住账号')).toBeVisible()
     await expect(page.getByRole('button', { name: '登录' })).toBeVisible()
-    await expect(page.getByText('创建新账号')).toBeVisible()
+    await expect(page.getByText('没有账号？')).toBeVisible()
   })
 
   test('password visibility toggle works', async ({ page }) => {
@@ -36,19 +35,14 @@ test.describe('Login Page', () => {
   })
 
   test('navigates to register page', async ({ page }) => {
-    await page.getByText('创建新账号').click()
+    await page.getByRole('link', { name: '注册' }).click()
     await expect(page).toHaveURL('/register')
     await expect(page.getByPlaceholder('昵称')).toBeVisible()
     await expect(page.getByPlaceholder('确认密码')).toBeVisible()
   })
 
-  test('remember account checkbox toggles', async ({ page }) => {
-    const checkbox = page.getByRole('checkbox')
-    await expect(checkbox).toBeChecked()
-    await checkbox.uncheck()
-    await expect(checkbox).not.toBeChecked()
-    await checkbox.check()
-    await expect(checkbox).toBeChecked()
+  test('register link points to /register', async ({ page }) => {
+    await expect(page.getByRole('link', { name: '注册' })).toHaveAttribute('href', '/register')
   })
 
   test('has theme and language footer', async ({ page }) => {
