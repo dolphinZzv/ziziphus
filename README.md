@@ -1,4 +1,4 @@
-# Panda (Ziziphus)
+# Ziziphus
 
 即时通讯（IM）应用，包含 Go 后端服务、React Web 前端、macOS 与 iOS 原生客户端。
 
@@ -30,8 +30,85 @@
 - Xcode 16+ (iOS 客户端需要)
 - PostgreSQL 16+
 - Redis 7+
+- Docker (可选)
 
-### 1. 后端服务
+### Docker 部署（推荐）
+
+#### 使用 Docker Compose 一键启动
+
+```bash
+# 1. 准备配置文件
+cp server/config/config.example.yaml server/config/config.yaml
+# 编辑 config.yaml，可按需修改端口、密码等
+
+# 2. 启动全部服务（PostgreSQL + Redis + 应用）
+docker compose up -d
+
+# 3. 查看日志
+docker compose logs -f app
+
+# 4. 停止
+docker compose down
+```
+
+这会自动启动三个容器：
+
+| 服务 | 镜像 | 端口 |
+|------|------|------|
+| postgres | `postgres:16-alpine` | 5432 |
+| redis | `redis:7-alpine` | 6379 |
+| app | 本地构建 | 8080 |
+
+数据持久化在 Docker volume 中，重启不丢失。
+
+#### 连接外部 PostgreSQL / Redis
+
+编辑 `server/config/config.yaml`，将地址改为外部服务：
+
+```yaml
+postgres:
+  dsn: "postgres://user:pass@your-pg-host:5432/imdb?sslmode=require"
+
+redis:
+  addr: "your-redis-host:6379"
+  password: "your-password"
+```
+
+然后只启动应用容器：
+
+```bash
+docker compose up -d app
+```
+
+#### 仅构建镜像（不启动）
+
+```bash
+# 完整构建（含 Web 前端 + Go 后端）
+docker build -t ziziphus:latest .
+
+# 仅 Go 后端（需要预先 npm run build 前端）
+docker build -t ziziphus:latest -f server/Dockerfile server/
+```
+
+#### 手动运行容器
+
+```bash
+docker run -d \
+  --name ziziphus \
+  -p 8080:8080 \
+  -v ./server/config/config.yaml:/app/config/config.yaml:ro \
+  ziziphus:latest
+```
+
+#### 镜像注册表
+
+每次推送到 main 分支，CI 自动构建并推送镜像到 GitHub Container Registry：
+
+```bash
+docker pull ghcr.io/dolphinZzv/ziziphus:latest
+```
+
+### 1. 后端服务（源码运行）
 
 #### 配置
 
