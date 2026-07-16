@@ -8,6 +8,7 @@
     "name": "Nickname",
     "confirmPassword": "Confirm Password",
     "rememberAccount": "Remember Account",
+    "noAccount": "Don't have an account?",
     "switchToRegister": "Create an account",
     "switchToLogin": "Already have an account? Login",
     "loginError": "Login failed",

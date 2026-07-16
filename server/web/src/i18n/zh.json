@@ -8,6 +8,7 @@
     "name": "昵称",
     "confirmPassword": "确认密码",
     "rememberAccount": "记住账号",
+    "noAccount": "没有账号？",
     "switchToRegister": "创建新账号",
     "switchToLogin": "已有账号？去登录",
     "loginError": "登录失败",
