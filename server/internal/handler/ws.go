@@ -134,7 +134,7 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			existing := h.sessMgr.Get(ctx, sid)
 			if existing != nil && existing.DeviceID == deviceID {
 				h.connMgr.DisconnectBySessionID(ctx, sid)
-				h.sessMgr.Delete(ctx, sid)
+				_ = h.sessMgr.Delete(ctx, sid)
 			}
 		}
 	}
@@ -150,7 +150,7 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	gwConn := gateway.NewConnection(connID, userID, sess.SessionID, int(deviceType), conn)
 
 	h.connMgr.Add(ctx, gwConn)
-	h.sessMgr.BindConnection(ctx, sess.SessionID, connID)
+	_ = h.sessMgr.BindConnection(ctx, sess.SessionID, connID)
 
 	logger.Info("ws connected", "user_id", userID, "session_id", sess.SessionID, "conn_id", connID)
 
@@ -164,7 +164,7 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Timestamp: time.Now().UnixMilli(),
 	}
 	welcomeData, _ := json.Marshal(welcome)
-	gwConn.SendFrame(protocol.Frame{Type: protocol.SessionRecoverAck, Payload: welcomeData})
+	_ = gwConn.SendFrame(protocol.Frame{Type: protocol.SessionRecoverAck, Payload: welcomeData})
 
 	// read loop (blocks until disconnect)
 	h.readLoop(ctx, gwConn, userID, sess.SessionID)
@@ -257,7 +257,7 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 			NewBody: p.NewBody, EditedAt: now, Timestamp: now,
 		})
 		for _, c := range h.connMgr.All() {
-			c.SendFrame(protocol.Frame{Type: protocol.MsgEdit, Payload: push})
+			_ = c.SendFrame(protocol.Frame{Type: protocol.MsgEdit, Payload: push})
 		}
 
 	case protocol.MsgRecall:
@@ -278,7 +278,7 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 			RecalledAt: now, Timestamp: now,
 		})
 		for _, c := range h.connMgr.All() {
-			c.SendFrame(protocol.Frame{Type: protocol.MsgRecall, Payload: push})
+			_ = c.SendFrame(protocol.Frame{Type: protocol.MsgRecall, Payload: push})
 		}
 
 	case protocol.Typing:
@@ -328,12 +328,12 @@ func (h *WSHandler) broadcastSessionEvent(ctx context.Context, userID, sessionID
 
 	for _, c := range h.connMgr.All() {
 		if c.UserID != userID {
-			c.SendFrame(frame)
+			_ = c.SendFrame(frame)
 		}
 	}
 }
 
 func writeWSError(conn *websocket.Conn, code int, msg string) {
 	payload, _ := json.Marshal(protocol.ErrorPayload{Code: code, Message: msg})
-	conn.WriteJSON(protocol.Frame{Type: protocol.Error, Payload: payload})
+	_ = conn.WriteJSON(protocol.Frame{Type: protocol.Error, Payload: payload})
 }

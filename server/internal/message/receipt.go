@@ -91,7 +91,7 @@ func (h *ReceiptHandler) MarkRead(ctx context.Context, userID, convID string, ms
 	conns := h.gateway.GetByUserID(ctx, msg.SenderID)
 	for _, conn := range conns {
 		if c, ok := conn.(interface{ SendFrame(protocol.Frame) error }); ok {
-			c.SendFrame(frame)
+			_ = c.SendFrame(frame)
 		}
 	}
 
@@ -103,7 +103,7 @@ func (h *ReceiptHandler) MarkRead(ctx context.Context, userID, convID string, ms
 		Timestamp: timestamp,
 	}
 	if h.receipt != nil {
-		h.receipt.Upsert(ctx, rc)
+		_ = h.receipt.Upsert(ctx, rc)
 	}
 
 	logger.Debug("read notify sent", "conv_id", convID, "sender_id", msg.SenderID)

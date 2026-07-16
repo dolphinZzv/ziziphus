@@ -3841,7 +3841,7 @@ func TestRegister_PasswordMinLength(t *testing.T) {
 	userRepo := &mockUserRepo{
 		createFunc: func(_ context.Context, _ *model.User) error { return nil },
 	}
-	handler := &UserHandler{userRepo: userRepo}
+	handler := &UserHandler{userRepo: userRepo, allowRegistration: true}
 
 	reqBody := `{"account":"test","name":"Test","password":"1234567"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/register", strings.NewReader(reqBody))

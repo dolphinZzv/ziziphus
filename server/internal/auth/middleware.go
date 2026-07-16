@@ -121,7 +121,7 @@ func WriteJSON(w http.ResponseWriter, code int, data interface{}) {
 			resp.Msg = "error"
 		}
 	}
-	w.Write(marshalJSON(resp))
+	_, _ = w.Write(marshalJSON(resp))
 }
 
 func marshalJSON(v interface{}) []byte {

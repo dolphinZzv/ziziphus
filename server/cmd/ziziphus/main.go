@@ -27,7 +27,20 @@ import (
 	"ziziphus/internal/webembed"
 	"ziziphus/pkg/logger"
 	"ziziphus/pkg/model"
+
+	_ "ziziphus/docs" // swagger docs
 )
+
+//	@title			Ziziphus API
+//	@version		1.0
+//	@description	Ziziphus IM 服务 REST API 文档
+//	@host			localhost:8080
+//	@BasePath		/api/v1
+
+//	@securityDefinitions.apikey	Bearer
+//	@in							header
+//	@name						Authorization
+//	@description				Bearer token from login/register response
 
 func main() {
 	configPath := flag.String("c", "config/config.yaml", "config file path")
@@ -202,5 +215,5 @@ func main() {
 	cancel()
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
-	srv.Shutdown(shutdownCtx)
+	_ = srv.Shutdown(shutdownCtx)
 }

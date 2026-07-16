@@ -11,6 +11,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"ziziphus/pkg/i18n"
 )
 
@@ -47,6 +48,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Get("/api/v1/announcement", h.Announcement)
 		r.Get("/health", h.Health)
 		r.Get("/metrics", promhttp.Handler().ServeHTTP)
+		r.Get("/swagger/*", httpSwagger.WrapHandler)
 		r.Post("/api/v1/auth/mfa/verify", h.User.MFAVerifyLogin)
 		r.Post("/api/v1/webhooks/receive", h.Webhook.ReceiveMessage)
 	})
@@ -81,7 +83,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/conversations/{conv_id}/members", h.Conversation.AddMembers)
 		r.Delete("/api/v1/conversations/{conv_id}/members/{user_id}", h.Conversation.RemoveMember)
 		r.Post("/api/v1/conversations/{conv_id}/leave", h.Conversation.Leave)
-			r.Post("/api/v1/conversations/{conv_id}/disband", h.Conversation.Disband)
+		r.Post("/api/v1/conversations/{conv_id}/disband", h.Conversation.Disband)
 		r.Post("/api/v1/conversations/{conv_id}/read", h.Conversation.MarkRead)
 		r.Post("/api/v1/conversations/{conv_id}/join-requests", h.Conversation.RequestJoin)
 		r.Get("/api/v1/conversations/{conv_id}/join-requests", h.Conversation.ListJoinRequests)
@@ -98,11 +100,11 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Put("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}", h.Webhook.Update)
 		r.Delete("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}", h.Webhook.Delete)
 		r.Post("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/regenerate-key", h.Webhook.RegenerateKey)
-r.Post("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/test", h.Webhook.Test)
+		r.Post("/api/v1/conversations/{conv_id}/webhooks/{webhook_id}/test", h.Webhook.Test)
 		r.Get("/api/v1/conversations/{conv_id}/files", h.File.ListConvFiles)
 		r.Delete("/api/v1/conversations/{conv_id}/files/{file_id}", h.File.DeleteConvFile)
 		r.Post("/api/v1/conversations/{conv_id}/folders", h.File.CreateFolder)
-			r.Delete("/api/v1/conversations/{conv_id}/folders", h.File.DeleteFolder)
+		r.Delete("/api/v1/conversations/{conv_id}/folders", h.File.DeleteFolder)
 		r.Put("/api/v1/conversations/{conv_id}/files/{file_id}/move", h.File.MoveFile)
 		r.Put("/api/v1/conversations/{conv_id}/folders/move", h.File.MoveFolder)
 		r.Put("/api/v1/conversations/{conv_id}/folders/rename", h.File.RenameFolder)

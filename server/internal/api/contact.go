@@ -77,6 +77,17 @@ type addContactReq struct {
 	Nickname string `json:"nickname"`
 }
 
+// @Summary List contacts
+// @Description List contacts with pagination and online status
+// @Tags contacts
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param page query int false "Page number (default 1)"
+// @Param size query int false "Page size (default 20, max 100)"
+// @Success 200 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /contacts [get]
 func (h *ContactHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -124,6 +135,17 @@ func (h *ContactHandler) List(w http.ResponseWriter, r *http.Request) {
 	Paginated(w, items, total, page, size)
 }
 
+// @Summary Add a contact
+// @Description Add a user to contacts list
+// @Tags contacts
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body addContactReq true "Add contact request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /contacts [post]
 func (h *ContactHandler) Add(w http.ResponseWriter, r *http.Request) {
 	var req addContactReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -156,6 +178,16 @@ func (h *ContactHandler) Add(w http.ResponseWriter, r *http.Request) {
 }
 
 // Remove now performs bidirectional deletion and removes the P2P conversation.
+// @Summary Remove a contact
+// @Description Remove a contact by user ID, performs bidirectional deletion and removes the P2P conversation
+// @Tags contacts
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param user_id path string true "Contact user ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} APIResponse
+// @Router /contacts/{user_id} [delete]
 func (h *ContactHandler) Remove(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	contactID := chi.URLParam(r, "user_id")
@@ -173,8 +205,8 @@ func (h *ContactHandler) Remove(w http.ResponseWriter, r *http.Request) {
 	// Remove the P2P conversation if it exists.
 	if h.convMgr != nil {
 		p2pConvID := model.MakeP2PConvID(userID, contactID)
-		h.convMgr.Leave(r.Context(), p2pConvID, userID)
-		h.convMgr.Leave(r.Context(), p2pConvID, contactID)
+		_ = h.convMgr.Leave(r.Context(), p2pConvID, userID)
+		_ = h.convMgr.Leave(r.Context(), p2pConvID, contactID)
 	}
 
 	JSON(w, map[string]interface{}{"user_id": contactID})
@@ -184,6 +216,18 @@ type updateContactNicknameReq struct {
 	Nickname string `json:"nickname"`
 }
 
+// @Summary Update contact nickname
+// @Description Update the nickname for a contact
+// @Tags contacts
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param user_id path string true "Contact user ID"
+// @Param request body updateContactNicknameReq true "Nickname update request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /contacts/{user_id} [put]
 func (h *ContactHandler) UpdateNickname(w http.ResponseWriter, r *http.Request) {
 	var req updateContactNicknameReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -212,6 +256,19 @@ type requestContactReq struct {
 
 // RequestContact handles POST /api/v1/contact-requests.
 // A sends a friend request to B.
+// @Summary Request contact
+// @Description Send a friend request to a user
+// @Tags contacts
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body requestContactReq true "Contact request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Failure 409 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /contact-requests [post]
 func (h *ContactHandler) RequestContact(w http.ResponseWriter, r *http.Request) {
 	var req requestContactReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -265,7 +322,7 @@ func (h *ContactHandler) RequestContact(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		// Delete old rejected/approved request to make room for the new one.
-		h.reqRepo.Delete(ctx, existing.ID)
+		_ = h.reqRepo.Delete(ctx, existing.ID)
 	}
 
 	// Get sender info for the form
@@ -327,13 +384,13 @@ func (h *ContactHandler) RequestContact(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Update the contact request with the form message ID
-	h.reqRepo.UpdateFormMsgID(ctx, requestID, formMsg.MsgID)
+	_ = h.reqRepo.UpdateFormMsgID(ctx, requestID, formMsg.MsgID)
 
 	// Ensure A's system conversation exists (lazy create) and send confirmation
 	if _, err := h.convMgr.GetOrCreateSystemConv(ctx, senderID); err != nil {
 		logger.Error("ensure sender system conv failed", "error", err)
 	} else {
-		h.ingest.SendSystemMessage(ctx, model.MakeSystemConvID(senderID),
+		_, _ = h.ingest.SendSystemMessage(ctx, model.MakeSystemConvID(senderID),
 			i18n.T(ctx, "contact_request.sent", targetName), senderID)
 	}
 
@@ -344,6 +401,17 @@ func (h *ContactHandler) RequestContact(w http.ResponseWriter, r *http.Request) 
 }
 
 // ListSentRequests handles GET /api/v1/contact-requests/sent.
+// @Summary List sent contact requests
+// @Description List contact requests sent by the current user
+// @Tags contacts
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param page query int false "Page number (default 1)"
+// @Param size query int false "Page size (default 20, max 100)"
+// @Success 200 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /contact-requests/sent [get]
 func (h *ContactHandler) ListSentRequests(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -368,6 +436,18 @@ func (h *ContactHandler) ListSentRequests(w http.ResponseWriter, r *http.Request
 }
 
 // ListReceivedRequests handles GET /api/v1/contact-requests/received.
+// @Summary List received contact requests
+// @Description List contact requests received by the current user
+// @Tags contacts
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param page query int false "Page number (default 1)"
+// @Param size query int false "Page size (default 20, max 100)"
+// @Param status query int false "Request status filter (-1 for all)"
+// @Success 200 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /contact-requests/received [get]
 func (h *ContactHandler) ListReceivedRequests(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -399,6 +479,19 @@ func (h *ContactHandler) ListReceivedRequests(w http.ResponseWriter, r *http.Req
 }
 
 // GetRequestByFormMsgID handles GET /api/v1/contact-requests/by-form/{msg_id}.
+// @Summary Get contact request by form message ID
+// @Description Get a contact request by its form message ID
+// @Tags contacts
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param msg_id path int64 true "Form message ID"
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /contact-requests/by-form/{msg_id} [get]
 func (h *ContactHandler) GetRequestByFormMsgID(w http.ResponseWriter, r *http.Request) {
 	msgIDStr := chi.URLParam(r, "msg_id")
 	msgID, err := strconv.ParseInt(msgIDStr, 10, 64)

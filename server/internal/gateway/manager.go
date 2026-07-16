@@ -89,7 +89,7 @@ func (m *Manager) DisconnectBySessionID(ctx context.Context, sessionID string) {
 	if c, ok2 := m.conns[connID]; ok2 {
 		// send kicked error frame before closing
 		errPayload, _ := json.Marshal(protocol.ErrorPayload{Code: 4001, Message: "kicked"})
-		c.SendFrame(protocol.Frame{Type: protocol.Error, Payload: errPayload})
+		_ = c.SendFrame(protocol.Frame{Type: protocol.Error, Payload: errPayload})
 		time.Sleep(100 * time.Millisecond)
 		c.Close()
 		delete(m.conns, connID)

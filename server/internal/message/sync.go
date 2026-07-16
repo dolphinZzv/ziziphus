@@ -46,7 +46,7 @@ func (h *SyncHandler) Handle(ctx context.Context, sessionID string, req protocol
 	// advance session seq
 	if len(messages) > 0 {
 		lastSeq := messages[len(messages)-1].ConvSeq
-		h.seqCache.SetSessionSeq(ctx, sessionID, req.ConvID, lastSeq)
+		_ = h.seqCache.SetSessionSeq(ctx, sessionID, req.ConvID, lastSeq)
 	}
 
 	syncMsgs := make([]protocol.SyncMessage, 0, len(messages))

@@ -33,6 +33,22 @@ func NewMsgHandler(msgRepo msgStorage, receipts receiptStorage, convMgr convMemb
 	return &MsgHandler{msgRepo: msgRepo, receipts: receipts, convMgr: convMgr}
 }
 
+// GetHistory returns paginated messages from a conversation.
+// @Summary      Get conversation message history
+// @Description  Returns paginated messages from a conversation with optional keyword and date filtering.
+// @Tags         messages
+// @Security     Bearer
+// @Param        conv_id        path  string true  "Conversation ID"
+// @Param        before_msg_id  query int    false "Cursor (message ID for pagination)"
+// @Param        around_msg_id  query int    false "Message ID to center results around"
+// @Param        limit          query int    false "Max messages (1-100, default 50)"
+// @Param        keyword        query string false "Search keyword"
+// @Param        start_date     query int    false "Filter messages after this Unix timestamp"
+// @Param        end_date       query int    false "Filter messages before this Unix timestamp"
+// @Success      200 {array}   map[string]interface{}
+// @Failure      403 {object} APIResponse
+// @Failure      500 {object} APIResponse
+// @Router       /conversations/{conv_id}/messages [get]
 func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
@@ -80,7 +96,16 @@ func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	JSON(w, items)
 }
 
-// GetReceipts returns read receipts for a message (who has read it).
+// GetReceipts returns the list of users who have read a specific message.
+// @Summary      Get message read receipts
+// @Description  Returns the list of user IDs who have read the specified message.
+// @Tags         messages
+// @Security     Bearer
+// @Param        msg_id  path  int64 true "Message ID"
+// @Success      200 {array}   map[string]interface{}
+// @Failure      400 {object} APIResponse
+// @Failure      500 {object} APIResponse
+// @Router       /messages/{msg_id}/receipts [get]
 func (h *MsgHandler) GetReceipts(w http.ResponseWriter, r *http.Request) {
 	msgID, err := strconv.ParseInt(chi.URLParam(r, "msg_id"), 10, 64)
 	if err != nil || msgID <= 0 {

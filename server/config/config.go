@@ -39,7 +39,7 @@ type StorageConfig struct {
 }
 
 type ServerConfig struct {
-	Port              int  `yaml:"port"`
+	Port              int   `yaml:"port"`
 	AllowRegistration *bool `yaml:"allow_registration"`
 }
 

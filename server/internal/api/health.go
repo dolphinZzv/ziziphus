@@ -18,6 +18,14 @@ type healthResp struct {
 	GitCommit   string            `json:"git_commit"`
 }
 
+// Health godoc
+//
+//	@summary		Health check
+//	@tags			system
+//	@produce		json
+//	@success		200	{object}	APIResponse{data=healthResp}
+//	@failure		503	{object}	APIResponse
+//	@router			/health [get]
 func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()

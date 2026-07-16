@@ -28,8 +28,8 @@ type convDataRepo interface {
 	Clone(ctx context.Context, srcConvID, newConvID, ownerID string, name string, idGen func() int64) error
 	SearchByName(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
 	AreContacts(ctx context.Context, userA, userB string) (bool, error)
-		UpdateSettings(ctx context.Context, convID string, settings map[string]any) error
-		GetSettings(ctx context.Context, convID string) (map[string]any, error)
+	UpdateSettings(ctx context.Context, convID string, settings map[string]any) error
+	GetSettings(ctx context.Context, convID string) (map[string]any, error)
 }
 
 type ConvHandler struct {
@@ -86,7 +86,7 @@ func (h *ConvHandler) sendSysMsgWithName(ctx context.Context, convID, key, userI
 		args = append(args, e)
 	}
 	body := i18n.T(ctx, key, args...)
-	h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
+	_, _ = h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
 }
 
 type createGroupReq struct {
@@ -95,6 +95,17 @@ type createGroupReq struct {
 	Headline  string   `json:"headline"`
 }
 
+// @Summary List conversations
+// @Description Get paginated list of conversations for the current user
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param page query int false "Page number" default(1)
+// @Param size query int false "Page size" default(20)
+// @Success 200 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations [get]
 func (h *ConvHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -118,6 +129,18 @@ func (h *ConvHandler) List(w http.ResponseWriter, r *http.Request) {
 	Paginated(w, items, total, page, size)
 }
 
+// @Summary Get conversation detail
+// @Description Get detailed information about a conversation including members
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id} [get]
 func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	convID := chi.URLParam(r, "conv_id")
@@ -164,6 +187,20 @@ type updateGroupReq struct {
 	Cover  *string `json:"cover"`
 }
 
+// @Summary Update group conversation
+// @Description Update group name, avatar, notice, or cover. Name/avatar require admin+, notice requires owner, cover supports any member.
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param body body updateGroupReq true "Update group request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id} [put]
 func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	var req updateGroupReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -286,6 +323,17 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	JSON(w, resp)
 }
 
+// @Summary Create a group conversation
+// @Description Create a new group conversation with specified members
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param body body createGroupReq true "Create group request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/group [post]
 func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	var req createGroupReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -329,6 +377,18 @@ type createP2PReq struct {
 	UserID string `json:"user_id"`
 }
 
+// @Summary Create or get a P2P conversation
+// @Description Create or get an existing one-on-one conversation with another user
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param body body createP2PReq true "Create P2P request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/p2p [post]
 func (h *ConvHandler) CreateP2P(w http.ResponseWriter, r *http.Request) {
 	var req createP2PReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -380,6 +440,19 @@ type addMembersReq struct {
 	UserIDs []string `json:"user_ids"`
 }
 
+// @Summary Add members to a conversation
+// @Description Add one or more members to a conversation
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param body body addMembersReq true "Add members request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/members [post]
 func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 	var req addMembersReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -432,6 +505,17 @@ func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }
 
+// @Summary Request to join a conversation
+// @Description Submit a join request for a conversation
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/join-requests [post]
 func (h *ConvHandler) RequestJoin(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
@@ -447,6 +531,17 @@ func (h *ConvHandler) RequestJoin(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }
 
+// @Summary List join requests
+// @Description List pending join requests for a conversation
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {array} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/join-requests [get]
 func (h *ConvHandler) ListJoinRequests(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
@@ -466,6 +561,18 @@ func (h *ConvHandler) ListJoinRequests(w http.ResponseWriter, r *http.Request) {
 	JSON(w, requests)
 }
 
+// @Summary Approve a join request
+// @Description Approve a pending join request for a conversation
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param user_id path string true "User ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/join-requests/{user_id}/approve [post]
 func (h *ConvHandler) ApproveJoinRequest(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := chi.URLParam(r, "user_id")
@@ -482,6 +589,18 @@ func (h *ConvHandler) ApproveJoinRequest(w http.ResponseWriter, r *http.Request)
 	JSON(w, map[string]interface{}{"conv_id": convID, "user_id": userID})
 }
 
+// @Summary Reject a join request
+// @Description Reject a pending join request for a conversation
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param user_id path string true "User ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/join-requests/{user_id}/reject [post]
 func (h *ConvHandler) RejectJoinRequest(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := chi.URLParam(r, "user_id")
@@ -498,6 +617,18 @@ func (h *ConvHandler) RejectJoinRequest(w http.ResponseWriter, r *http.Request) 
 	JSON(w, map[string]interface{}{"conv_id": convID, "user_id": userID})
 }
 
+// @Summary Remove a member from a conversation
+// @Description Remove a specified member from a conversation
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param user_id path string true "User ID of the member to remove"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/members/{user_id} [delete]
 func (h *ConvHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	targetID := chi.URLParam(r, "user_id")
@@ -517,6 +648,16 @@ func (h *ConvHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]interface{}{"conv_id": convID})
 }
 
+// @Summary Leave a conversation
+// @Description Leave a conversation as the current user
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/leave [post]
 func (h *ConvHandler) Leave(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
@@ -535,6 +676,19 @@ type markReadReq struct {
 	MsgID int64 `json:"msg_id"`
 }
 
+// @Summary Mark conversation as read
+// @Description Mark messages up to a specified message ID as read
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param body body markReadReq true "Mark read request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/read [post]
 func (h *ConvHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req markReadReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -555,12 +709,24 @@ func (h *ConvHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.readMarker != nil {
-		h.readMarker.MarkRead(r.Context(), userID, convID, req.MsgID)
+		_ = h.readMarker.MarkRead(r.Context(), userID, convID, req.MsgID)
 	}
 
 	JSON(w, map[string]interface{}{"conv_id": convID, "msg_id": req.MsgID})
 }
 
+// @Summary Search groups
+// @Description Search groups by name with pagination
+// @Tags groups
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param q query string true "Search query"
+// @Param page query int false "Page number" default(1)
+// @Param size query int false "Page size" default(20)
+// @Success 200 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /groups/search [get]
 func (h *ConvHandler) SearchGroups(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -583,6 +749,15 @@ func (h *ConvHandler) SearchGroups(w http.ResponseWriter, r *http.Request) {
 	Paginated(w, items, total, page, size)
 }
 
+// @Summary Get total unread count
+// @Description Get the total number of unread messages across all conversations for the current user
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} APIResponse
+// @Router /conversations/unread/total [get]
 func (h *ConvHandler) UnreadTotal(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 
@@ -599,6 +774,16 @@ func (h *ConvHandler) UnreadTotal(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]interface{}{"total": totalUnread})
 }
 
+// @Summary Pin a conversation
+// @Description Pin a conversation for the current user
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/pin [post]
 func (h *ConvHandler) Pin(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	convID := chi.URLParam(r, "conv_id")
@@ -609,6 +794,16 @@ func (h *ConvHandler) Pin(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]interface{}{"conv_id": convID, "pinned": true})
 }
 
+// @Summary Unpin a conversation
+// @Description Unpin a conversation for the current user
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/unpin [post]
 func (h *ConvHandler) Unpin(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	convID := chi.URLParam(r, "conv_id")
@@ -623,7 +818,16 @@ type cloneGroupReq struct {
 	Name string `json:"name"`
 }
 
-
+// @Summary Get conversation settings
+// @Description Get settings for a conversation
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Router /conversations/{conv_id}/settings [get]
 func (h *ConvHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
@@ -640,6 +844,18 @@ func (h *ConvHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]any{"settings": settings})
 }
 
+// @Summary Update conversation settings
+// @Description Update settings for a conversation
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/settings [put]
 func (h *ConvHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
@@ -666,6 +882,17 @@ func (h *ConvHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]any{"settings": body.Settings})
 }
 
+// @Summary Disband a group conversation
+// @Description Disband a group conversation (owner only)
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/disband [post]
 func (h *ConvHandler) Disband(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
@@ -681,6 +908,20 @@ func (h *ConvHandler) Disband(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"status": "disbanded"})
 }
 
+// @Summary Clone a group conversation
+// @Description Clone a group conversation with all members and settings (owner only)
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param body body cloneGroupReq false "Clone group request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/clone [post]
 func (h *ConvHandler) Clone(w http.ResponseWriter, r *http.Request) {
 	var req cloneGroupReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

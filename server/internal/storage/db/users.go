@@ -182,7 +182,7 @@ func (r *UserRepo) DeleteAccount(ctx context.Context, userID string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Step through in dependency order — children first, then parents.
 

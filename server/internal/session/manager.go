@@ -127,7 +127,7 @@ func (m *Manager) BindConnection(ctx context.Context, sessionID, connID string) 
 	// update cache
 	if cached, err := m.sessionCache.Get(ctx, sessionID); err == nil {
 		cached.ConnID = connID
-		m.sessionCache.Set(ctx, cached)
+		_ = m.sessionCache.Set(ctx, cached)
 	}
 	return nil
 }

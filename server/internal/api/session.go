@@ -28,6 +28,14 @@ func NewSessionHandler(sessMgr sessionManager, gwMgr *gateway.Manager) *SessionH
 }
 
 // ListSessions returns all active sessions for the current user.
+// @Summary List sessions
+// @Description List all active sessions for the current user
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {array} APIResponse
+// @Router /sessions [get]
 func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	sessionIDs := h.sessMgr.GetUserSessionIDs(r.Context(), userID)
@@ -42,6 +50,18 @@ func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteSession revokes a session: removes it from storage and force-disconnects the WebSocket.
+// @Summary Delete a session
+// @Description Revoke a session and force-disconnect the WebSocket
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param session_id path string true "Session ID"
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /sessions/{session_id} [delete]
 func (h *SessionHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	sessionID := chi.URLParam(r, "session_id")

@@ -22,7 +22,7 @@ func (r *MessageRepo) Insert(ctx context.Context, msg *model.Message) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx,
 		`INSERT INTO messages (msg_id, conv_id, sender_id, sender_name, sender_session_id, content_type, body, mention, reply_to, timestamp, client_seq, conv_seq, status)
@@ -214,6 +214,7 @@ func (r *MessageRepo) Recall(ctx context.Context, msgID int64) error {
 	return err
 }
 
+//nolint:unused
 func scanMessages(rows pgx.Rows) ([]*model.Message, error) {
 	var msgs []*model.Message
 	for rows.Next() {

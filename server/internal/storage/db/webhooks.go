@@ -142,6 +142,8 @@ func (r *WebhookRepo) UpdateAPIKeyHash(ctx context.Context, id int64, hash strin
 }
 
 // JSON type helpers for pgx JSONB columns
+//
+//nolint:unused
 func (r *WebhookRepo) scanWebhookHeaders(src any) ([]model.WebhookHeader, error) {
 	if src == nil {
 		return nil, nil
@@ -155,6 +157,7 @@ func (r *WebhookRepo) scanWebhookHeaders(src any) ([]model.WebhookHeader, error)
 	return headers, nil
 }
 
+//nolint:unused
 func (r *WebhookRepo) scanStringSlice(src any) ([]string, error) {
 	if src == nil {
 		return nil, nil

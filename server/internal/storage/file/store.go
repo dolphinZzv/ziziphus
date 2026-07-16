@@ -193,5 +193,3 @@ func (s *Store) fullPath(relative string) string {
 	}
 	return resolved
 }
-
-

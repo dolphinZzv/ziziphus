@@ -1,4 +1,4 @@
-.PHONY: server server-stop macos macos-stop ios-deploy xcodegen build-info deploy deploy-status deploy-logs
+.PHONY: server server-stop macos macos-stop ios-deploy xcodegen build-info deploy deploy-status deploy-logs swagger
 
 GIT_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_INFO := client/Packages/IMCore/Sources/IMCore/BuildInfo.swift
@@ -13,8 +13,12 @@ build-info:
 	@echo '    static let gitCommit = "$(GIT_HASH)"' >> $(BUILD_INFO)
 	@echo '}' >> $(BUILD_INFO)
 
+# 生成 Swagger/OpenAPI 文档
+swagger:
+	cd server && swag init -g cmd/ziziphus/main.go -o docs/
+
 # 后端服务
-server: server-stop
+server: server-stop swagger
 	cd server/web && npm run build
 	mkdir -p bin
 	cd server && go build -ldflags "-X ziziphus/pkg/version.GitCommit=$(GIT_HASH)" -o ../bin/ziziphus ./cmd/ziziphus/

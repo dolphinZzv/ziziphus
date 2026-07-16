@@ -75,7 +75,21 @@ type uploadResp struct {
 	Height       int    `json:"height,omitempty"`
 }
 
-// Upload handles POST /api/v1/files/upload (multipart/form-data).
+// @Summary Upload a file
+// @Description Upload a file to a conversation via multipart/form-data
+// @Tags files
+// @Accept mpfd
+// @Produce json
+// @Security Bearer
+// @Param file formData file true "File to upload"
+// @Param conv_id formData string false "Conversation ID"
+// @Param folder_path formData string false "Folder path (empty for root)"
+// @Param file_type formData string false "File type: 0=image, 1=file, 2=video, 3=audio" default(1)
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /files/upload [post]
 func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
 
@@ -86,10 +100,14 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	fileType := 1
 	switch r.FormValue("file_type") {
-	case "0": fileType = 0
-	case "1": fileType = 1
-	case "2": fileType = 2
-	case "3": fileType = 3
+	case "0":
+		fileType = 0
+	case "1":
+		fileType = 1
+	case "2":
+		fileType = 2
+	case "3":
+		fileType = 3
 	}
 
 	uploadedFile, header, err := r.FormFile("file")
@@ -170,7 +188,17 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetInfo handles GET /api/v1/files/{file_id}.
+// @Summary Get file info
+// @Description Get file metadata by file ID
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param file_id path string true "File ID"
+// @Success 200 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /files/{file_id} [get]
 func (h *FileHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	fileID := chi.URLParam(r, "file_id")
 	finfo, err := h.fileDB.GetByID(r.Context(), fileID)
@@ -189,13 +217,29 @@ func (h *FileHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ListConvFiles handles GET /api/v1/conversations/{conv_id}/files
+// @Summary List conversation files
+// @Description Get paginated list of files in a conversation
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param page query int false "Page number" default(1)
+// @Param size query int false "Page size" default(50)
+// @Success 200 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/files [get]
 func (h *FileHandler) ListConvFiles(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
-	if page < 1 { page = 1 }
-	if size < 1 || size > 100 { size = 50 }
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 100 {
+		size = 50
+	}
 
 	files, total, err := h.fileDB.ListByConvID(r.Context(), convID, page, size)
 	if err != nil {
@@ -203,11 +247,24 @@ func (h *FileHandler) ListConvFiles(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	if files == nil { files = []*model.FileInfo{} }
+	if files == nil {
+		files = []*model.FileInfo{}
+	}
 	Paginated(w, files, total, page, size)
 }
 
-// DeleteConvFile handles DELETE /api/v1/conversations/{conv_id}/files/{file_id}
+// @Summary Delete a conversation file
+// @Description Delete a file from a conversation
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param file_id path string true "File ID"
+// @Success 200 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/files/{file_id} [delete]
 func (h *FileHandler) DeleteConvFile(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	fileID := chi.URLParam(r, "file_id")
@@ -222,7 +279,7 @@ func (h *FileHandler) DeleteConvFile(w http.ResponseWriter, r *http.Request) {
 			ext = filepath.Ext(finfo.Name)
 		}
 		relPath := filepath.Join(convID, finfo.FolderPath, fileID+ext)
-		h.store.Delete(r.Context(), relPath)
+		_ = h.store.Delete(r.Context(), relPath)
 	}
 
 	if err := h.fileDB.DeleteByID(r.Context(), fileID, userID); err != nil {
@@ -238,7 +295,6 @@ func (h *FileHandler) DeleteConvFile(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"file_id": fileID})
 }
 
-// ServeFile serves stored files via HTTP (GET /files/*).
 func (h *FileHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 	filePath := chi.URLParam(r, "*")
 	rc, err := h.store.Open(r.Context(), filePath)
@@ -269,7 +325,7 @@ func (h *FileHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 			if resized, ct, err := resizeImage(data, tw, th, ext); err == nil {
 				w.Header().Set("Content-Type", ct)
 				w.Header().Set("Cache-Control", "public, max-age=2592000")
-				w.Write(resized)
+				_, _ = w.Write(resized)
 				return
 			}
 		}
@@ -277,42 +333,57 @@ func (h *FileHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", contentTypeByExt(ext))
 	w.Header().Set("Cache-Control", "public, max-age=2592000")
-	w.Write(data)
+	_, _ = w.Write(data)
 }
 
 func contentTypeByExt(ext string) string {
 	switch ext {
-	case ".png": return "image/png"
-	case ".jpg", ".jpeg": return "image/jpeg"
-	case ".gif": return "image/gif"
-	case ".webp": return "image/webp"
-	case ".mp4": return "video/mp4"
-	case ".mp3": return "audio/mpeg"
-	case ".pdf": return "application/pdf"
-	default: return "application/octet-stream"
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	case ".mp4":
+		return "video/mp4"
+	case ".mp3":
+		return "audio/mpeg"
+	case ".pdf":
+		return "application/pdf"
+	default:
+		return "application/octet-stream"
 	}
 }
 
 func isImageExt(ext string) bool {
 	switch ext {
-	case ".png", ".jpg", ".jpeg", ".gif": return true
+	case ".png", ".jpg", ".jpeg", ".gif":
+		return true
 	}
 	return false
 }
 
 func decodeImageDimensions(data []byte) (int, int, error) {
 	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
-	if err != nil { return 0, 0, err }
+	if err != nil {
+		return 0, 0, err
+	}
 	return cfg.Width, cfg.Height, nil
 }
 
 func resizeImage(data []byte, tw, th int, ext string) ([]byte, string, error) {
 	src, _, err := image.Decode(bytes.NewReader(data))
-	if err != nil { return nil, "", err }
+	if err != nil {
+		return nil, "", err
+	}
 
 	sb := src.Bounds()
 	sw, sh := sb.Dx(), sb.Dy()
-	if sw == 0 || sh == 0 { return data, contentTypeByExt(ext), nil }
+	if sw == 0 || sh == 0 {
+		return data, contentTypeByExt(ext), nil
+	}
 
 	crop := sb
 	if tw > 0 && th > 0 {
@@ -333,7 +404,9 @@ func resizeImage(data []byte, tw, th int, ext string) ([]byte, string, error) {
 
 	var cropped image.Image
 	if crop != sb {
-		if sub, ok := src.(interface{ SubImage(r image.Rectangle) image.Image }); ok {
+		if sub, ok := src.(interface {
+			SubImage(r image.Rectangle) image.Image
+		}); ok {
 			cropped = sub.SubImage(crop)
 		} else {
 			tmp := image.NewRGBA(image.Rect(0, 0, crop.Dx(), crop.Dy()))
@@ -353,16 +426,32 @@ func resizeImage(data []byte, tw, th int, ext string) ([]byte, string, error) {
 
 	var buf bytes.Buffer
 	if ext == ".png" || ext == ".gif" {
-		if err := png.Encode(&buf, dst); err != nil { return nil, "", err }
+		if err := png.Encode(&buf, dst); err != nil {
+			return nil, "", err
+		}
 		return buf.Bytes(), "image/png", nil
 	}
-	if err := jpeg.Encode(&buf, dst, &jpeg.Options{Quality: 85}); err != nil { return nil, "", err }
+	if err := jpeg.Encode(&buf, dst, &jpeg.Options{Quality: 85}); err != nil {
+		return nil, "", err
+	}
 	return buf.Bytes(), "image/jpeg", nil
 }
 
 // ===== Folder endpoints (filesystem-based) =====
 
-// CreateFolder handles POST /api/v1/conversations/{conv_id}/folders
+// @Summary Create a folder
+// @Description Create a new folder in a conversation
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param body body object true "Create folder request" SchemaExample({"name":"folder_name","parent_path":""})
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/folders [post]
 func (h *FileHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	var req struct {
@@ -384,12 +473,25 @@ func (h *FileHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fullPath := req.ParentPath
-	if fullPath != "" { fullPath += "/" }
+	if fullPath != "" {
+		fullPath += "/"
+	}
 	fullPath += req.Name
 	JSON(w, map[string]interface{}{"path": fullPath, "name": req.Name, "parent_path": req.ParentPath})
 }
 
-// ListFolders handles GET /api/v1/conversations/{conv_id}/folders
+// @Summary List folders
+// @Description List folders in a conversation
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param parent_path query string false "Parent folder path (empty for root)"
+// @Success 200 {array} file.FolderInfo
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/folders [get]
 func (h *FileHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	parentPath := r.URL.Query().Get("parent_path")
@@ -406,11 +508,25 @@ func (h *FileHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	if folders == nil { folders = []file.FolderInfo{} }
+	if folders == nil {
+		folders = []file.FolderInfo{}
+	}
 	JSON(w, folders)
 }
 
-// DeleteFolder handles DELETE /api/v1/conversations/{conv_id}/folders
+// @Summary Delete a folder
+// @Description Delete a folder from a conversation
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param path query string true "Folder path to delete"
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/folders [delete]
 func (h *FileHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	folderPath := r.URL.Query().Get("path")
@@ -426,14 +542,31 @@ func (h *FileHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"status": "ok"})
 }
 
-// ListFolderFiles handles GET /api/v1/conversations/{conv_id}/folders/files
+// @Summary List files in a folder
+// @Description Get paginated list of files in a specific folder within a conversation
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param path query string false "Folder path (empty for root)"
+// @Param page query int false "Page number" default(1)
+// @Param size query int false "Page size" default(50)
+// @Success 200 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/folders/files [get]
 func (h *FileHandler) ListFolderFiles(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	folderPath := r.URL.Query().Get("path")
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
-	if page < 1 { page = 1 }
-	if size < 1 || size > 100 { size = 50 }
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 100 {
+		size = 50
+	}
 
 	files, total, err := h.fileDB.ListFilesInFolder(r.Context(), convID, folderPath, page, size)
 	if err != nil {
@@ -441,11 +574,27 @@ func (h *FileHandler) ListFolderFiles(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	if files == nil { files = []*model.FileInfo{} }
+	if files == nil {
+		files = []*model.FileInfo{}
+	}
 	Paginated(w, files, total, page, size)
 }
 
-// MoveFile handles PUT /api/v1/conversations/{conv_id}/files/{file_id}/move
+// @Summary Move a file
+// @Description Move a file to a different folder within a conversation
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param file_id path string true "File ID"
+// @Param body body object true "Move file request" SchemaExample({"folder_path":"/target"})
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/files/{file_id}/move [put]
 func (h *FileHandler) MoveFile(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	fileID := chi.URLParam(r, "file_id")
@@ -464,7 +613,9 @@ func (h *FileHandler) MoveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ext := filepath.Ext(finfo.URL)
-	if ext == "" { ext = filepath.Ext(finfo.Name) }
+	if ext == "" {
+		ext = filepath.Ext(finfo.Name)
+	}
 
 	srcRel := filepath.Join(convID, finfo.FolderPath, fileID+ext)
 	dstRel := filepath.Join(convID, req.FolderPath, fileID+ext)
@@ -482,12 +633,24 @@ func (h *FileHandler) MoveFile(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"status": "ok"})
 }
 
-// MoveFolder handles PUT /api/v1/conversations/{conv_id}/folders/move
+// @Summary Move a folder
+// @Description Move a folder to a different parent folder within a conversation
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param body body object true "Move folder request" SchemaExample({"src_path":"/old","dst_parent":"/new"})
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/folders/move [put]
 func (h *FileHandler) MoveFolder(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	var req struct {
-		SrcPath    string `json:"src_path"`
-		DstParent  string `json:"dst_parent"`
+		SrcPath   string `json:"src_path"`
+		DstParent string `json:"dst_parent"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		BadRequest(w, r, "invalid body")
@@ -501,7 +664,19 @@ func (h *FileHandler) MoveFolder(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"status": "ok"})
 }
 
-// RenameFolder handles PUT /api/v1/conversations/{conv_id}/folders/rename
+// @Summary Rename a folder
+// @Description Rename a folder in a conversation
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param body body object true "Rename folder request" SchemaExample({"old_path":"/old","new_name":"renamed"})
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 403 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /conversations/{conv_id}/folders/rename [put]
 func (h *FileHandler) RenameFolder(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	var req struct {
@@ -513,8 +688,12 @@ func (h *FileHandler) RenameFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	newPath := filepath.Dir(req.OldPath)
-	if newPath == "." { newPath = "" }
-	if newPath != "" { newPath += "/" }
+	if newPath == "." {
+		newPath = ""
+	}
+	if newPath != "" {
+		newPath += "/"
+	}
 	newPath += req.NewName
 
 	if err := h.store.RenameFolder(r.Context(), convID, req.OldPath, newPath); err != nil {
@@ -528,24 +707,36 @@ func (h *FileHandler) RenameFolder(w http.ResponseWriter, r *http.Request) {
 // sendFileChangeNotify sends a system message when a file is uploaded.
 func (h *FileHandler) sendFileChangeNotify(ctx context.Context, convID, userID, fileName string) {
 	c, err := h.convMgr.Get(ctx, convID)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	enabled, _ := c.Settings["file_change_notify"].(bool)
-	if !enabled { return }
+	if !enabled {
+		return
+	}
 
 	userName := userID
-	if u, err := h.userDB.GetByID(ctx, userID); err == nil && u != nil { userName = u.Name }
+	if u, err := h.userDB.GetByID(ctx, userID); err == nil && u != nil {
+		userName = u.Name
+	}
 	body := fmt.Sprintf("%s 上传了文件: %s", userName, fileName)
-	h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
+	_, _ = h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
 }
 
 func (h *FileHandler) sendFileDeleteNotify(ctx context.Context, convID, userID, fileName string) {
 	c, err := h.convMgr.Get(ctx, convID)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	enabled, _ := c.Settings["file_change_notify"].(bool)
-	if !enabled { return }
+	if !enabled {
+		return
+	}
 
 	userName := userID
-	if u, err := h.userDB.GetByID(ctx, userID); err == nil && u != nil { userName = u.Name }
+	if u, err := h.userDB.GetByID(ctx, userID); err == nil && u != nil {
+		userName = u.Name
+	}
 	body := fmt.Sprintf("%s 删除了文件: %s", userName, fileName)
-	h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
+	_, _ = h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
 }

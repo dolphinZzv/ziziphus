@@ -181,10 +181,10 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 	metrics.MessagesSentTotal.Inc()
 
 	// 6. set sender's user_seq so self-messages don't count as unread
-	in.seqCache.SetUserSeq(ctx, senderID, payload.ConvID, convSeq)
+	_ = in.seqCache.SetUserSeq(ctx, senderID, payload.ConvID, convSeq)
 
 	// 6. cache recent
-	in.seqCache.SetRecentMsg(ctx, payload.ConvID, msgID, float64(msgID))
+	_ = in.seqCache.SetRecentMsg(ctx, payload.ConvID, msgID, float64(msgID))
 
 	// 7. route + push
 	targets := in.router.Route(ctx, msg)
@@ -228,12 +228,12 @@ func (in *Ingest) SendSystemMessage(ctx context.Context, convID, body string, se
 	if err := in.store.Insert(ctx, msg); err != nil {
 		return nil, err
 	}
-	in.seqCache.SetRecentMsg(ctx, convID, msgID, float64(msgID))
+	_ = in.seqCache.SetRecentMsg(ctx, convID, msgID, float64(msgID))
 
 	// Set the sender's user_seq so the system message doesn't
 	// count as unread for the user who triggered it.
 	if len(senderID) > 0 && senderID[0] != "" {
-		in.seqCache.SetUserSeq(ctx, senderID[0], convID, convSeq)
+		_ = in.seqCache.SetUserSeq(ctx, senderID[0], convID, convSeq)
 	}
 
 	targets := in.router.Route(ctx, msg)
@@ -270,7 +270,7 @@ func (in *Ingest) SendFormMessage(ctx context.Context, convID string, body *mode
 	if err := in.store.Insert(ctx, msg); err != nil {
 		return nil, err
 	}
-	in.seqCache.SetRecentMsg(ctx, convID, msgID, float64(msgID))
+	_ = in.seqCache.SetRecentMsg(ctx, convID, msgID, float64(msgID))
 
 	targets := in.router.Route(ctx, msg)
 	if len(targets) > 0 {
@@ -389,12 +389,12 @@ func (in *Ingest) handleFormResponse(ctx context.Context, senderID string, sessi
 		return nil, err
 	}
 	metrics.MessagesSentTotal.Inc()
-	in.seqCache.SetUserSeq(ctx, senderID, payload.ConvID, convSeq)
-	in.seqCache.SetRecentMsg(ctx, payload.ConvID, msgID, float64(msgID))
+	_ = in.seqCache.SetUserSeq(ctx, senderID, payload.ConvID, convSeq)
+	_ = in.seqCache.SetRecentMsg(ctx, payload.ConvID, msgID, float64(msgID))
 
 	// Update contact request status.
 	if err := in.contactReqDB.UpdateStatus(ctx, req.ID, newStatus); err != nil {
-		// Log but don't fail.
+		logger.Warn("update contact request status failed", "request_id", req.ID, "error", err)
 	}
 
 	responderName := senderID
@@ -416,11 +416,11 @@ func (in *Ingest) handleFormResponse(ctx context.Context, senderID string, sessi
 
 	if newStatus == model.ContactRequestApproved {
 		in.ensureContacts(ctx, req.FromUserID, req.ToUserID)
-		in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s 已通过你的好友申请", responderName))
-		in.SendSystemMessage(ctx, sysB, fmt.Sprintf("你已通过 %s 的好友申请", initiatorName))
+		_, _ = in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s 已通过你的好友申请", responderName))
+		_, _ = in.SendSystemMessage(ctx, sysB, fmt.Sprintf("你已通过 %s 的好友申请", initiatorName))
 	} else {
-		in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s 已拒绝你的好友申请", responderName))
-		in.SendSystemMessage(ctx, sysB, fmt.Sprintf("你已拒绝 %s 的好友申请", initiatorName))
+		_, _ = in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s 已拒绝你的好友申请", responderName))
+		_, _ = in.SendSystemMessage(ctx, sysB, fmt.Sprintf("你已拒绝 %s 的好友申请", initiatorName))
 	}
 
 	// Push the FormResponse to the sender's own system conversation.
@@ -441,11 +441,11 @@ func (in *Ingest) handleFormResponse(ctx context.Context, senderID string, sessi
 // It is idempotent — safe to call multiple times.
 func (in *Ingest) ensureContacts(ctx context.Context, userA, userB string) {
 	if in.contactRepo != nil {
-		in.contactRepo.AddContact(ctx, userA, userB)
-		in.contactRepo.AddContact(ctx, userB, userA)
+		_ = in.contactRepo.AddContact(ctx, userA, userB)
+		_ = in.contactRepo.AddContact(ctx, userB, userA)
 	}
 	if in.convMgr != nil {
-		in.convMgr.GetOrCreateP2P(ctx, userA, userB)
+		_, _ = in.convMgr.GetOrCreateP2P(ctx, userA, userB)
 	}
 }
 
@@ -461,7 +461,6 @@ func parseP2PCounterpart(convID, senderID string) string {
 	}
 	return parts[0]
 }
-
 
 // forwardToWebhooks forwards a message to configured webhook callbacks.
 func (in *Ingest) forwardToWebhooks(ctx context.Context, msg *model.Message) {
@@ -538,9 +537,9 @@ func (in *Ingest) logWhAudit(ctx context.Context, whID int64, msgID int64, actio
 
 func buildWebhookPayload(whID int64, msg *model.Message) map[string]any {
 	return map[string]any{
-		"event":    "message.created",
+		"event":      "message.created",
 		"webhook_id": whID,
-		"conv_id":  msg.ConvID,
+		"conv_id":    msg.ConvID,
 		"message": map[string]any{
 			"msg_id":       msg.MsgID,
 			"sender_id":    msg.SenderID,
@@ -572,4 +571,3 @@ func extractMentions(body string) map[string]bool {
 	}
 	return result
 }
-

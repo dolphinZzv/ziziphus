@@ -82,11 +82,11 @@ func (m *Manager) GetOrCreateP2P(ctx context.Context, userA, userB string) (*mod
 	if err := m.convRepo.Create(ctx, conv); err != nil {
 		return nil, err
 	}
-	m.convRepo.AddMember(ctx, convID, userA, model.ConvRoleOwner)
-	m.convRepo.AddMember(ctx, convID, userB, model.ConvRoleMember)
+	_ = m.convRepo.AddMember(ctx, convID, userA, model.ConvRoleOwner)
+	_ = m.convRepo.AddMember(ctx, convID, userB, model.ConvRoleMember)
 
 	// init conv seq to 0
-	m.seqCache.InitConvSeq(ctx, convID, 0)
+	_ = m.seqCache.InitConvSeq(ctx, convID, 0)
 	logger.Info("P2P conversation created", "conv_id", convID)
 	return conv, nil
 }
@@ -120,7 +120,7 @@ func (m *Manager) GetOrCreateSystemConv(ctx context.Context, userID string) (*mo
 	if err := m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleOwner); err != nil {
 		return nil, fmt.Errorf("add system conv member: %w", err)
 	}
-	m.seqCache.InitConvSeq(ctx, convID, 0)
+	_ = m.seqCache.InitConvSeq(ctx, convID, 0)
 	logger.Info("system conversation created", "conv_id", convID)
 	return conv, nil
 }
@@ -131,7 +131,7 @@ func (m *Manager) GetOrCreateSystemConvTx(ctx context.Context, tx pgx.Tx, userID
 	conv, err := m.convRepo.Get(ctx, convID)
 	if err == nil {
 		if isMember, _ := m.convRepo.IsMember(ctx, convID, userID); !isMember {
-			m.convRepo.AddMemberTx(ctx, tx, convID, userID, model.ConvRoleOwner)
+			_ = m.convRepo.AddMemberTx(ctx, tx, convID, userID, model.ConvRoleOwner)
 		}
 		return conv, nil
 	}
@@ -150,7 +150,7 @@ func (m *Manager) GetOrCreateSystemConvTx(ctx context.Context, tx pgx.Tx, userID
 	if err := m.convRepo.AddMemberTx(ctx, tx, convID, userID, model.ConvRoleOwner); err != nil {
 		return nil, fmt.Errorf("add system conv member (tx): %w", err)
 	}
-	m.seqCache.InitConvSeq(ctx, convID, 0)
+	_ = m.seqCache.InitConvSeq(ctx, convID, 0)
 	logger.Info("system conversation created (tx)", "conv_id", convID)
 	return conv, nil
 }
@@ -195,13 +195,13 @@ func (m *Manager) CreateGroup(ctx context.Context, name, headline, ownerID strin
 	}
 
 	// add owner
-	m.convRepo.AddMember(ctx, convID, ownerID, model.ConvRoleOwner)
+	_ = m.convRepo.AddMember(ctx, convID, ownerID, model.ConvRoleOwner)
 	// add members
 	for _, mid := range uniqueMembers {
-		m.convRepo.AddMember(ctx, convID, mid, model.ConvRoleMember)
+		_ = m.convRepo.AddMember(ctx, convID, mid, model.ConvRoleMember)
 	}
 	// init conv seq
-	m.seqCache.InitConvSeq(ctx, convID, 0)
+	_ = m.seqCache.InitConvSeq(ctx, convID, 0)
 	logger.Info("group created", "conv_id", convID, "name", name)
 	return conv, nil
 }
@@ -265,7 +265,6 @@ func (m *Manager) RemoveMember(ctx context.Context, convID, userID, operatorID s
 func (m *Manager) Leave(ctx context.Context, convID, userID string) error {
 	return m.convRepo.RemoveMember(ctx, convID, userID)
 }
-
 
 func (m *Manager) Disband(ctx context.Context, convID, ownerID string) error {
 	role, err := m.convRepo.GetMemberRole(ctx, convID, ownerID)

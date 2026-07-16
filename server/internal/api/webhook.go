@@ -228,6 +228,14 @@ func (h *WebhookHandler) canManageWebhook(ctx context.Context, wh *model.ConvWeb
 
 // ---------- CRUD ----------
 
+// List returns all webhooks for a conversation.
+// @Summary List webhooks
+// @Description Returns all webhooks configured for the specified conversation.
+// @Tags webhooks
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {array} APIResponse
+// @Router /conversations/{conv_id}/webhooks [get]
 func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
@@ -247,6 +255,15 @@ func (h *WebhookHandler) List(w http.ResponseWriter, r *http.Request) {
 	JSON(w, list)
 }
 
+// Create adds a new webhook to a conversation.
+// @Summary Create webhook
+// @Description Creates a new webhook configuration for the specified conversation.
+// @Tags webhooks
+// @Security Bearer
+// @Accept json
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} APIResponse
+// @Router /conversations/{conv_id}/webhooks [post]
 func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
@@ -313,6 +330,16 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 	JSON(w, created)
 }
 
+// Update modifies an existing webhook.
+// @Summary Update webhook
+// @Description Updates the configuration of an existing webhook.
+// @Tags webhooks
+// @Security Bearer
+// @Accept json
+// @Param conv_id path string true "Conversation ID"
+// @Param webhook_id path string true "Webhook ID"
+// @Success 200 {object} APIResponse
+// @Router /conversations/{conv_id}/webhooks/{webhook_id} [put]
 func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 	webhookID, err := strconvParseInt(chi.URLParam(r, "webhook_id"))
 	if err != nil {
@@ -361,6 +388,15 @@ func (h *WebhookHandler) Update(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"status": "ok"})
 }
 
+// Delete removes a webhook.
+// @Summary Delete webhook
+// @Description Deletes a webhook configuration from the conversation.
+// @Tags webhooks
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param webhook_id path string true "Webhook ID"
+// @Success 200 {object} APIResponse
+// @Router /conversations/{conv_id}/webhooks/{webhook_id} [delete]
 func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	webhookID, err := strconvParseInt(chi.URLParam(r, "webhook_id"))
 	if err != nil {
@@ -387,6 +423,15 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"status": "ok"})
 }
 
+// Test sends a test message through the webhook.
+// @Summary Test webhook
+// @Description Sends a test message via the specified webhook to verify configuration.
+// @Tags webhooks
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param webhook_id path string true "Webhook ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /conversations/{conv_id}/webhooks/{webhook_id}/test [post]
 func (h *WebhookHandler) Test(w http.ResponseWriter, r *http.Request) {
 	webhookID, err := strconvParseInt(chi.URLParam(r, "webhook_id"))
 	if err != nil {
@@ -439,6 +484,15 @@ func (h *WebhookHandler) Test(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// RegenerateKey generates a new API key for the webhook.
+// @Summary Regenerate API key
+// @Description Generates a new API key for the specified webhook. The old key becomes invalid.
+// @Tags webhooks
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Param webhook_id path string true "Webhook ID"
+// @Success 200 {object} APIResponse
+// @Router /conversations/{conv_id}/webhooks/{webhook_id}/regenerate-key [post]
 func (h *WebhookHandler) RegenerateKey(w http.ResponseWriter, r *http.Request) {
 	webhookID, err := strconvParseInt(chi.URLParam(r, "webhook_id"))
 	if err != nil {
@@ -483,11 +537,18 @@ func (h *WebhookHandler) RegenerateKey(w http.ResponseWriter, r *http.Request) {
 // ---------- receive message (public) ----------
 
 type webhookReceiveReq struct {
-	ContentType int   `json:"content_type"`
+	ContentType int    `json:"content_type"`
 	Body        string `json:"body"`
 	ReplyTo     int64  `json:"reply_to"`
 }
 
+// ReceiveMessage receives a message from an external webhook caller.
+// @Summary Receive webhook message
+// @Description Receives and processes a message sent by an external service via webhook.
+// @Tags webhooks
+// @Accept json
+// @Success 200 {object} map[string]interface{}
+// @Router /webhooks/receive [post]
 func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) {
 	ip := callerIP(r)
 	if !h.rateLmt.Allow(ip) {
@@ -562,7 +623,7 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 		h.pusher.Push(r.Context(), msg, targets)
 	}
 
-	h.seqCache.SetRecentMsg(r.Context(), wh.ConvID, msgID, float64(msgID))
+	_ = h.seqCache.SetRecentMsg(r.Context(), wh.ConvID, msgID, float64(msgID))
 
 	JSON(w, map[string]any{
 		"msg_id":    msgID,
@@ -583,6 +644,7 @@ func strconvParseInt(s string) (int64, error) {
 	return n, nil
 }
 
+//nolint:unused
 func parsePageSize(r *http.Request) (int, int) {
 	page := 1
 	size := 20

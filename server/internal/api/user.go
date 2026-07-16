@@ -24,12 +24,12 @@ type mfaStorage interface {
 }
 
 type UserHandler struct {
-	authSvc         *auth.Service
-	userRepo        userRepo
-	sessMgr         sessionChecker
-	idGen           func() int64
-	mfaRepo         mfaStorage
-	emailVerifyRepo emailVerifyHandler
+	authSvc           *auth.Service
+	userRepo          userRepo
+	sessMgr           sessionChecker
+	idGen             func() int64
+	mfaRepo           mfaStorage
+	emailVerifyRepo   emailVerifyHandler
 	mailer            emailSender
 	allowRegistration bool
 }
@@ -64,13 +64,23 @@ func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChe
 }
 
 type registerReq struct {
-	Name     string `json:"name"`
-	Account  string `json:"account"`
-	Password string `json:"password"`
-	Avatar   string `json:"avatar"`
-	Email    string `json:"email"`
+	Name     string `json:"name" example:"张三"`
+	Account  string `json:"account" example:"zhangsan"`
+	Password string `json:"password" example:"password123"`
+	Email    string `json:"email,omitempty" example:"user@example.com"`
 }
 
+// Register godoc
+//
+//	@summary		Register a new user
+//	@tags			auth
+//	@accept			json
+//	@produce		json
+//	@param			body	body	registerReq	true	"注册信息"
+//	@success		200		{object}	APIResponse{data=object{user_id=string,account=string,name=string,token=string,refresh_token=string}}
+//	@failure		400		{object}	APIResponse
+//	@failure		403		{object}	APIResponse	"注册已关闭"
+//	@router			/users/register [post]
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if !h.allowRegistration {
 		Error(w, r, http.StatusForbidden, model.NewAppError(model.ErrNoPermission, "新用户注册已关闭"))
@@ -105,10 +115,20 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 type loginReq struct {
-	Account  string `json:"account"`
-	Password string `json:"password"`
+	Account  string `json:"account" example:"zhangsan"`
+	Password string `json:"password" example:"password123"`
 }
 
+// Login godoc
+//
+//	@summary		User login
+//	@tags			auth
+//	@accept			json
+//	@produce		json
+//	@param			body	body	loginReq	true	"登录凭证"
+//	@success		200		{object}	APIResponse{data=object{user_id=string,token=string,refresh_token=string,expires_at=string}}
+//	@failure		401		{object}	APIResponse
+//	@router			/users/login [post]
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -139,10 +159,10 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 			if mfa.MFAType == model.MFAEmail && mfaUser2 != nil && mfaUser2.Email != "" {
 				newCode := auth.GenerateEmailOTP()
 				if h.mailer != nil && h.mailer.Enabled() {
-					go func() { h.mailer.SendVerificationCode(mfaUser2.Email, newCode) }()
+					go func() { _ = h.mailer.SendVerificationCode(mfaUser2.Email, newCode) }()
 				}
 				// Update stored secret with new code
-				h.mfaRepo.Upsert(r.Context(), &model.UserMFA{
+				_ = h.mfaRepo.Upsert(r.Context(), &model.UserMFA{
 					UserID:  userID,
 					MFAType: mfa.MFAType,
 					Enabled: true,
@@ -193,6 +213,17 @@ type mfaLoginReq struct {
 	Code      string `json:"code"`
 }
 
+// MFAVerifyLogin godoc
+//
+//	@summary		Verify MFA code during login
+//	@tags			auth
+//	@accept			json
+//	@produce		json
+//	@param			body	body	mfaLoginReq	true	"MFA verification request"
+//	@success		200		{object}	APIResponse{data=object{user_id=string,account=string,name=string,token=string,refresh_token=string,expires_at=string}}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@router			/auth/mfa/verify [post]
 func (h *UserHandler) MFAVerifyLogin(w http.ResponseWriter, r *http.Request) {
 	var req mfaLoginReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -251,6 +282,17 @@ type refreshReq struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// Refresh godoc
+//
+//	@summary		Refresh an access token
+//	@tags			auth
+//	@accept			json
+//	@produce		json
+//	@param			body	body	refreshReq	true	"Refresh token request"
+//	@success		200		{object}	APIResponse{data=object{token=string,expires_at=string}}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@router			/users/refresh [post]
 func (h *UserHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req refreshReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -277,6 +319,15 @@ func (h *UserHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetMe godoc
+//
+//	@summary		Get current user info
+//	@tags			users
+//	@produce		json
+//	@security		Bearer
+//	@success		200	{object}	APIResponse{data=model.User}
+//	@failure		401	{object}	APIResponse
+//	@router			/users/me [get]
 func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	user, err := h.userRepo.GetByID(r.Context(), userID)
@@ -288,6 +339,18 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	writeUserWithDevices(w, r, user, h.sessMgr)
 }
 
+// GetUser godoc
+//
+//	@summary		Get user by ID
+//	@tags			users
+//	@produce		json
+//	@security		Bearer
+//	@param			user_id	path	string	true	"User ID"
+//	@success		200		{object}	APIResponse{data=model.User}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@failure		404		{object}	APIResponse
+//	@router			/users/{user_id} [get]
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "user_id")
 	callerID := auth.UserFromCtx(r.Context())
@@ -326,6 +389,18 @@ type batchReq struct {
 	UserIDs []string `json:"user_ids"`
 }
 
+// BatchGet godoc
+//
+//	@summary		Get multiple users by IDs
+//	@tags			users
+//	@accept			json
+//	@produce		json
+//	@security		Bearer
+//	@param			body	body	batchReq	true	"Batch user request"
+//	@success		200		{object}	APIResponse{data=object{users=object}}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@router			/users/batch [post]
 func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 	var req batchReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -373,6 +448,18 @@ type updateMeReq struct {
 	AllowDirectChat *bool  `json:"allow_direct_chat"`
 }
 
+// UpdateMe godoc
+//
+//	@summary		Update current user profile
+//	@tags			users
+//	@accept			json
+//	@produce		json
+//	@security		Bearer
+//	@param			body	body	updateMeReq	true	"Profile update request"
+//	@success		200		{object}	APIResponse{data=object{user_id=string,name=string,avatar=string,cover=string,email=string,primary_color=string,secondary_color=string,headline=string,discoverable=bool,allow_direct_chat=bool}}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@router			/users/me [put]
 func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	var req updateMeReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -393,18 +480,31 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	JSON(w, map[string]interface{}{
-		"user_id":           userID,
-		"name":              req.Name,
-		"avatar":            req.Avatar,
-		"cover":             req.Cover,
-		"email":             req.Email,
-		"primary_color":     req.PrimaryColor,
-		"secondary_color":   req.SecondaryColor,
-			"headline":          req.Headline,		"discoverable":      discoverable,
+		"user_id":         userID,
+		"name":            req.Name,
+		"avatar":          req.Avatar,
+		"cover":           req.Cover,
+		"email":           req.Email,
+		"primary_color":   req.PrimaryColor,
+		"secondary_color": req.SecondaryColor,
+		"headline":        req.Headline, "discoverable": discoverable,
 		"allow_direct_chat": allowDirectChat,
 	})
 }
 
+// Search godoc
+//
+//	@summary		Search users
+//	@tags			users
+//	@produce		json
+//	@security		Bearer
+//	@param			q		query	string	true	"Search query (min 2 chars)"
+//	@param			page	query	int		false	"Page number"
+//	@param			size	query	int		false	"Page size"
+//	@success		200		{object}	APIResponse{data=PaginatedData}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@router			/users/search [get]
 func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	if len(q) < 2 {
@@ -457,6 +557,15 @@ type mfaVerifyReq struct {
 	Code string `json:"code"`
 }
 
+// GetMFA godoc
+//
+//	@summary		Get MFA status for current user
+//	@tags			mfa
+//	@produce		json
+//	@security		Bearer
+//	@success		200	{object}	APIResponse{data=object{enabled=bool,mfa_type=int}}
+//	@failure		401	{object}	APIResponse
+//	@router			/users/me/mfa [get]
 func (h *UserHandler) GetMFA(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	mfa, err := h.mfaRepo.Get(r.Context(), userID)
@@ -474,6 +583,18 @@ func (h *UserHandler) GetMFA(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// SetupMFA godoc
+//
+//	@summary		Set up MFA (TOTP or email)
+//	@tags			mfa
+//	@accept			json
+//	@produce		json
+//	@security		Bearer
+//	@param			body	body	mfaSetupReq	true	"MFA setup request"
+//	@success		200		{object}	APIResponse{data=object{mfa_type=int,secret=string,uri=string}}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@router			/users/me/mfa/setup [post]
 func (h *UserHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 	var req mfaSetupReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -497,7 +618,7 @@ func (h *UserHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 		emailSecret = auth.GenerateEmailOTP()
 		u, _ := h.userRepo.GetByID(r.Context(), userID)
 		if u != nil && u.Email != "" && h.mailer != nil && h.mailer.Enabled() {
-			go func() { h.mailer.SendVerificationCode(u.Email, emailSecret) }()
+			go func() { _ = h.mailer.SendVerificationCode(u.Email, emailSecret) }()
 		}
 	}
 
@@ -538,6 +659,19 @@ func (h *UserHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 	JSON(w, resp)
 }
 
+// VerifyMFA godoc
+//
+//	@summary		Verify MFA setup code
+//	@tags			mfa
+//	@accept			json
+//	@produce		json
+//	@security		Bearer
+//	@param			body	body	mfaVerifyReq	true	"MFA verification request"
+//	@success		200		{object}	APIResponse{data=object{enabled=bool}}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@failure		404		{object}	APIResponse
+//	@router			/users/me/mfa/verify [post]
 func (h *UserHandler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 	var req mfaVerifyReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -571,6 +705,15 @@ func (h *UserHandler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]interface{}{"enabled": true})
 }
 
+// DisableMFA godoc
+//
+//	@summary		Disable MFA for current user
+//	@tags			mfa
+//	@produce		json
+//	@security		Bearer
+//	@success		200	{object}	APIResponse{data=object{enabled=bool}}
+//	@failure		401	{object}	APIResponse
+//	@router			/users/me/mfa/disable [post]
 func (h *UserHandler) DisableMFA(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	if err := h.mfaRepo.Disable(r.Context(), userID); err != nil {
@@ -594,6 +737,18 @@ type confirmEmailReq struct {
 	Code string `json:"code"`
 }
 
+// SendEmailCode godoc
+//
+//	@summary		Send email verification code
+//	@tags			email
+//	@accept			json
+//	@produce		json
+//	@security		Bearer
+//	@param			body	body	sendEmailCodeReq	true	"Email verification request"
+//	@success		200		{object}	APIResponse{data=object{code=string,expires_in=int}}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@router			/users/me/email/send-code [post]
 func (h *UserHandler) SendEmailCode(w http.ResponseWriter, r *http.Request) {
 	var req sendEmailCodeReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -614,11 +769,23 @@ func (h *UserHandler) SendEmailCode(w http.ResponseWriter, r *http.Request) {
 	}
 	// Send email asynchronously so API responds instantly
 	if h.mailer != nil && h.mailer.Enabled() {
-		go func() { h.mailer.SendVerificationCode(req.Email, code) }()
+		go func() { _ = h.mailer.SendVerificationCode(req.Email, code) }()
 	}
 	JSON(w, map[string]interface{}{"code": code, "expires_in": 600})
 }
 
+// ConfirmEmail godoc
+//
+//	@summary		Confirm email verification code
+//	@tags			email
+//	@accept			json
+//	@produce		json
+//	@security		Bearer
+//	@param			body	body	confirmEmailReq	true	"Email confirmation request"
+//	@success		200		{object}	APIResponse{data=object{email=string,verified=bool}}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@router			/users/me/email/confirm [post]
 func (h *UserHandler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 	var req confirmEmailReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -646,7 +813,7 @@ func (h *UserHandler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	h.emailVerifyRepo.Delete(r.Context(), userID)
+	_ = h.emailVerifyRepo.Delete(r.Context(), userID)
 	JSON(w, map[string]interface{}{"email": ev.PendingEmail, "verified": true})
 }
 
@@ -663,6 +830,15 @@ type createAgentReq struct {
 	AllowDirectChat *bool  `json:"allow_direct_chat"`
 }
 
+// ListMyAgents godoc
+//
+//	@summary		List my agents
+//	@tags			agents
+//	@produce		json
+//	@security		Bearer
+//	@success		200	{object}	APIResponse{data=[]model.User}
+//	@failure		401	{object}	APIResponse
+//	@router			/users/me/agents [get]
 func (h *UserHandler) ListMyAgents(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	agents, err := h.userRepo.ListAgents(r.Context(), userID)
@@ -676,6 +852,18 @@ func (h *UserHandler) ListMyAgents(w http.ResponseWriter, r *http.Request) {
 	JSON(w, agents)
 }
 
+// CreateAgent godoc
+//
+//	@summary		Create a new agent
+//	@tags			agents
+//	@accept			json
+//	@produce		json
+//	@security		Bearer
+//	@param			body	body	createAgentReq	true	"Agent creation request"
+//	@success		200		{object}	APIResponse{data=model.User}
+//	@failure		400		{object}	APIResponse
+//	@failure		401		{object}	APIResponse
+//	@router			/users/me/agents [post]
 func (h *UserHandler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	var req createAgentReq
@@ -713,17 +901,17 @@ func (h *UserHandler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		allowDirectChat = *req.AllowDirectChat
 	}
 	u := &model.User{
-		ID:              agentID,
-		Type:            model.UserAgent,
-		Name:            req.Name,
-		Account:         "agent_" + agentID,
-		Avatar:          req.Avatar,
-		Cover:           req.Cover,
-		Status:          model.UserOffline,
-		UID:             userID,
-		PrimaryColor:    req.PrimaryColor,
-		SecondaryColor:  req.SecondaryColor,
-			Headline:        req.Headline,		WakeMode:        model.WakeMode(req.WakeMode),
+		ID:             agentID,
+		Type:           model.UserAgent,
+		Name:           req.Name,
+		Account:        "agent_" + agentID,
+		Avatar:         req.Avatar,
+		Cover:          req.Cover,
+		Status:         model.UserOffline,
+		UID:            userID,
+		PrimaryColor:   req.PrimaryColor,
+		SecondaryColor: req.SecondaryColor,
+		Headline:       req.Headline, WakeMode: model.WakeMode(req.WakeMode),
 		Discoverable:    discoverable,
 		AllowDirectChat: allowDirectChat,
 		APIKey:          apiKeyStr,
@@ -737,6 +925,19 @@ func (h *UserHandler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	JSON(w, u)
 }
 
+// UpdateAgent godoc
+//
+//	@summary		Update an agent
+//	@tags			agents
+//	@accept			json
+//	@produce		json
+//	@security		Bearer
+//	@param			agent_id	path	string	true	"Agent ID"
+//	@param			body		body	createAgentReq	true	"Agent update request"
+//	@success		200			{object}	APIResponse{data=object{status=string}}
+//	@failure		400			{object}	APIResponse
+//	@failure		401			{object}	APIResponse
+//	@router			/users/me/agents/{agent_id} [put]
 func (h *UserHandler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	agentID := chi.URLParam(r, "agent_id")
@@ -764,6 +965,19 @@ func (h *UserHandler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"status": "ok"})
 }
 
+// RegenerateAgentKey godoc
+//
+//	@summary		Regenerate agent API key
+//	@tags			agents
+//	@produce		json
+//	@security		Bearer
+//	@param			agent_id	path	string	true	"Agent ID"
+//	@success		200			{object}	APIResponse{data=object{api_key=string}}
+//	@failure		400			{object}	APIResponse
+//	@failure		401			{object}	APIResponse
+//	@failure		404			{object}	APIResponse
+//	@router			/users/me/agents/{agent_id}/regenerate-key [put]
+//
 // RegenerateAgentKey regenerates the api_key for an agent.
 func (h *UserHandler) RegenerateAgentKey(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
@@ -801,6 +1015,17 @@ func (h *UserHandler) RegenerateAgentKey(w http.ResponseWriter, r *http.Request)
 	JSON(w, map[string]string{"api_key": apiKey})
 }
 
+// DeleteAgent godoc
+//
+//	@summary		Delete an agent
+//	@tags			agents
+//	@produce		json
+//	@security		Bearer
+//	@param			agent_id	path	string	true	"Agent ID"
+//	@success		200			{object}	APIResponse{data=object{status=string}}
+//	@failure		400			{object}	APIResponse
+//	@failure		401			{object}	APIResponse
+//	@router			/users/me/agents/{agent_id} [delete]
 func (h *UserHandler) DeleteAgent(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	agentID := chi.URLParam(r, "agent_id")
@@ -815,6 +1040,15 @@ func (h *UserHandler) DeleteAgent(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]string{"status": "ok"})
 }
 
+// DeleteAccount godoc
+//
+//	@summary		Delete current user account
+//	@tags			users
+//	@produce		json
+//	@security		Bearer
+//	@success		200	{object}	APIResponse{data=object{user_id=string}}
+//	@failure		401	{object}	APIResponse
+//	@router			/users/me [delete]
 func (h *UserHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	if err := h.userRepo.DeleteAccount(r.Context(), userID); err != nil {
