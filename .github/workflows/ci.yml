@@ -226,7 +226,7 @@ jobs:
             password: ""
             db: 0
           jwt:
-            secret: "ci-smoke-test-secret"
+            secret: "ci-smoke-test-secret-must-be-at-least-32-chars"
             expire_hours: 1
             refresh_expire_hours: 168
           snowflake:
