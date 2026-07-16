@@ -64,11 +64,14 @@ if [ -n "$CHANGED_TS" ]; then
 
     if [ -n "$OXLINT" ]; then
         cd "$WEB_DIR"
-        echo "  → oxlint ($(echo "$CHANGED_TS" | wc -l | tr -d ' ') files)..."
-        # oxlint doesn't support --new-from-rev, so pass changed files directly
-        if ! $OXLINT --deny-warnings $CHANGED_TS >&2; then
-            echo "  ✖ Frontend lint errors found. Fix them before pushing." >&2
-            HAS_ERRORS=1
+        # Strip server/web/ prefix so paths are relative to $WEB_DIR
+        TS_FILES=$(echo "$CHANGED_TS" | sed "s|^server/web/||")
+        echo "  → oxlint ($(echo "$TS_FILES" | wc -l | tr -d ' ') files)..."
+        if echo "$TS_FILES" | grep -q .; then
+            if ! $OXLINT --deny-warnings $TS_FILES >&2; then
+                echo "  ✖ Frontend lint errors found. Fix them before pushing." >&2
+                HAS_ERRORS=1
+            fi
         fi
     else
         echo "  ⚠ oxlint not found — install it: npm install -g oxlint" >&2
