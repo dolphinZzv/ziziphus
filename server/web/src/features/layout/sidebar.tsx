@@ -8,7 +8,7 @@ import { MessageType } from '@/types/ws'
 import ConversationList from '@/features/conversation-list/conversation-list'
 import { SheetWrapper } from './lazy-sheets'
 import { avatarUrl } from '@/lib/file'
-import { Plus, User, Users, UserPlus, MessageCircle, Search } from 'lucide-react'
+import { Plus, User, Users, UserPlus, MessageCircle, Search, Menu } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export default function Sidebar() {
@@ -41,10 +41,18 @@ export default function Sidebar() {
   return (
     <>
       {/* User header */}
-      <div className="flex items-center justify-between px-4 h-12 border-b border-[var(--color-hairline)]">
-        <button
-          onClick={() => uiStore.openSheet('profile')}
-          className="flex items-center gap-3 text-sm font-medium text-[var(--color-ink)] hover:opacity-80"
+      <div className="flex items-center justify-between px-2 h-12 border-b border-[var(--color-hairline)]">
+        <div className="flex items-center gap-1 min-w-0">
+          <button
+            onClick={() => uiStore.toggleSidebar()}
+            className="p-2 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors md:hidden flex-shrink-0"
+            aria-label={t('sidebar.toggle', '切换侧栏')}
+          >
+            <Menu size={18} />
+          </button>
+          <button
+            onClick={() => uiStore.openSheet('profile')}
+            className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink)] hover:opacity-80 min-w-0"
         >
           {user?.avatar ? (
             <img src={avatarUrl(user.avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
@@ -58,6 +66,7 @@ export default function Sidebar() {
           )}
           <span className="truncate max-w-[140px]">{user?.name || user?.account || 'User'}</span>
         </button>
+	      </div>
 
         <div className="flex items-center gap-0.5">
           <button

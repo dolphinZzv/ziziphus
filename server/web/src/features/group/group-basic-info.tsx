@@ -75,8 +75,8 @@ export default function GroupBasicInfo({ convId, onClose }: Props) {
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-[420px] max-h-[580px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden flex flex-col"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+      <div className="w-full sm:w-[420px] max-h-[580px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden flex flex-col"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
         {/* Banner */}

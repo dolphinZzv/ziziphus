@@ -9,6 +9,8 @@ import { MessageType } from '@/types/ws'
 import type { ConnectionStatus } from '@/services/websocket-client'
 import type { MsgPushPayload } from '@/types/ws'
 import { cn } from '@/lib/cn'
+import { useIsMobile, useIsTablet } from '@/hooks/use-breakpoint'
+import { Menu } from 'lucide-react'
 
 export default function AppLayout() {
   const { t } = useTranslation()
@@ -16,6 +18,8 @@ export default function AppLayout() {
   const theme = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.theme)
   const [connStatus, setConnStatus] = useState<ConnectionStatus>('disconnected')
   const [sidebarWidth, setSidebarWidth] = useState(288)
+  const isMobile = useIsMobile()
+  const isTablet = useIsTablet()
 
   useEffect(() => {
     setConnStatus(wsClient.connectionStatus)
@@ -47,11 +51,8 @@ export default function AppLayout() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
-      // Escape → close current sheet
       if (e.key === 'Escape') uiStore.closeSheet()
-      // Cmd/Ctrl + N → new chat
       if (mod && e.key === 'n') { e.preventDefault(); uiStore.openSheet('newChat') }
-      // Cmd/Ctrl + K → focus search (future)
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
@@ -59,9 +60,12 @@ export default function AppLayout() {
 
   const connected = connStatus === 'connected'
 
+  // Computed widths
+  const sideW = isMobile ? 280 : (isTablet ? 240 : sidebarWidth)
+
   return (
     <div className={cn('h-full w-full flex flex-col', theme === 'dark' ? 'dark' : '')}>
-      {/* Connection status bar — full width top */}
+      {/* Connection status bar */}
       {!connected && (
         <div className={cn(
           'h-6 flex items-center justify-center text-[11px] font-medium flex-shrink-0',
@@ -79,26 +83,65 @@ export default function AppLayout() {
 
       {/* Body */}
       <div className="flex-1 flex min-h-0 relative">
-        <div className={cn(
-          'flex-shrink-0 h-full flex flex-col border-r border-[var(--color-hairline)] transition-transform duration-200',
-          'bg-[var(--color-canvas)]',
-          !isSidebarOpen && '-translate-x-full hidden'
-        )} style={{ width: isSidebarOpen ? sidebarWidth : 288 }}>
+        {/* Mobile sidebar backdrop */}
+        {isMobile && isSidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/30"
+            onClick={() => uiStore.toggleSidebar()}
+          />
+        )}
+
+        {/* Sidebar */}
+        <div
+          className={cn(
+            // Desktop/tablet: inline
+            'flex-shrink-0 h-full flex flex-col border-r border-[var(--color-hairline)] bg-[var(--color-canvas)]',
+            // Mobile: fixed overlay with transition
+            isMobile && 'fixed inset-y-0 left-0 z-50 transition-transform duration-200',
+            isMobile && (isSidebarOpen ? 'translate-x-0' : '-translate-x-full'),
+            // Non-mobile: inline, hidden when toggled off
+            !isMobile && 'transition-transform duration-200',
+            !isMobile && !isSidebarOpen && '-translate-x-full hidden',
+          )}
+          style={{ width: sideW }}
+        >
           <Sidebar />
         </div>
-        {/* Zero-width drag handle between sidebar and content */}
-        <div className={cn('relative flex-shrink-0', !isSidebarOpen && 'hidden')} style={{ width: 0 }}>
-          <div className="absolute -left-1 top-0 bottom-0 w-2 cursor-col-resize group z-10"
-          onMouseDown={e => {
-            e.preventDefault(); e.stopPropagation()
-            const sx = e.clientX; const sw = sidebarWidth
-            document.body.style.userSelect = 'none'
-            const mv = (ev: MouseEvent) => { ev.preventDefault(); setSidebarWidth(Math.max(200, Math.min(400, sw + ev.clientX - sx))) }
-            const up = () => { document.body.style.userSelect = ''; document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up) }
-            document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up)
-          }} />
-        </div>
-        <div className="flex-1 h-full flex flex-col min-w-0 bg-[var(--color-surface-soft)]">
+
+        {/* Drag handle (desktop only) */}
+        {!isMobile && !isTablet && isSidebarOpen && (
+          <div className="relative flex-shrink-0" style={{ width: 0 }}>
+            <div
+              className="absolute -left-1 top-0 bottom-0 w-2 cursor-col-resize group z-10"
+              onMouseDown={e => {
+                e.preventDefault(); e.stopPropagation()
+                const sx = e.clientX; const sw = sidebarWidth
+                document.body.style.userSelect = 'none'
+                const mv = (ev: MouseEvent) => { ev.preventDefault(); setSidebarWidth(Math.max(200, Math.min(400, sw + ev.clientX - sx))) }
+                const up = () => { document.body.style.userSelect = ''; document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up) }
+                document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up)
+              }}
+            />
+          </div>
+        )}
+
+        {/* Chat area */}
+        <div className={cn(
+          'flex-1 h-full flex flex-col min-w-0 bg-[var(--color-surface-soft)]',
+          isMobile && isSidebarOpen && 'hidden'
+        )}>
+          {/* Mobile chat header with sidebar toggle */}
+          {isMobile && (
+            <div className="flex items-center h-12 px-3 border-b border-[var(--color-hairline)] bg-[var(--color-canvas)] flex-shrink-0">
+              <button
+                onClick={() => uiStore.toggleSidebar()}
+                className="p-2 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+                aria-label={t('sidebar.toggle', '切换侧栏')}
+              >
+                <Menu size={18} />
+              </button>
+            </div>
+          )}
           <Outlet />
         </div>
       </div>

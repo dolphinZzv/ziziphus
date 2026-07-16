@@ -243,7 +243,7 @@ export default function ChatView() {
             ) : (
             <button
               onClick={() => { navigator.clipboard.writeText(convId); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-              className="text-[10px] text-[var(--color-muted-soft)] hover:text-[var(--color-ink)] font-mono truncate flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-[10px] text-[var(--color-muted-soft)] hover:text-[var(--color-ink)] font-mono truncate hidden sm:flex items-center gap-1 transition-colors cursor-pointer"
               title={t('chat.clickCopyId')}
             >
               {convId}
@@ -312,7 +312,7 @@ export default function ChatView() {
             </button>
           )}
           <button onClick={() => setShowFiles(!showFiles)}
-            className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+            className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors hidden sm:inline-flex"
             title={t('conversation.files')}>
             <Folder size={17} />
           </button>

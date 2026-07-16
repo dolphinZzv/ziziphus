@@ -19,8 +19,8 @@ export default function ShortcutsView({ onClose }: Props) {
   const mod = navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-[380px] bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+      <div className="w-full sm:w-[380px] bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-headline text-lg font-semibold text-[var(--color-ink)]">{t('shortcuts.title')}</h3>

@@ -28,7 +28,7 @@ export default function SessionList({ onClose, inline }: Props) {
   }
 
   const inner = (
-    <div className={`${inline ? 'h-full' : 'w-[400px] max-h-[500px]'} bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6 flex flex-col overflow-hidden`}
+    <div className={`${inline ? 'h-full' : 'w-full sm:w-[400px] max-h-[500px]'} bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6 flex flex-col overflow-hidden`}
       style={inline ? {} : { boxShadow: 'var(--shadow-lg)' }} onClick={inline ? undefined : e => e.stopPropagation()}>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
@@ -65,7 +65,7 @@ export default function SessionList({ onClose, inline }: Props) {
 
   if (inline) return inner
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
       {inner}
     </div>
   )

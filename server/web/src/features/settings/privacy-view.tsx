@@ -85,8 +85,8 @@ export default function PrivacyView({ onClose }: Props) {
   const toggleDot = (active: boolean) => `absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${active ? 'left-[18px]' : 'left-0.5'}`
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-[420px] max-h-[580px] overflow-y-auto bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+      <div className="w-full sm:w-[420px] max-h-[580px] overflow-y-auto bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-headline text-xl font-semibold text-[var(--color-ink)]">用户设置</h3>

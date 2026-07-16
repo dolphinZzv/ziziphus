@@ -75,8 +75,8 @@ export default function WebhookPanel({ convId, onClose }: Props) {
   const iCls = 'w-full h-8 px-2 rounded-lg text-xs bg-[var(--color-surface-soft)] border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)]'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-[420px] max-h-[580px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden flex flex-col"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+      <div className="w-full sm:w-[420px] max-h-[580px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden flex flex-col"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
@@ -127,8 +127,8 @@ export default function WebhookPanel({ convId, onClose }: Props) {
 
           {/* Form modal */}
           {showForm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShowForm(false)}>
-              <div className="w-[380px] max-h-[560px] overflow-y-auto bg-[var(--color-surface-card)] rounded-xl p-4" style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setShowForm(false)}>
+              <div className="w-full sm:w-[380px] max-h-[560px] overflow-y-auto bg-[var(--color-surface-card)] rounded-xl p-4" style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-[var(--color-ink)]">{editing ? t('conversation.webhookEdit') : t('conversation.webhookAdd')}</span>
                 <button onClick={() => setShowForm(false)} className="p-1 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={15} /></button>

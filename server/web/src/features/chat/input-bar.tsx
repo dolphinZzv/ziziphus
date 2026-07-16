@@ -159,7 +159,7 @@ export default function InputBar({ convId, isP2p }: Props) {
     : members.slice(0, 5)
 
   return (
-    <div className="flex-shrink-0 border-t border-[var(--color-hairline)] bg-[var(--color-surface-card)] relative"
+    <div className="flex-shrink-0 border-t border-[var(--color-hairline)] bg-[var(--color-surface-card)] relative pb-[env(safe-area-inset-bottom,0px)]"
       onPaste={handlePaste}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

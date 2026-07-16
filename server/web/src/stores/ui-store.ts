@@ -84,7 +84,8 @@ export const uiStore = {
   },
 
   selectConversation(convId: string | null) {
-    state = { ...state, selectedConvId: convId, activeSheet: null, sidebarView: null }; emit()
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+    state = { ...state, selectedConvId: convId, activeSheet: null, sidebarView: null, isSidebarOpen: !isMobile }; emit()
   },
 
   openSheet(name: string) {

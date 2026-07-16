@@ -30,8 +30,8 @@ export default function AddMemberView({ convId: _convId, onClose, onAdded, exclu
   const inputClass = 'w-full h-10 px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-[380px] max-h-[460px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden flex flex-col"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+      <div className="w-full sm:w-[380px] max-h-[460px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden flex flex-col"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">

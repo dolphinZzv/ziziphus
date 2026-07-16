@@ -42,8 +42,8 @@ export default function ProfileView({ onClose }: Props) {
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-[360px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+      <div className="w-full sm:w-[360px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
         {/* Banner */}
