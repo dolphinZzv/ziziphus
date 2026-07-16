@@ -283,19 +283,6 @@ make deploy-logs     # 查看服务日志
 └─────────────────────────────────────────────────┘
 ```
 
-### 主要模块
-
-- **`server/internal/api/`** — HTTP API 路由与处理函数
-- **`server/internal/handler/`** — WebSocket 连接处理
-- **`server/internal/message/`** — 消息接收、路由、推送与回执
-- **`server/internal/session/`** — 设备会话管理
-- **`server/internal/gateway/`** — 长连接网关与心跳
-- **`server/internal/conversation/`** — 会话（群组/P2P）管理
-- **`server/internal/auth/`** — JWT 认证与 API Key 鉴权
-- **`server/internal/storage/`** — 数据库与缓存抽象层
-- **`server/internal/webembed/`** — 前端构建产物嵌入
-- **`server/web/`** — React 前端 SPA
-
 ---
 
 ## 环境变量
