@@ -123,47 +123,49 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	mfaUser2, _ := h.userRepo.GetByID(r.Context(), userID)
 
 	// Check if user has MFA enabled
-	mfa, mfaErr := h.mfaRepo.Get(r.Context(), userID)
-	if mfaErr == nil && mfa.Enabled {
-		mfaToken := auth.GenerateEmailOTP() + auth.GenerateEmailOTP()
-		auth.SetSignupCode(mfaToken, userID, 5*60)
-		maskedEmail := ""
+	if h.mfaRepo != nil {
+		mfa, mfaErr := h.mfaRepo.Get(r.Context(), userID)
+		if mfaErr == nil && mfa != nil && mfa.Enabled {
+			mfaToken := auth.GenerateEmailOTP() + auth.GenerateEmailOTP()
+			auth.SetSignupCode(mfaToken, userID, 5*60)
+			maskedEmail := ""
 
-		// For email MFA: generate NEW code, send to email, update stored secret
-		if mfa.MFAType == model.MFAEmail && mfaUser2 != nil && mfaUser2.Email != "" {
-			newCode := auth.GenerateEmailOTP()
-			if h.mailer != nil && h.mailer.Enabled() {
-				go func() { h.mailer.SendVerificationCode(mfaUser2.Email, newCode) }()
+			// For email MFA: generate NEW code, send to email, update stored secret
+			if mfa.MFAType == model.MFAEmail && mfaUser2 != nil && mfaUser2.Email != "" {
+				newCode := auth.GenerateEmailOTP()
+				if h.mailer != nil && h.mailer.Enabled() {
+					go func() { h.mailer.SendVerificationCode(mfaUser2.Email, newCode) }()
+				}
+				// Update stored secret with new code
+				h.mfaRepo.Upsert(r.Context(), &model.UserMFA{
+					UserID:  userID,
+					MFAType: mfa.MFAType,
+					Enabled: true,
+					Secret:  newCode,
+				})
+				e := mfaUser2.Email
+				at := strings.Index(e, "@")
+				if at > 1 {
+					maskedEmail = e[:1] + "***" + e[at-1:]
+				}
 			}
-			// Update stored secret with new code
-			h.mfaRepo.Upsert(r.Context(), &model.UserMFA{
-				UserID:  userID,
-				MFAType: mfa.MFAType,
-				Enabled: true,
-				Secret:  newCode,
-			})
-			e := mfaUser2.Email
-			at := strings.Index(e, "@")
-			if at > 1 {
-				maskedEmail = e[:1] + "***" + e[at-1:]
+			resp := map[string]interface{}{
+				"mfa_required": true,
+				"mfa_type":     int(mfa.MFAType),
+				"mfa_token":    mfaToken,
+				"user_id":      userID,
+				"masked_email": maskedEmail,
 			}
-		}
-		resp := map[string]interface{}{
-			"mfa_required": true,
-			"mfa_type":     int(mfa.MFAType),
-			"mfa_token":    mfaToken,
-			"user_id":      userID,
-			"masked_email": maskedEmail,
-		}
-		// Dev mode: return code for automated tests
-		if mfa.MFAType == model.MFAEmail {
-			mfaUpdated, _ := h.mfaRepo.Get(r.Context(), userID)
-			if mfaUpdated != nil {
-				resp["code"] = mfaUpdated.Secret
+			// Dev mode: return code for automated tests
+			if mfa.MFAType == model.MFAEmail {
+				mfaUpdated, _ := h.mfaRepo.Get(r.Context(), userID)
+				if mfaUpdated != nil {
+					resp["code"] = mfaUpdated.Secret
+				}
 			}
+			JSON(w, resp)
+			return
 		}
-		JSON(w, resp)
-		return
 	}
 
 	user, _ := h.userRepo.GetByID(r.Context(), userID)

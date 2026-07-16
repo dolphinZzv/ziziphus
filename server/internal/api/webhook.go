@@ -576,7 +576,7 @@ func strconvParseInt(s string) (int64, error) {
 	var n int64
 	for _, c := range s {
 		if c < '0' || c > '9' {
-			return 0, fmt.Errorf("not a number: %s", c)
+			return 0, fmt.Errorf("not a number: %c", c)
 		}
 		n = n*10 + int64(c-'0')
 	}
