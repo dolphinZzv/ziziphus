@@ -335,7 +335,6 @@ type mockWhForwarder struct{}
 
 func (m *mockWhForwarder) ListByConvID(_ context.Context, _ string) ([]*model.ConvWebhook, error) { return nil, nil }
 func (m *mockWhForwarder) GetByConvIDAndName(_ context.Context, _, _ string) (*model.ConvWebhook, error) { return nil, nil }
-func (m *mockWhForwarder) InsertAuditLog(_ context.Context, _ *model.WebhookAuditLog) error { return nil }
 
 type mockContactRequestDB struct{}
 
