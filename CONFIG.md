@@ -101,14 +101,15 @@ Sections marked **❌** require a full restart — they affect startup-time init
 
 | Key | Type | Default | Description | Hot-reload |
 |-----|------|---------|-------------|:----------:|
-| `host` | string | `""` | SMTP server hostname | ❌ |
-| `port` | string | `587` | SMTP server port | ❌ |
-| `user` | string | `""` | SMTP username | ❌ |
-| `password` | string | `""` | SMTP password | ❌ |
-| `from` | string | (same as `user`) | From address for outgoing emails | ❌ |
+| `host` | string | `""` | SMTP server hostname | ✅ |
+| `port` | string | `587` | SMTP server port | ✅ |
+| `user` | string | `""` | SMTP username | ✅ |
+| `password` | string | `""` | SMTP password | ✅ |
+| `from` | string | (same as `user`) | From address for outgoing emails | ✅ |
 
-> SMTP settings are loaded at startup into each `Mailer` instance.
-> Changes require a server restart.
+> SMTP settings use `atomic.Pointer` — the Mailer reads config atomically on every
+> `send()` call. Changes via file watch or SIGHUP take effect immediately for new
+> email sends. Existing SMTP connections are unaffected (each send opens a new connection).
 
 ---
 
