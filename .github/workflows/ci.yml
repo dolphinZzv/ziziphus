@@ -166,12 +166,12 @@ jobs:
           mkdir -p coverage
           go tool covdata textfmt -i="$GOCOVERDIR" -o=coverage/coverage.out
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v6
         with:
-          name: coverage
-          path: server/coverage/
-          retention-days: 7
+          files: server/coverage/coverage.out,server/coverage/frontend/lcov.info
+          flags: e2e
+          fail_ci_if_error: false
 
       - name: Upload test results
         if: failure()

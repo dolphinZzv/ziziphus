@@ -1,5 +1,7 @@
 # Ziziphus
 
+[![codecov](https://codecov.io/gh/dolphinZzv/ziziphus/branch/main/graph/badge.svg)](https://codecov.io/gh/dolphinZzv/ziziphus)
+
 即时通讯（IM）应用，包含 Go 后端服务、React Web 前端、macOS 与 iOS 原生客户端。
 
 ## 项目结构
