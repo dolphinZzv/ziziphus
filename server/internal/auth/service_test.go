@@ -140,12 +140,12 @@ func TestRegister_DuplicateAccount(t *testing.T) {
 	svc, _, _ := setupService(t)
 	ctx := context.Background()
 
-	_, _, _, err := svc.Register(ctx, "alice", "pass1", "same_account", "")
+	_, _, _, err := svc.Register(ctx, "alice", "pass1long", "same_account", "")
 	if err != nil {
 		t.Fatalf("first Register: %v", err)
 	}
 
-	_, _, _, err = svc.Register(ctx, "bob", "pass2", "same_account", "")
+	_, _, _, err = svc.Register(ctx, "bob", "pass2long", "same_account", "")
 	if err == nil {
 		t.Fatal("expected error for duplicate account, got nil")
 	}
@@ -166,7 +166,7 @@ func TestRegister_RepoError(t *testing.T) {
 	repo.err = expected
 	t.Cleanup(func() { repo.err = nil })
 
-	_, _, _, err := svc.Register(ctx, "bob", "secret", "bob_account", "")
+	_, _, _, err := svc.Register(ctx, "bob", "secret12", "bob_account", "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -183,12 +183,12 @@ func TestLogin_Success(t *testing.T) {
 	svc, _, _ := setupService(t)
 	ctx := context.Background()
 
-	user, _, _, err := svc.Register(ctx, "carol", "hunter2", "carol_account", "")
+	user, _, _, err := svc.Register(ctx, "carol", "hunter2!", "carol_account", "")
 	if err != nil {
 		t.Fatalf("Register: %v", err)
 	}
 
-	accessToken, _, expireAt, _, err := svc.Login(ctx, "carol_account", "hunter2")
+	accessToken, _, expireAt, _, err := svc.Login(ctx, "carol_account", "hunter2!")
 	if err != nil {
 		t.Fatalf("Login: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestParseToken_Valid(t *testing.T) {
 	svc, _, _ := setupService(t)
 
 	// generateAccessToken is unexported; use Register to get a real token
-	user, token, _, err := svc.Register(context.Background(), "test", "pass", "test_parse", "")
+	user, token, _, err := svc.Register(context.Background(), "test", "testpass", "test_parse", "")
 	if err != nil {
 		t.Fatalf("Register: %v", err)
 	}

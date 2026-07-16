@@ -42,7 +42,7 @@ func TestRefreshToken_Success(t *testing.T) {
 	svc, _, mr := setupServiceWithRedis(t)
 	ctx := context.Background()
 
-	_, _, refreshToken, err := svc.Register(ctx, "alice", "p@ss", "alice_rf", "")
+	_, _, refreshToken, err := svc.Register(ctx, "alice", "p@ssword!", "alice_rf", "")
 	if err != nil {
 		t.Fatalf("Register: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestRefreshToken_Expired(t *testing.T) {
 	svc, _, mr := setupServiceWithRedis(t)
 	ctx := context.Background()
 
-	_, _, refreshToken, err := svc.Register(ctx, "bob", "pass", "bob_exp", "")
+	_, _, refreshToken, err := svc.Register(ctx, "bob", "password", "bob_exp", "")
 	if err != nil {
 		t.Fatalf("Register: %v", err)
 	}
