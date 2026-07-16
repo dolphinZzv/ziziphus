@@ -30,7 +30,8 @@ type UserHandler struct {
 	idGen           func() int64
 	mfaRepo         mfaStorage
 	emailVerifyRepo emailVerifyHandler
-	mailer          emailSender
+	mailer            emailSender
+	allowRegistration bool
 }
 
 type userRepo interface {
@@ -58,8 +59,8 @@ type emailSender interface {
 	SendVerificationCode(to, code string) error
 }
 
-func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender) *UserHandler {
-	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen, mfaRepo: mfaRepo, emailVerifyRepo: emailVerifyRepo, mailer: mailer}
+func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender, allowRegistration bool) *UserHandler {
+	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen, mfaRepo: mfaRepo, emailVerifyRepo: emailVerifyRepo, mailer: mailer, allowRegistration: allowRegistration}
 }
 
 type registerReq struct {
@@ -71,6 +72,10 @@ type registerReq struct {
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if !h.allowRegistration {
+		Error(w, r, http.StatusForbidden, model.NewAppError(model.ErrNoPermission, "新用户注册已关闭"))
+		return
+	}
 	var req registerReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))

@@ -4,6 +4,7 @@ import './i18n'
 import { authStore } from '@/stores/auth-store'
 import { uiStore } from '@/stores/ui-store'
 import AppLayout from '@/features/layout/app-layout'
+import AnnouncementBanner from '@/components/announcement-banner'
 import LoginPage from '@/features/auth/login-page'
 import RegisterPage from '@/features/auth/register-page'
 import EmptyChat from '@/features/chat/empty-chat'
@@ -42,6 +43,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <AnnouncementBanner />
       <Routes>
         <Route path="/login" element={isLoggedIn ? <Navigate to="/chat" replace /> : <LoginPage />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/chat" replace /> : <RegisterPage />} />

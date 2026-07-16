@@ -11,6 +11,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/dm-sans": "^5.2.8",
+    "@fontsource/fira-code": "^5.2.7",
+    "@fontsource/plus-jakarta-sans": "^5.2.8",
     "@tanstack/react-virtual": "^3.14.4",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",

@@ -22,6 +22,7 @@ type Handlers struct {
 	Session      *SessionHandler
 	File         *FileHandler
 	Webhook      *WebhookHandler
+	Announcement http.HandlerFunc
 	DB           *pgxpool.Pool
 	RDB          *redis.Client
 	LoginRL      *LoginRateLimiter
@@ -43,6 +44,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/users/login", h.User.Login)
 		r.Post("/api/v1/users/refresh", h.User.Refresh)
 		r.Get("/api/v1/version", h.GetVersion)
+		r.Get("/api/v1/announcement", h.Announcement)
 		r.Get("/health", h.Health)
 		r.Get("/metrics", promhttp.Handler().ServeHTTP)
 		r.Post("/api/v1/auth/mfa/verify", h.User.MFAVerifyLogin)

@@ -7,14 +7,22 @@ import (
 )
 
 type Config struct {
-	Server    ServerConfig    `yaml:"server"`
-	Postgres  PostgresConfig  `yaml:"postgres"`
-	Redis     RedisConfig     `yaml:"redis"`
-	JWT       JWTConfig       `yaml:"jwt"`
-	Snowflake SnowflakeConfig `yaml:"snowflake"`
-	RateLimit RateLimitConfig `yaml:"ratelimit"`
-	Storage   StorageConfig   `yaml:"storage"`
-	SMTP      SMTPConfig      `yaml:"smtp"`
+	Server       ServerConfig       `yaml:"server"`
+	Postgres     PostgresConfig     `yaml:"postgres"`
+	Redis        RedisConfig        `yaml:"redis"`
+	JWT          JWTConfig          `yaml:"jwt"`
+	Snowflake    SnowflakeConfig    `yaml:"snowflake"`
+	RateLimit    RateLimitConfig    `yaml:"ratelimit"`
+	Storage      StorageConfig      `yaml:"storage"`
+	SMTP         SMTPConfig         `yaml:"smtp"`
+	Announcement AnnouncementConfig `yaml:"announcement"`
+}
+
+type AnnouncementConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Title   string `yaml:"title"`
+	Body    string `yaml:"body"`
+	URL     string `yaml:"url"`
 }
 
 type SMTPConfig struct {
@@ -31,7 +39,15 @@ type StorageConfig struct {
 }
 
 type ServerConfig struct {
-	Port int `yaml:"port"`
+	Port              int  `yaml:"port"`
+	AllowRegistration *bool `yaml:"allow_registration"`
+}
+
+func (s ServerConfig) RegistrationAllowed() bool {
+	if s.AllowRegistration == nil {
+		return true // default: allow
+	}
+	return *s.AllowRegistration
 }
 
 type PostgresConfig struct {

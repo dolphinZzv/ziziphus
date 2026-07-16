@@ -2,6 +2,7 @@
 # Copy this file to config.yaml and adjust for your environment.
 server:
   port: 8080
+  # allow_registration: true   # set to false to disable new account registration
 
 postgres:
   dsn: "postgres://postgres@localhost:5432/imdb?sslmode=disable"
@@ -27,6 +28,13 @@ ratelimit:
   msg_per_sec: 30
   max_body_bytes: 10240
   burst_size: 50
+
+# Global announcement shown to all users
+announcement:
+  enabled: false
+  title: ""
+  body: ""
+  url: ""
 
 # SMTP for email sending (MFA verification codes, notifications)
 smtp:
