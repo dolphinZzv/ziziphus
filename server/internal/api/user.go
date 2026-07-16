@@ -64,7 +64,7 @@ func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChe
 }
 
 type registerReq struct {
-	Name     string `json:"name" example:"张三"`
+	Name     string `json:"name" example:"Alice"`
 	Account  string `json:"account" example:"zhangsan"`
 	Password string `json:"password" example:"password123"`
 	Email    string `json:"email,omitempty" example:"user@example.com"`

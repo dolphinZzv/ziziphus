@@ -66,18 +66,18 @@ func (r *testAuthUserRepo) GetByAccount(_ context.Context, account string) (*mod
 // ---------------------------------------------------------------------------
 
 type mockUserRepo struct {
-	createFunc          func(ctx context.Context, u *model.User) error
-	getByIDFunc         func(ctx context.Context, id string) (*model.User, error)
-	getByIDsFunc        func(ctx context.Context, ids []string) (map[string]*model.User, error)
-	searchFunc          func(ctx context.Context, q string, page, size int) ([]*model.User, int, error)
-	updateFunc          func(ctx context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error
-	countAgentsFunc     func(ctx context.Context, uid string) (int, error)
-	listAgentsFunc      func(ctx context.Context, uid string) ([]*model.User, error)
-	updateAgentFunc     func(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error
-	deleteAgentFunc     func(ctx context.Context, agentID, uid string) error
-	getByAPIKeyFunc     func(ctx context.Context, apiKey string) (*model.User, error)
+	createFunc            func(ctx context.Context, u *model.User) error
+	getByIDFunc           func(ctx context.Context, id string) (*model.User, error)
+	getByIDsFunc          func(ctx context.Context, ids []string) (map[string]*model.User, error)
+	searchFunc            func(ctx context.Context, q string, page, size int) ([]*model.User, int, error)
+	updateFunc            func(ctx context.Context, id, name, avatar, cover, email, primaryColor, secondaryColor string, discoverable, allowDirectChat bool) error
+	countAgentsFunc       func(ctx context.Context, uid string) (int, error)
+	listAgentsFunc        func(ctx context.Context, uid string) ([]*model.User, error)
+	updateAgentFunc       func(ctx context.Context, agentID, uid, name, avatar, cover, primaryColor, secondaryColor string, wakeMode model.WakeMode, discoverable, allowDirectChat bool) error
+	deleteAgentFunc       func(ctx context.Context, agentID, uid string) error
+	getByAPIKeyFunc       func(ctx context.Context, apiKey string) (*model.User, error)
 	updateAgentAPIKeyFunc func(ctx context.Context, agentID, uid, apiKey string) error
-	deleteAccountFunc   func(ctx context.Context, userID string) error
+	deleteAccountFunc     func(ctx context.Context, userID string) error
 }
 
 func (m *mockUserRepo) Create(ctx context.Context, u *model.User) error {
@@ -384,12 +384,16 @@ func (m *mockConvDataRepo) UpdateNameAvatar(ctx context.Context, convID, name, a
 }
 
 func (m *mockConvDataRepo) UpdateNotice(ctx context.Context, convID, notice string) error {
-	if m.updateNoticeFunc != nil { return m.updateNoticeFunc(ctx, convID, notice) }
+	if m.updateNoticeFunc != nil {
+		return m.updateNoticeFunc(ctx, convID, notice)
+	}
 	return nil
 }
 
 func (m *mockConvDataRepo) UpdateCover(ctx context.Context, convID, cover string) error {
-	if m.updateCoverFunc != nil { return m.updateCoverFunc(ctx, convID, cover) }
+	if m.updateCoverFunc != nil {
+		return m.updateCoverFunc(ctx, convID, cover)
+	}
 	return nil
 }
 
@@ -550,7 +554,7 @@ type mockContactRequestStorage struct {
 	getByFormMsgIDFunc     func(ctx context.Context, formMsgID int64) (*model.ContactRequest, error)
 	getByPairFunc          func(ctx context.Context, fromUserID, toUserID string) (*model.ContactRequest, error)
 	listSentFunc           func(ctx context.Context, userID string, page, size int) ([]*model.ContactRequest, int, error)
-	listReceivedFunc        func(ctx context.Context, userID string, status int, page, size int) ([]*model.ContactRequest, int, error)
+	listReceivedFunc       func(ctx context.Context, userID string, status int, page, size int) ([]*model.ContactRequest, int, error)
 	deleteFunc             func(ctx context.Context, id int64) error
 	existsAnyDirectionFunc func(ctx context.Context, userA, userB string) (bool, error)
 }
@@ -683,39 +687,50 @@ func (m *mockSessionManager) Delete(ctx context.Context, sessionID string) error
 // ---------------------------------------------------------------------------
 
 type mockFileDB struct {
-	insertFunc         func(ctx context.Context, f *model.FileInfo) error
-	getByIDFunc        func(ctx context.Context, fileID string) (*model.FileInfo, error)
-	listByConvIDFunc   func(ctx context.Context, convID string, page, size int) ([]*model.FileInfo, int, error)
-	deleteByIDFunc     func(ctx context.Context, fileID, uploaderID string) error
+	insertFunc            func(ctx context.Context, f *model.FileInfo) error
+	getByIDFunc           func(ctx context.Context, fileID string) (*model.FileInfo, error)
+	listByConvIDFunc      func(ctx context.Context, convID string, page, size int) ([]*model.FileInfo, int, error)
+	deleteByIDFunc        func(ctx context.Context, fileID, uploaderID string) error
 	listFilesInFolderFunc func(ctx context.Context, convID, folderPath string, page, size int) ([]*model.FileInfo, int, error)
 	updateFolderPathFunc  func(ctx context.Context, fileID, folderPath string) error
 }
 
 func (m *mockFileDB) Insert(ctx context.Context, f *model.FileInfo) error {
-	if m.insertFunc != nil { return m.insertFunc(ctx, f) }
+	if m.insertFunc != nil {
+		return m.insertFunc(ctx, f)
+	}
 	return nil
 }
 func (m *mockFileDB) GetByID(ctx context.Context, fileID string) (*model.FileInfo, error) {
-	if m.getByIDFunc != nil { return m.getByIDFunc(ctx, fileID) }
+	if m.getByIDFunc != nil {
+		return m.getByIDFunc(ctx, fileID)
+	}
 	return &model.FileInfo{FileID: fileID, Name: fileID + ".png", URL: "/files/" + fileID + ".png", Size: 100, ContentType: 1}, nil
 }
 func (m *mockFileDB) ListByConvID(ctx context.Context, convID string, page, size int) ([]*model.FileInfo, int, error) {
-	if m.listByConvIDFunc != nil { return m.listByConvIDFunc(ctx, convID, page, size) }
+	if m.listByConvIDFunc != nil {
+		return m.listByConvIDFunc(ctx, convID, page, size)
+	}
 	return nil, 0, nil
 }
 func (m *mockFileDB) DeleteByID(ctx context.Context, fileID, uploaderID string) error {
-	if m.deleteByIDFunc != nil { return m.deleteByIDFunc(ctx, fileID, uploaderID) }
+	if m.deleteByIDFunc != nil {
+		return m.deleteByIDFunc(ctx, fileID, uploaderID)
+	}
 	return nil
 }
 func (m *mockFileDB) ListFilesInFolder(ctx context.Context, convID, folderPath string, page, size int) ([]*model.FileInfo, int, error) {
-	if m.listFilesInFolderFunc != nil { return m.listFilesInFolderFunc(ctx, convID, folderPath, page, size) }
+	if m.listFilesInFolderFunc != nil {
+		return m.listFilesInFolderFunc(ctx, convID, folderPath, page, size)
+	}
 	return nil, 0, nil
 }
 func (m *mockFileDB) UpdateFolderPath(ctx context.Context, fileID, folderPath string) error {
-	if m.updateFolderPathFunc != nil { return m.updateFolderPathFunc(ctx, fileID, folderPath) }
+	if m.updateFolderPathFunc != nil {
+		return m.updateFolderPathFunc(ctx, fileID, folderPath)
+	}
 	return nil
 }
-
 
 // ---------------------------------------------------------------------------
 // decodeResponse decodes an *httptest.ResponseRecorder body into APIResponse.
@@ -737,8 +752,8 @@ func decodeResponse(t *testing.T, w *httptest.ResponseRecorder) APIResponse {
 type mockMFAStorage struct{}
 
 func (m *mockMFAStorage) Get(_ context.Context, _ string) (*model.UserMFA, error) { return nil, nil }
-func (m *mockMFAStorage) Upsert(_ context.Context, _ *model.UserMFA) error       { return nil }
-func (m *mockMFAStorage) Disable(_ context.Context, _ string) error              { return nil }
+func (m *mockMFAStorage) Upsert(_ context.Context, _ *model.UserMFA) error        { return nil }
+func (m *mockMFAStorage) Disable(_ context.Context, _ string) error               { return nil }
 
 // ---------------------------------------------------------------------------
 // Mock: emailVerifyHandler
@@ -758,7 +773,7 @@ func (m *mockEmailVerifyHandler) Delete(_ context.Context, _ string) error { ret
 
 type mockEmailSender struct{}
 
-func (m *mockEmailSender) Enabled() bool                         { return false }
+func (m *mockEmailSender) Enabled() bool                          { return false }
 func (m *mockEmailSender) SendVerificationCode(_, _ string) error { return nil }
 
 // ---------------------------------------------------------------------------
