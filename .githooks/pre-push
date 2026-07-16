@@ -1,0 +1,84 @@
+#!/bin/bash
+# Pre-push hook — run lint on new/modified code before pushing.
+# Compares against origin/main to catch only new issues.
+#
+# Install: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SERVER_DIR="$ROOT_DIR/server"
+WEB_DIR="$SERVER_DIR/web"
+
+# Determine the base revision for comparison
+if ! BASE_REV=$(git merge-base HEAD origin/main 2>/dev/null); then
+    # origin/main doesn't exist yet — use root commit
+    BASE_REV=$(git rev-list --max-parents=0 HEAD)
+fi
+
+# Collect changed Go/TS files compared to base
+CHANGED_GO=$(git diff --name-only --diff-filter=ACMR "$BASE_REV" -- 'server/**/*.go' || true)
+CHANGED_TS=$(git diff --name-only --diff-filter=ACMR "$BASE_REV" -- 'server/web/**/*.ts' 'server/web/**/*.tsx' 'server/web/**/*.svelte' || true)
+
+# Also include untracked files that would be pushed
+CHANGED_GO="$CHANGED_GO
+$(git ls-files --others --exclude-standard -- 'server/**/*.go' 2>/dev/null || true)"
+CHANGED_TS="$CHANGED_TS
+$(git ls-files --others --exclude-standard -- 'server/web/**/*.ts' 'server/web/**/*.tsx' 'server/web/**/*.svelte' 2>/dev/null || true)"
+
+# Trim leading/trailing whitespace/newlines
+CHANGED_GO=$(echo "$CHANGED_GO" | sed '/^$/d')
+CHANGED_TS=$(echo "$CHANGED_TS" | sed '/^$/d')
+
+if [ -z "$CHANGED_GO" ] && [ -z "$CHANGED_TS" ]; then
+    exit 0
+fi
+
+echo "🔍 Running pre-push lint checks (vs $BASE_REV)..."
+
+HAS_ERRORS=0
+
+# --- Go lint ---
+if [ -n "$CHANGED_GO" ]; then
+    if command -v golangci-lint &>/dev/null; then
+        cd "$SERVER_DIR"
+        echo "  → golangci-lint ($(echo "$CHANGED_GO" | wc -l | tr -d ' ') files)..."
+        if ! golangci-lint run --new-from-rev="$BASE_REV" --out-format=colored-line-number >&2; then
+            echo "  ✖ Go lint errors found. Fix them before pushing." >&2
+            HAS_ERRORS=1
+        fi
+    else
+        echo "  ⚠ golangci-lint not found — install it: brew install golangci-lint" >&2
+        exit 1
+    fi
+fi
+
+# --- Frontend lint ---
+if [ -n "$CHANGED_TS" ]; then
+    OXLINT=""
+    if command -v oxlint &>/dev/null; then
+        OXLINT="oxlint"
+    elif [ -x "$WEB_DIR/node_modules/.bin/oxlint" ]; then
+        OXLINT="$WEB_DIR/node_modules/.bin/oxlint"
+    fi
+
+    if [ -n "$OXLINT" ]; then
+        cd "$WEB_DIR"
+        echo "  → oxlint ($(echo "$CHANGED_TS" | wc -l | tr -d ' ') files)..."
+        # oxlint doesn't support --new-from-rev, so pass changed files directly
+        if ! $OXLINT --deny-warnings $CHANGED_TS >&2; then
+            echo "  ✖ Frontend lint errors found. Fix them before pushing." >&2
+            HAS_ERRORS=1
+        fi
+    else
+        echo "  ⚠ oxlint not found — install it: npm install -g oxlint" >&2
+        exit 1
+    fi
+fi
+
+if [ "$HAS_ERRORS" -ne 0 ]; then
+    echo "❌ Pre-push checks failed. Push aborted." >&2
+    exit 1
+fi
+
+echo "✅ Pre-push lint checks passed."

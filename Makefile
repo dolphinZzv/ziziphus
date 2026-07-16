@@ -1,4 +1,4 @@
-.PHONY: server server-stop macos macos-stop ios-deploy xcodegen build-info deploy deploy-status deploy-logs swagger
+.PHONY: server server-stop macos macos-stop ios-deploy xcodegen build-info deploy deploy-status deploy-logs swagger init-githooks
 
 GIT_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_INFO := client/Packages/IMCore/Sources/IMCore/BuildInfo.swift
@@ -16,6 +16,11 @@ build-info:
 # Generate Swagger/OpenAPI docs
 swagger:
 	cd server && swag init -g cmd/ziziphus/main.go -o docs/
+
+# Initialize git hooks for this project
+init-githooks:
+	git config core.hooksPath .githooks
+	@echo "✅ Git hooks configured (using .githooks/)"
 
 # Backend server
 server: server-stop swagger
