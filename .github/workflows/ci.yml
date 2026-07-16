@@ -159,19 +159,23 @@ jobs:
         working-directory: server/web
 
       - name: Stop backend
+        if: always()
         run: pkill -f "bin/ziziphus" || true
 
       - name: Merge coverage data
+        if: always()
         run: |
           mkdir -p coverage
           go tool covdata textfmt -i="$GOCOVERDIR" -o=coverage/coverage.out
 
       - name: Upload coverage to Codecov
+        if: always()
         uses: codecov/codecov-action@v6
         with:
           files: server/coverage/coverage.out,server/coverage/frontend/lcov.info
           flags: e2e
           fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test results
         if: failure()
