@@ -65,12 +65,12 @@ func NewService(jwtSecret string, accessExpireHours, refreshExpireHours int, use
 // Register creates a new user with a bcrypt-hashed password and returns tokens.
 func (s *Service) Register(ctx context.Context, name, password, account, email string) (*model.User, string, string, error) {
 	if len(password) < 8 {
-		return nil, "", "", &model.AppError{Code: model.ErrBadMessage, Message: "密码长度不能少于8位", Key: "auth.password_too_short"}
+		return nil, "", "", &model.AppError{Code: model.ErrBadMessage, Message: "password must be at least 8 characters", Key: "auth.password_too_short"}
 	}
 	if account != "" {
 		existing, _ := s.userRepo.GetByAccount(ctx, account)
 		if existing != nil {
-			return nil, "", "", &model.AppError{Code: model.ErrBadMessage, Message: "账户已存在", Key: "auth.account_exists"}
+			return nil, "", "", &model.AppError{Code: model.ErrBadMessage, Message: "account already exists", Key: "auth.account_exists"}
 		}
 	}
 
@@ -114,11 +114,11 @@ func (s *Service) Register(ctx context.Context, name, password, account, email s
 func (s *Service) Login(ctx context.Context, account, password string) (string, string, int64, string, error) {
 	user, err := s.userRepo.GetByAccount(ctx, account)
 	if err != nil {
-		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "账号或密码错误", Key: "auth.bad_credentials"}
+		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "invalid account or password", Key: "auth.bad_credentials"}
 	}
 
 	if !CheckPassword(password, user.Password) {
-		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "账号或密码错误", Key: "auth.bad_credentials"}
+		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "invalid account or password", Key: "auth.bad_credentials"}
 	}
 
 	// Check if user is banned
@@ -159,7 +159,7 @@ func (s *Service) RefreshToken(ctx context.Context, refreshTokenStr string) (str
 
 	data, err := s.rdb.Get(ctx, refreshTokenKeyPrefix+refreshTokenStr).Bytes()
 	if err == redis.Nil {
-		return "", 0, &model.AppError{Code: model.ErrNoPermission, Message: "刷新令牌无效或已过期", Key: "auth.invalid_refresh_token"}
+		return "", 0, &model.AppError{Code: model.ErrNoPermission, Message: "refresh token invalid or expired", Key: "auth.invalid_refresh_token"}
 	}
 	if err != nil {
 		return "", 0, fmt.Errorf("get refresh token: %w", err)
@@ -174,7 +174,7 @@ func (s *Service) RefreshToken(ctx context.Context, refreshTokenStr string) (str
 	s.rdb.Del(ctx, refreshTokenKeyPrefix+refreshTokenStr)
 
 	if rt.ExpiresAt < time.Now().Unix() {
-		return "", 0, &model.AppError{Code: model.ErrNoPermission, Message: "刷新令牌已过期", Key: "auth.invalid_refresh_token"}
+		return "", 0, &model.AppError{Code: model.ErrNoPermission, Message: "refresh token expired", Key: "auth.invalid_refresh_token"}
 	}
 
 	accessToken, err := s.generateAccessToken(rt.UserID, 0)

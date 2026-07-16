@@ -123,8 +123,10 @@ jobs:
         run: npm ci
         working-directory: server/web
 
-      - name: Setup config
-        run: cp config/config.example.yaml config/config.yaml
+      - name: Setup config (E2E — rate limiting disabled)
+        run: |
+          cp config/config.example.yaml config/config.yaml
+          sed -i 's/api_enabled: true/api_enabled: false/' config/config.yaml
 
       - name: Build frontend
         run: npm run build

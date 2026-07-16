@@ -52,9 +52,9 @@ func BadRequest(w http.ResponseWriter, r *http.Request, msg string) {
 }
 
 func NotFound(w http.ResponseWriter, r *http.Request) {
-	Error(w, r, http.StatusNotFound, &model.AppError{Code: model.ErrNotFound, Message: "资源不存在", Key: "err.resource_not_found"})
+	Error(w, r, http.StatusNotFound, &model.AppError{Code: model.ErrNotFound, Message: "resource not found", Key: "err.resource_not_found"})
 }
 
 func Unauthorized(w http.ResponseWriter, r *http.Request) {
-	Error(w, r, http.StatusUnauthorized, &model.AppError{Code: model.ErrNoPermission, Message: "未授权", Key: "err.unauthorized"})
+	Error(w, r, http.StatusUnauthorized, &model.AppError{Code: model.ErrNoPermission, Message: "unauthorized", Key: "err.unauthorized"})
 }

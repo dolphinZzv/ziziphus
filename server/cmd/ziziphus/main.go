@@ -164,10 +164,26 @@ func main() {
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
 	sessionHandler := api.NewSessionHandler(sessMgr, gwMgr)
 	webhookHandler := api.NewWebhookHandler(webhookRepo, sf, convMgr, userRepo, msgRepo, msgRouter, pusher, seqCache, ingest)
-	// Rate limiters (Redis-backed)
-	loginRL := api.NewLoginRateLimiter(10, time.Minute, 5*time.Minute, rdb)
-	registerRL := api.NewRegisterLimiter(5, time.Hour, rdb) // 5 registrations/hour/IP
-	globalRL := api.NewGlobalRateLimiter(100, 200, rdb)     // 100 req/s burst 200 per IP
+	// Rate limiters (Redis-backed) — disabled when config.api_enabled is false (E2E)
+	var loginRL *api.LoginRateLimiter
+	var registerRL *api.RegisterLimiter
+	var globalRL *api.GlobalRateLimiter
+	if cfg.RateLimit.HTTPRateLimitEnabled() {
+		loginRL = api.NewLoginRateLimiter(
+			cfg.RateLimit.LoginAttempts,
+			time.Duration(cfg.RateLimit.LoginWindowMin)*time.Minute,
+			time.Duration(cfg.RateLimit.LoginLockoutMin)*time.Minute, rdb)
+		registerRL = api.NewRegisterLimiter(
+			cfg.RateLimit.RegPerWindow,
+			time.Duration(cfg.RateLimit.RegWindowHour)*time.Hour, rdb)
+		globalRL = api.NewGlobalRateLimiter(
+			cfg.RateLimit.GlobalRate, cfg.RateLimit.GlobalBurst, rdb)
+		logger.Info("HTTP rate limiters enabled",
+			"login_attempts", cfg.RateLimit.LoginAttempts,
+			"global_rate", cfg.RateLimit.GlobalRate)
+	} else {
+		logger.Info("HTTP rate limiters disabled (api_enabled=false)")
+	}
 
 	handlers := &api.Handlers{
 		User:         userHandler,

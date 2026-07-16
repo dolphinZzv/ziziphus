@@ -84,7 +84,7 @@ type registerReq struct {
 //	@router			/users/register [post]
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if !h.allowRegistration {
-		Error(w, r, http.StatusForbidden, model.NewAppError(model.ErrNoPermission, "新用户注册已关闭"))
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: "registration disabled", Key: "err.registration_disabled"})
 		return
 	}
 	var req registerReq

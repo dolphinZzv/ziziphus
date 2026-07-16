@@ -943,7 +943,7 @@ func (h *ConvHandler) Clone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := conv.Name + " (副本)"
+	name := conv.Name + " (copy)"
 	if req.Name != "" {
 		name = req.Name
 	}

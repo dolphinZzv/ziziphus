@@ -7,6 +7,9 @@ var Messages = map[string]map[Lang]string{
 	"auth.account_exists": {LangZH: "账户已存在", LangEN: "Account already exists"},
 	"auth.user_not_found": {LangZH: "用户不存在", LangEN: "User not found"},
 	"auth.wrong_password": {LangZH: "密码错误", LangEN: "Wrong password"},
+	"auth.password_too_short":    {LangZH: "密码长度不能少于8位", LangEN: "Password must be at least 8 characters"},
+	"auth.bad_credentials":       {LangZH: "账号或密码错误", LangEN: "Invalid account or password"},
+	"auth.invalid_refresh_token": {LangZH: "刷新令牌无效或已过期", LangEN: "Refresh token is invalid or has expired"},
 
 	// ===== Errors from pkg/model/errors.go =====
 	"err.bad_msg_content": {LangZH: "消息内容非法", LangEN: "Invalid message content"},
@@ -30,6 +33,8 @@ var Messages = map[string]map[Lang]string{
 	"err.group_only":               {LangZH: "仅支持群组", LangEN: "Groups only"},
 	"err.cannot_add_self":          {LangZH: "不能添加自己为联系人", LangEN: "Cannot add yourself as contact"},
 	"err.contact_user_id_required": {LangZH: "user_id 不能为空", LangEN: "user_id is required"},
+	"err.registration_disabled":    {LangZH: "新用户注册已关闭", LangEN: "Registration is disabled"},
+	"err.invalid_email":            {LangZH: "邮箱格式无效", LangEN: "Invalid email format"},
 
 	// ===== Conversation manager =====
 	"err.conv_not_found_mgr":     {LangZH: "会话不存在", LangEN: "Conversation not found"},
@@ -40,6 +45,8 @@ var Messages = map[string]map[Lang]string{
 	"err.duplicate_join_request": {LangZH: "已存在待处理的入群申请", LangEN: "A pending join request already exists"},
 	"err.already_member":         {LangZH: "已经是群成员", LangEN: "Already a group member"},
 	"err.no_pending_request":     {LangZH: "没有待处理的申请", LangEN: "No pending join request"},
+	"err.agent_owner_only":       {LangZH: "只有 Agent 的创建者可以将其加入群组", LangEN: "Only the agent creator can add it to the group"},
+	"err.owner_only":             {LangZH: "只有群主可以解散群组", LangEN: "Only the group owner can dismiss the group"},
 
 	// ===== WS handler =====
 	"err.create_session_failed": {LangZH: "创建会话失败", LangEN: "Failed to create session"},

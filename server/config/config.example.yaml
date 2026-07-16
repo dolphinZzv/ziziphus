@@ -28,10 +28,21 @@ snowflake:
   worker_id: 1
   start_time: "2025-01-01T00:00:00Z"
 
+# Rate limiting — disable api_enabled during E2E tests to avoid false failures.
 ratelimit:
-  msg_per_sec: 30
-  max_body_bytes: 10240
-  burst_size: 50
+  msg_per_sec: 30         # WebSocket message rate
+  max_body_bytes: 10240   # max WebSocket message body
+  burst_size: 50          # WebSocket burst allowance
+
+  # HTTP API rate limiters (login, register, per-IP DDoS protection)
+  api_enabled: true                      # set false to disable all HTTP rate limiters (E2E)
+  login_attempts: 10                     # failed attempts before lockout
+  login_window_min: 1                    # window for counting attempts
+  login_lockout_min: 5                   # lockout duration after too many failures
+  reg_per_window: 5                      # registrations allowed per window
+  reg_window_hour: 1                     # registration window (hours)
+  global_rate: 100                       # req/s per IP (DDoS deterrent)
+  global_burst: 200                      # burst size for global limiter
 
 # Zap structured logger with optional file rotation (lumberjack)
 log:

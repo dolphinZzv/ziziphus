@@ -460,7 +460,7 @@ func (h *WebhookHandler) Test(w http.ResponseWriter, r *http.Request) {
 		SenderSessionID: fmt.Sprintf("test:%d", now),
 		SenderName:      wh.Name,
 		ContentType:     0,
-		Body:            fmt.Sprintf("🔔 Webhook 测试消息 (%d)", now%10000),
+		Body:            fmt.Sprintf("🔔 Webhook test message (%d)", now%10000),
 		Timestamp:       now,
 		ClientSeq:       now,
 		ConvSeq:         convSeq,

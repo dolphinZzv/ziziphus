@@ -89,6 +89,26 @@ type RateLimitConfig struct {
 	MsgPerSec    int `yaml:"msg_per_sec"`
 	MaxBodyBytes int `yaml:"max_body_bytes"`
 	BurstSize    int `yaml:"burst_size"`
+
+	// HTTP API-level rate limiters (login, register, global per-IP DDoS).
+	// Set api_enabled: false to disable all during E2E tests.
+	APIEnabled      *bool `yaml:"api_enabled"`       // nil defaults to true
+	LoginAttempts   int   `yaml:"login_attempts"`    // max failed login attempts per window
+	LoginWindowMin  int   `yaml:"login_window_min"`  // window in minutes
+	LoginLockoutMin int   `yaml:"login_lockout_min"` // lockout in minutes
+	RegPerWindow    int   `yaml:"reg_per_window"`    // max registrations per window
+	RegWindowHour   int   `yaml:"reg_window_hour"`   // window in hours
+	GlobalRate      int   `yaml:"global_rate"`       // req/s per IP
+	GlobalBurst     int   `yaml:"global_burst"`      // burst size
+}
+
+// HTTPRateLimitEnabled returns whether HTTP-level rate limiters are enabled.
+// Defaults to true when the config key is absent (nil pointer).
+func (r RateLimitConfig) HTTPRateLimitEnabled() bool {
+	if r.APIEnabled == nil {
+		return true
+	}
+	return *r.APIEnabled
 }
 
 func Load(path string) (*Config, error) {
@@ -154,6 +174,27 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.RateLimit.BurstSize == 0 {
 		cfg.RateLimit.BurstSize = 50
+	}
+	if cfg.RateLimit.LoginAttempts == 0 {
+		cfg.RateLimit.LoginAttempts = 10
+	}
+	if cfg.RateLimit.LoginWindowMin == 0 {
+		cfg.RateLimit.LoginWindowMin = 1
+	}
+	if cfg.RateLimit.LoginLockoutMin == 0 {
+		cfg.RateLimit.LoginLockoutMin = 5
+	}
+	if cfg.RateLimit.RegPerWindow == 0 {
+		cfg.RateLimit.RegPerWindow = 5
+	}
+	if cfg.RateLimit.RegWindowHour == 0 {
+		cfg.RateLimit.RegWindowHour = 1
+	}
+	if cfg.RateLimit.GlobalRate == 0 {
+		cfg.RateLimit.GlobalRate = 100
+	}
+	if cfg.RateLimit.GlobalBurst == 0 {
+		cfg.RateLimit.GlobalBurst = 200
 	}
 	if cfg.SMTP.Port == "" {
 		cfg.SMTP.Port = "587"

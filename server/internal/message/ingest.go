@@ -416,11 +416,11 @@ func (in *Ingest) handleFormResponse(ctx context.Context, senderID string, sessi
 
 	if newStatus == model.ContactRequestApproved {
 		in.ensureContacts(ctx, req.FromUserID, req.ToUserID)
-		_, _ = in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s 已通过你的好友申请", responderName))
-		_, _ = in.SendSystemMessage(ctx, sysB, fmt.Sprintf("你已通过 %s 的好友申请", initiatorName))
+		_, _ = in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s approved your friend request", responderName))
+		_, _ = in.SendSystemMessage(ctx, sysB, fmt.Sprintf("You approved %s's friend request", initiatorName))
 	} else {
-		_, _ = in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s 已拒绝你的好友申请", responderName))
-		_, _ = in.SendSystemMessage(ctx, sysB, fmt.Sprintf("你已拒绝 %s 的好友申请", initiatorName))
+		_, _ = in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s rejected your friend request", responderName))
+		_, _ = in.SendSystemMessage(ctx, sysB, fmt.Sprintf("You rejected %s's friend request", initiatorName))
 	}
 
 	// Push the FormResponse to the sender's own system conversation.

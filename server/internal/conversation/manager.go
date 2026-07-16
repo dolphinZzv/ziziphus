@@ -172,7 +172,7 @@ func (m *Manager) CreateGroup(ctx context.Context, name, headline, ownerID strin
 	}
 	for _, mid := range uniqueMembers {
 		if _, ok := users[mid]; !ok {
-			return nil, &model.AppError{Code: model.ErrNotFound, Message: fmt.Sprintf("用户 %s 不存在", mid), Key: "err.user_not_found"}
+			return nil, &model.AppError{Code: model.ErrNotFound, Message: fmt.Sprintf("user %s not found", mid), Key: "err.user_not_found"}
 		}
 	}
 
@@ -180,7 +180,7 @@ func (m *Manager) CreateGroup(ctx context.Context, name, headline, ownerID strin
 	now := time.Now().UnixMilli()
 	maxMembers := 200
 	if len(uniqueMembers)+1 > maxMembers {
-		return nil, &model.AppError{Code: model.ErrTooLarge, Message: "群组人数已达上限", Key: "err.group_full"}
+		return nil, &model.AppError{Code: model.ErrTooLarge, Message: "group member limit reached", Key: "err.group_full"}
 	}
 	conv := &model.Conversation{
 		ConvID:     convID,
@@ -214,27 +214,27 @@ func (m *Manager) AddMember(ctx context.Context, convID, userID string, operator
 	// 2. Check conversation exists and is a group
 	conv, err := m.convRepo.Get(ctx, convID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+		return &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
 	}
 	if conv.Type != model.ConvGroup {
-		return &model.AppError{Code: model.ErrBadMessage, Message: "仅支持群组操作", Key: "err.group_only"}
+		return &model.AppError{Code: model.ErrBadMessage, Message: "groups only", Key: "err.group_only"}
 	}
 	// 1. Check target user exists
 	target, err := m.userRepo.GetByID(ctx, userID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "用户不存在", Key: "err.user_not_found"}
+		return &model.AppError{Code: model.ErrNotFound, Message: "user not found", Key: "err.user_not_found"}
 	}
 	// Agent users can only be added by their creator
 	if target.Type == model.UserAgent && target.UID != operatorID {
-		return &model.AppError{Code: model.ErrNoPermission, Message: "只有 Agent 的创建者可以将其加入群组", Key: "err.agent_owner_only"}
+		return &model.AppError{Code: model.ErrNoPermission, Message: "only the agent creator can add it to a group", Key: "err.agent_owner_only"}
 	}
 	// Verify operator is member and has admin/owner role
 	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+		return &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
 	}
 	if role < model.ConvRoleAdmin {
-		return &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
+		return &model.AppError{Code: model.ErrNoPermission, Message: "permission denied", Key: "err.permission_denied"}
 	}
 	// 3. Check max members limit
 	members, err := m.convRepo.GetMembers(ctx, convID)
@@ -242,7 +242,7 @@ func (m *Manager) AddMember(ctx context.Context, convID, userID string, operator
 		return err
 	}
 	if conv.MaxMembers > 0 && len(members) >= conv.MaxMembers {
-		return &model.AppError{Code: model.ErrTooLarge, Message: "群组人数已达上限", Key: "err.group_full"}
+		return &model.AppError{Code: model.ErrTooLarge, Message: "group member limit reached", Key: "err.group_full"}
 	}
 	return m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleMember)
 }
@@ -254,10 +254,10 @@ func (m *Manager) RemoveMember(ctx context.Context, convID, userID, operatorID s
 	}
 	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+		return &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
 	}
 	if role < model.ConvRoleAdmin {
-		return &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
+		return &model.AppError{Code: model.ErrNoPermission, Message: "permission denied", Key: "err.permission_denied"}
 	}
 	return m.convRepo.RemoveMember(ctx, convID, userID)
 }
@@ -269,10 +269,10 @@ func (m *Manager) Leave(ctx context.Context, convID, userID string) error {
 func (m *Manager) Disband(ctx context.Context, convID, ownerID string) error {
 	role, err := m.convRepo.GetMemberRole(ctx, convID, ownerID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNoPermission, Message: "你不是群成员", Key: "err.not_in_conv"}
+		return &model.AppError{Code: model.ErrNoPermission, Message: "you are not a group member", Key: "err.not_in_conv"}
 	}
 	if role != model.ConvRoleOwner {
-		return &model.AppError{Code: model.ErrNoPermission, Message: "只有群主可以解散群组", Key: "err.owner_only"}
+		return &model.AppError{Code: model.ErrNoPermission, Message: "only the group owner can dismiss the group", Key: "err.owner_only"}
 	}
 	members, err := m.convRepo.GetMembers(ctx, convID)
 	if err != nil {
@@ -304,13 +304,13 @@ func (m *Manager) GetMemberRole(ctx context.Context, convID, userID string) (mod
 func (m *Manager) RequestJoin(ctx context.Context, convID, userID string) error {
 	conv, err := m.convRepo.Get(ctx, convID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+		return &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
 	}
 	if conv.Type != model.ConvGroup {
-		return &model.AppError{Code: model.ErrBadMessage, Message: "仅支持群组", Key: "err.group_only"}
+		return &model.AppError{Code: model.ErrBadMessage, Message: "groups only", Key: "err.group_only"}
 	}
 	if _, err := m.userRepo.GetByID(ctx, userID); err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "用户不存在", Key: "err.user_not_found"}
+		return &model.AppError{Code: model.ErrNotFound, Message: "user not found", Key: "err.user_not_found"}
 	}
 	isMember, err := m.convRepo.IsMember(ctx, convID, userID)
 	if err != nil {
@@ -332,10 +332,10 @@ func (m *Manager) RequestJoin(ctx context.Context, convID, userID string) error 
 func (m *Manager) ListJoinRequests(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error) {
 	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
 	if err != nil {
-		return nil, &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+		return nil, &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
 	}
 	if role < model.ConvRoleAdmin {
-		return nil, &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
+		return nil, &model.AppError{Code: model.ErrNoPermission, Message: "permission denied", Key: "err.permission_denied"}
 	}
 	return m.joinRequestRepo.ListByConv(ctx, convID, model.JoinRequestPending)
 }
@@ -350,21 +350,21 @@ func (m *Manager) ApproveJoinRequest(ctx context.Context, convID, userID, operat
 	}
 	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+		return &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
 	}
 	if role < model.ConvRoleAdmin {
-		return &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
+		return &model.AppError{Code: model.ErrNoPermission, Message: "permission denied", Key: "err.permission_denied"}
 	}
 	conv, err := m.convRepo.Get(ctx, convID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+		return &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
 	}
 	members, err := m.convRepo.GetMembers(ctx, convID)
 	if err != nil {
 		return err
 	}
 	if conv.MaxMembers > 0 && len(members) >= conv.MaxMembers {
-		return &model.AppError{Code: model.ErrTooLarge, Message: "群组人数已达上限", Key: "err.group_full"}
+		return &model.AppError{Code: model.ErrTooLarge, Message: "group member limit reached", Key: "err.group_full"}
 	}
 	if err := m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleMember); err != nil {
 		return err
@@ -382,10 +382,10 @@ func (m *Manager) RejectJoinRequest(ctx context.Context, convID, userID, operato
 	}
 	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "会话不存在", Key: "err.conv_not_found_mgr"}
+		return &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
 	}
 	if role < model.ConvRoleAdmin {
-		return &model.AppError{Code: model.ErrNoPermission, Message: "权限不足", Key: "err.permission_denied"}
+		return &model.AppError{Code: model.ErrNoPermission, Message: "permission denied", Key: "err.permission_denied"}
 	}
 	return m.joinRequestRepo.UpdateStatus(ctx, convID, userID, model.JoinRequestRejected)
 }

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -139,8 +140,18 @@ func (rl *LoginRateLimiter) allowMemory(key string) error {
 }
 
 // Middleware creates an HTTP middleware that rate-limits requests by IP.
+// Health, metrics and swagger paths are skipped (they are not login attempts).
 func (rl *LoginRateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/health", "/metrics":
+			next.ServeHTTP(w, r)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/swagger/") {
+			next.ServeHTTP(w, r)
+			return
+		}
 		ip := ClientIP(r)
 
 		// Try to extract account from JSON body for rate limit key
