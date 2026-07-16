@@ -43,7 +43,7 @@ if [ -n "$CHANGED_GO" ]; then
     if command -v golangci-lint &>/dev/null; then
         cd "$SERVER_DIR"
         echo "  → golangci-lint ($(echo "$CHANGED_GO" | wc -l | tr -d ' ') files)..."
-        if ! golangci-lint run --new-from-rev="$BASE_REV" --out-format=colored-line-number >&2; then
+        if ! golangci-lint run --new-from-rev="$BASE_REV" >&2; then
             echo "  ✖ Go lint errors found. Fix them before pushing." >&2
             HAS_ERRORS=1
         fi
