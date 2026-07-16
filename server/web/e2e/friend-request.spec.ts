@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures/coverage'
 
-const API = 'http://47.95.200.101:10011'
+const API = 'http://localhost:8080'
 
 function auth(userId: string, name: string, token: string) {
   return `

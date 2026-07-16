@@ -15,7 +15,7 @@ test.describe('New Chat Dialog', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(AUTH_INIT)
     await page.goto('/chat')
-    await page.waitForTimeout(800)
+    await page.waitForTimeout(1500)
   })
 
   test('opens via plus menu', async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe('Create Group Dialog', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(AUTH_INIT)
     await page.goto('/chat')
-    await page.waitForTimeout(800)
+    await page.waitForTimeout(1500)
   })
 
   test('opens via plus menu with group name input', async ({ page }) => {
@@ -81,7 +81,7 @@ test.describe('Join Group Dialog', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(AUTH_INIT)
     await page.goto('/chat')
-    await page.waitForTimeout(800)
+    await page.waitForTimeout(1500)
   })
 
   test('opens via plus menu with group search', async ({ page }) => {

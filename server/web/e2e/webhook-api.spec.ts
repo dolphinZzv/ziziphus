@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures/coverage'
 
-const API = process.env.E2E_API_URL || 'http://47.95.200.101:10011'
+const API = 'http://localhost:8080'
 const TS = Date.now()
 
 test('Webhook full lifecycle - register, create, send, verify', async ({ request }) => {

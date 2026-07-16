@@ -96,20 +96,19 @@ test.describe('Sender Display & UserCard', () => {
 
     // Intercept message history to return mock messages with sender_name
     await page.route('**/api/v1/conversations/conv_test_001/messages**', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_MESSAGES) })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 0, msg: 'ok', data: MOCK_MESSAGES }) })
     })
 
-    // Intercept user API for sender info
     await page.route('**/api/v1/users/user_002', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_SENDER_INFO['user_002']) })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 0, msg: 'ok', data: MOCK_SENDER_INFO['user_002'] }) })
     })
     await page.route('**/api/v1/users/user_003', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_SENDER_INFO['user_003']) })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 0, msg: 'ok', data: MOCK_SENDER_INFO['user_003'] }) })
     })
 
     // Intercept read receipts
     await page.route('**/api/v1/messages/*/receipts', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 0, msg: 'ok', data: [] }) })
     })
 
     await page.goto('/chat/conv_test_001')

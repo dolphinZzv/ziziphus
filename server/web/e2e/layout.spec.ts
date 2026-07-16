@@ -7,6 +7,7 @@ const AUTH_INIT = `
     type: 0, status: 1, uid: '', primary_color: '#0F172A', secondary_color: '#64748B',
     wake_mode: 0, api_key: '', created_at: 1700000000,
   }));
+  localStorage.setItem('ziziphus_language', JSON.stringify('zh'));
 `
 
 test.describe('App Layout (authenticated)', () => {

@@ -18,16 +18,6 @@ test.describe('Sheets & Dialogs (authenticated)', () => {
     await page.waitForTimeout(1500)
   })
 
-  test('settings dialog opens and shows content', async ({ page }) => {
-    const settingsBtn = page.locator('button[title="设置"]')
-    await expect(settingsBtn).toBeVisible({ timeout: 5000 })
-    await settingsBtn.click({ force: true })
-    await page.waitForTimeout(400)
-    await expect(page.getByText('主题')).toBeVisible({ timeout: 3000 })
-    await expect(page.getByText('语言')).toBeVisible()
-    await expect(page.getByText('气泡颜色')).toBeVisible()
-  })
-
   test('profile dialog opens from sidebar name click', async ({ page }) => {
     await expect(page.getByText('测试用户').first()).toBeVisible({ timeout: 5000 })
     await page.getByText('测试用户').first().click({ force: true })
@@ -35,18 +25,37 @@ test.describe('Sheets & Dialogs (authenticated)', () => {
     await expect(page.getByText('Agent 管理')).toBeVisible({ timeout: 3000 })
   })
 
-  test('agent management opens from sidebar bot button', async ({ page }) => {
-    const btn = page.locator('button[title="Agent"]')
-    await expect(btn).toBeVisible({ timeout: 5000 })
-    await btn.click({ force: true })
+  test('settings dialog opens from profile and shows content', async ({ page }) => {
+    // Open profile first (click user name)
+    await expect(page.getByText('测试用户').first()).toBeVisible({ timeout: 5000 })
+    await page.getByText('测试用户').first().click({ force: true })
     await page.waitForTimeout(400)
+    // Click settings button inside profile
+    await expect(page.getByText('应用设置')).toBeVisible({ timeout: 3000 })
+    await page.getByText('应用设置').click()
+    await page.waitForTimeout(400)
+    await expect(page.getByText('主题')).toBeVisible({ timeout: 3000 })
+    await expect(page.getByText('语言')).toBeVisible()
+    await expect(page.getByText('气泡颜色')).toBeVisible()
+  })
+
+  test('agent management opens from profile', async ({ page }) => {
+    await expect(page.getByText('测试用户').first()).toBeVisible({ timeout: 5000 })
+    await page.getByText('测试用户').first().click({ force: true })
+    await page.waitForTimeout(400)
+    await expect(page.getByText('Agent 管理')).toBeVisible({ timeout: 3000 })
+    await page.getByText('Agent 管理').click()
+    await page.waitForTimeout(400)
+    // Agent management dialog opened
     await expect(page.getByText('Agent 管理')).toBeVisible({ timeout: 3000 })
   })
 
-  test('session management opens from sidebar smartphone button', async ({ page }) => {
-    const btn = page.locator('button[title="设备管理"]')
-    await expect(btn).toBeVisible({ timeout: 5000 })
-    await btn.click({ force: true })
+  test('session management opens from profile', async ({ page }) => {
+    await expect(page.getByText('测试用户').first()).toBeVisible({ timeout: 5000 })
+    await page.getByText('测试用户').first().click({ force: true })
+    await page.waitForTimeout(400)
+    await expect(page.getByText('设备管理')).toBeVisible({ timeout: 3000 })
+    await page.getByText('设备管理').click()
     await page.waitForTimeout(400)
     await expect(page.getByText('设备管理')).toBeVisible({ timeout: 3000 })
   })

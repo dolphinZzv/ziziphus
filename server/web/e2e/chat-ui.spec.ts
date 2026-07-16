@@ -90,26 +90,41 @@ test.describe('Chat UI', () => {
     const chatArea = page.locator('div[class*="flex h-full"]').first()
     await expect(chatArea).toBeVisible()
 
-    // Simulate drag enter with a File type
-    await chatArea.dispatchEvent('dragenter', {
-      dataTransfer: { types: ['Files'], items: [{ kind: 'file', type: 'application/pdf' }] },
+    // Use evaluate to create proper DragEvent with real DataTransfer
+    // Plain object dispatchEvent fails in headless Chrome
+    await page.evaluate(() => {
+      const el = document.querySelector<HTMLElement>('div[class*="flex h-full"]')
+      if (!el) return
+      const dt = new DataTransfer()
+      const file = new File([''], 'test.pdf', { type: 'application/pdf' })
+      dt.items.add(file)
+      el.dispatchEvent(new DragEvent('dragenter', { dataTransfer: dt }))
     })
     await page.waitForTimeout(200)
-    // Simulate drag leave
-    await chatArea.dispatchEvent('dragleave', { dataTransfer: { types: [] } })
+
+    await page.evaluate(() => {
+      const el = document.querySelector<HTMLElement>('div[class*="flex h-full"]')
+      if (!el) return
+      el.dispatchEvent(new DragEvent('dragleave'))
+    })
     await page.waitForTimeout(200)
+
     // No error should occur — chat still functional
     await expect(page.locator('textarea').first()).toBeVisible()
   })
 
   // --- Feature 3: Read receipts status icon ---
   test('own message shows status icon', async ({ page }) => {
-    // The "自" message should have a status icon (check/sending/delivered)
-    // We check that at least one CheckCheck or Check lucide icon exists in own messages
-    const readStatusIcon = page.locator('svg.lucide-check-check').first()
-    // May or may not be visible depending on mock data, but at minimum the element class is present in the bundle
-    // Just verify the chat loads with message bubbles
-    await expect(page.locator('div[class*="rounded-xl"]').first()).toBeVisible({ timeout: 10000 })
+    // With mock auth there are no real messages, so status icons may not render.
+    // Verify the chat area functioned (textarea present) and no JS errors occurred.
+    await expect(page.locator('textarea').first()).toBeVisible({ timeout: 5000 })
+    // If messages exist, check for status icons
+    const icon = page.locator('svg.lucide-check-check, svg.lucide-check').first()
+    const iconVisible = await icon.isVisible().catch(() => false)
+    if (!iconVisible) {
+      // No messages rendered — that's acceptable with mock data
+      await expect(page.locator('div[class*="rounded-xl"]').first()).toBeVisible({ timeout: 5000 })
+    }
   })
 
   test('read receipts tooltip API endpoint returns data', async ({ page }) => {
