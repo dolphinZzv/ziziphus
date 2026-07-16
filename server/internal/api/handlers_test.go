@@ -193,7 +193,7 @@ func (m *mockSessionChecker) GetUserSessionIDs(ctx context.Context, userID strin
 
 type mockConvManager struct {
 	getFunc                func(ctx context.Context, convID string) (*model.Conversation, error)
-	createGroupFunc        func(ctx context.Context, name, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error)
+	createGroupFunc        func(ctx context.Context, name, headline, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error)
 	getOrCreateP2PFunc     func(ctx context.Context, userA, userB string) (*model.Conversation, error)
 	addMemberFunc          func(ctx context.Context, convID, userID, operatorID string) error
 	removeMemberFunc       func(ctx context.Context, convID, userID, operatorID string) error
@@ -205,6 +205,7 @@ type mockConvManager struct {
 	approveJoinRequestFunc func(ctx context.Context, convID, userID, operatorID string) error
 	rejectJoinRequestFunc  func(ctx context.Context, convID, userID, operatorID string) error
 	getMemberRoleFunc      func(ctx context.Context, convID, userID string) (model.ConvRole, error)
+	disbandFunc            func(ctx context.Context, convID, ownerID string) error
 }
 
 func (m *mockConvManager) Get(ctx context.Context, convID string) (*model.Conversation, error) {
@@ -216,7 +217,7 @@ func (m *mockConvManager) Get(ctx context.Context, convID string) (*model.Conver
 
 func (m *mockConvManager) CreateGroup(ctx context.Context, name, headline, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error) {
 	if m.createGroupFunc != nil {
-		return m.createGroupFunc(ctx, name, ownerID, memberIDs, idGen)
+		return m.createGroupFunc(ctx, name, headline, ownerID, memberIDs, idGen)
 	}
 	return nil, nil
 }
@@ -296,6 +297,13 @@ func (m *mockConvManager) GetMemberRole(ctx context.Context, convID, userID stri
 		return m.getMemberRoleFunc(ctx, convID, userID)
 	}
 	return model.ConvRoleMember, nil
+}
+
+func (m *mockConvManager) Disband(ctx context.Context, convID, ownerID string) error {
+	if m.disbandFunc != nil {
+		return m.disbandFunc(ctx, convID, ownerID)
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -709,6 +717,68 @@ func (m *mockFileDB) UpdateFolderPath(ctx context.Context, fileID, folderPath st
 }
 
 
+// ---------------------------------------------------------------------------
+// decodeResponse decodes an *httptest.ResponseRecorder body into APIResponse.
+// ---------------------------------------------------------------------------
+
+func decodeResponse(t *testing.T, w *httptest.ResponseRecorder) APIResponse {
+	t.Helper()
+	var resp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	return resp
+}
+
+// ---------------------------------------------------------------------------
+// Mock: mfaStorage
+// ---------------------------------------------------------------------------
+
+type mockMFAStorage struct{}
+
+func (m *mockMFAStorage) Get(_ context.Context, _ string) (*model.UserMFA, error) { return nil, nil }
+func (m *mockMFAStorage) Upsert(_ context.Context, _ *model.UserMFA) error       { return nil }
+func (m *mockMFAStorage) Disable(_ context.Context, _ string) error              { return nil }
+
+// ---------------------------------------------------------------------------
+// Mock: emailVerifyHandler
+// ---------------------------------------------------------------------------
+
+type mockEmailVerifyHandler struct{}
+
+func (m *mockEmailVerifyHandler) Upsert(_ context.Context, _ *model.EmailVerify) error { return nil }
+func (m *mockEmailVerifyHandler) Get(_ context.Context, _ string) (*model.EmailVerify, error) {
+	return nil, nil
+}
+func (m *mockEmailVerifyHandler) Delete(_ context.Context, _ string) error { return nil }
+
+// ---------------------------------------------------------------------------
+// Mock: emailSender
+// ---------------------------------------------------------------------------
+
+type mockEmailSender struct{}
+
+func (m *mockEmailSender) Enabled() bool                         { return false }
+func (m *mockEmailSender) SendVerificationCode(_, _ string) error { return nil }
+
+// ---------------------------------------------------------------------------
+// Test helpers
+// ---------------------------------------------------------------------------
+
+func setAuthCtx(r *http.Request, userID string) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), auth.CtxKeyUserID, userID))
+}
+
+func setChiURLParam(r *http.Request, key, value string) *http.Request {
+	chiCtx := chi.RouteContext(r.Context())
+	if chiCtx == nil {
+		chiCtx = chi.NewRouteContext()
+		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, chiCtx))
+	}
+	chiCtx.URLParams.Add(key, value)
+	return r
+}
+
 func TestJSON_writesCorrectContentTypeAndBody(t *testing.T) {
 	w := httptest.NewRecorder()
 	JSON(w, map[string]string{"key": "value"})
@@ -1049,7 +1119,7 @@ func TestUserHandler_GetUser(t *testing.T) {
 	handler, _, userRepo, sessMgr := newTestUserHandler(authUserRepo)
 
 	userRepo.getByIDFunc = func(_ context.Context, id string) (*model.User, error) {
-		return &model.User{ID: id, Name: "Target User", Type: model.UserHuman}, nil
+		return &model.User{ID: id, Name: "Target User", Type: model.UserHuman, Discoverable: true}, nil
 	}
 	sessMgr.isOnlineFunc = func(_ context.Context, userID string) bool {
 		return false
@@ -1412,7 +1482,7 @@ func TestConvHandler_CreateGroup(t *testing.T) {
 	var sysMsgConvID, sysMsgBody string
 	handler := &ConvHandler{
 		convMgr: &mockConvManager{
-			createGroupFunc: func(_ context.Context, name, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error) {
+			createGroupFunc: func(_ context.Context, name, headline, ownerID string, memberIDs []string, idGen func() int64) (*model.Conversation, error) {
 				return &model.Conversation{ConvID: "group_123", Name: name}, nil
 			},
 		},

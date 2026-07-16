@@ -316,13 +316,13 @@ func TestE2E_RefreshToken_NilRedisReturnsEmpty(t *testing.T) {
 	handler, _, _, _ := e2eRouter(t)
 
 	// Register with nil rdb — refresh_token should be empty
-	_, _, refreshToken := mustRegister(t, handler, "Dave", "dave_refresh", "pass")
+	_, _, refreshToken := mustRegister(t, handler, "Dave", "dave_refresh", "testpass1")
 	if refreshToken != "" {
 		t.Logf("refresh_token = %q (expected empty since rdb is nil)", refreshToken)
 	}
 
 	// Login with nil rdb — refresh_token should be empty
-	_, refreshToken2 := mustLogin(t, handler, "dave_refresh", "pass")
+	_, refreshToken2 := mustLogin(t, handler, "dave_refresh", "testpass1")
 	if refreshToken2 != "" {
 		t.Logf("login refresh_token = %q (expected empty since rdb is nil)", refreshToken2)
 	}
@@ -359,7 +359,7 @@ func TestE2E_RefreshToken_EndpointRejectsGarbage(t *testing.T) {
 func TestE2E_GetHistory_MemberAllowed(t *testing.T) {
 	handler, _, convMgr, _ := e2eRouter(t)
 
-	aliceID, aliceToken, _ := mustRegister(t, handler, "Alice", "alice_hist_ok", "pass")
+	aliceID, aliceToken, _ := mustRegister(t, handler, "Alice", "alice_hist_ok", "testpass1")
 
 	// Alice is a member of "conv_abc"
 	convMgr.isMemberFunc = func(_ context.Context, convID, userID string) (bool, error) {
@@ -375,8 +375,8 @@ func TestE2E_GetHistory_MemberAllowed(t *testing.T) {
 func TestE2E_GetHistory_NonMemberBlocked(t *testing.T) {
 	handler, _, convMgr, _ := e2eRouter(t)
 
-	mustRegister(t, handler, "Alice", "alice_hist_deny", "pass")
-	_, bobToken, _ := mustRegister(t, handler, "Bob", "bob_hist_deny", "pass")
+	mustRegister(t, handler, "Alice", "alice_hist_deny", "testpass1")
+	_, bobToken, _ := mustRegister(t, handler, "Bob", "bob_hist_deny", "testpass1")
 
 	// No one is a member of "conv_xyz"
 	convMgr.isMemberFunc = func(_ context.Context, convID, userID string) (bool, error) {
