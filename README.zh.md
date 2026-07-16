@@ -6,9 +6,9 @@
 [![E2E](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg?query=branch:main+job:"E2E+tests")](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
 [![Container](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg?query=branch:main+job:"Container+\(build+%2B+smoke+%2B+push\)")](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/dolphinZzv/ziziphus/branch/main/graph/badge.svg)](https://codecov.io/gh/dolphinZzv/ziziphus)
-[![Demo](https://img.shields.io/badge/demo-online-brightgreen)](http://ziziphus.siciv.space:10011/)
+[![Demo](https://img.shields.io/badge/demo-online-brightgreen)](http://47.95.200.101:10011/)
 
-> **演示地址**: [http://ziziphus.siciv.space:10011/](http://ziziphus.siciv.space:10011/)
+> **演示地址**: [http://47.95.200.101:10011/](http://47.95.200.101:10011/)
 
 [中文](README.zh.md) | [English](README.md)
 
