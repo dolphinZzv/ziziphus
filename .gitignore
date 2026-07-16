@@ -16,6 +16,7 @@ server/config/rsa_key.pem
 server/config/config.yaml
 .venv
 .env
+env
 .omo
 data
 panda_ai

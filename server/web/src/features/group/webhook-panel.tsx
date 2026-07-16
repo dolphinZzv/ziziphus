@@ -158,7 +158,7 @@ export default function WebhookPanel({ convId, onClose }: Props) {
                   {editing && (() => {
                     const baseUrl = window.location.origin
                     const apiKey = editing.api_key || '<api_key>'
-                    const curlCmd = `curl -X POST \\\n  "${baseUrl}/api/v1/webhooks/receive" \\\n  -H "Authorization: Bearer ${apiKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"body": "Hello from webhook", "content_type": 1}'`
+                    const curlCmd = `curl -X POST \\\n  "${baseUrl}/api/v1/webhooks/receive" \\\n  -H "Authorization: Bearer ${apiKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"body": "Hello from webhook", "content_type": 0}'`
                     const hasCallback = !!(editing.callback_url || form.callback_url)
                     let socatCmd = ''
                     let socatPort = '8080'

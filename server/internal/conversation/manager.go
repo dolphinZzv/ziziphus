@@ -220,8 +220,13 @@ func (m *Manager) AddMember(ctx context.Context, convID, userID string, operator
 		return &model.AppError{Code: model.ErrBadMessage, Message: "仅支持群组操作", Key: "err.group_only"}
 	}
 	// 1. Check target user exists
-	if _, err := m.userRepo.GetByID(ctx, userID); err != nil {
+	target, err := m.userRepo.GetByID(ctx, userID)
+	if err != nil {
 		return &model.AppError{Code: model.ErrNotFound, Message: "用户不存在", Key: "err.user_not_found"}
+	}
+	// Agent users can only be added by their creator
+	if target.Type == model.UserAgent && target.UID != operatorID {
+		return &model.AppError{Code: model.ErrNoPermission, Message: "只有 Agent 的创建者可以将其加入群组", Key: "err.agent_owner_only"}
 	}
 	// Verify operator is member and has admin/owner role
 	role, err := m.convRepo.GetMemberRole(ctx, convID, operatorID)

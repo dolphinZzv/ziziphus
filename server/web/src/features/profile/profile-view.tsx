@@ -53,8 +53,8 @@ export default function ProfileView({ onClose }: Props) {
             : `linear-gradient(135deg, ${user?.primary_color || 'var(--color-primary)'}, ${user?.secondary_color || user?.primary_color || 'var(--color-muted)'})` }}>
           {user?.cover && <div className="absolute inset-0 bg-black/20" />}
           <button onClick={() => coverInputRef.current?.click()} disabled={uploadingCover}
-            className="absolute top-3 left-3 p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white z-10 transition-colors">
-            <Camera size={14} />
+            className="absolute top-3 left-3 p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white/70 hover:text-white z-10 transition-colors">
+            <Camera size={15} />
           </button>
           <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCover} className="hidden" />
           <div className="absolute top-3 right-3 flex items-center gap-1 z-10">

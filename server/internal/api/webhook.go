@@ -525,9 +525,6 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusRequestEntityTooLarge, 413, "body too large")
 		return
 	}
-	if req.ContentType == 0 {
-		req.ContentType = 1
-	}
 
 	now := time.Now().UnixMilli()
 	msgID := h.idGen.NextID()

@@ -49,32 +49,34 @@
 }
 
 .dark {
-  --color-primary: #1E293B;
-  --color-primary-hover: #334155;
-  --color-canvas: #0F172A;
-  --color-surface-card: #1E293B;
-  --color-surface-soft: #1E293B;
+  --color-primary: #3B82F6;
+  --color-primary-hover: #60A5FA;
+  --color-accent: #34D399;
+  --color-accent-hover: #6EE7B7;
+  --color-canvas: #0B1120;
+  --color-surface-card: #111827;
+  --color-surface-soft: #1A2332;
   --color-ink: #F8FAFC;
   --color-body-strong: #E2E8F0;
-  --color-body: #94A3B8;
-  --color-muted: #64748B;
-  --color-muted-soft: #475569;
-  --color-hairline: #334155;
-  --color-hairline-soft: #1E293B;
+  --color-body: #CBD5E1;
+  --color-muted: #94A3B8;
+  --color-muted-soft: #64748B;
+  --color-hairline: #1E293B;
+  --color-hairline-soft: #1A2332;
   --bubble-self: #3B82F6;
   --bubble-self-text: #FFFFFF;
-  --bubble-other: #1E293B;
+  --bubble-other: #1A2332;
   --bubble-other-text: #F8FAFC;
-  --bubble-other-border: #334155;
-  --destructive: #EF4444;
-  --destructive-hover: #DC2626;
-  --success: #22C55E;
-  --warning: #EAB308;
-  --info: #0EA5E9;
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
-  --shadow-default: 0 2px 6px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px 0 rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  --bubble-other-border: #1E293B;
+  --destructive: #F87171;
+  --destructive-hover: #FCA5A5;
+  --success: #34D399;
+  --warning: #FBBF24;
+  --info: #38BDF8;
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-default: 0 2px 6px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 16px 0 rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
 }
 
 * { box-sizing: border-box; }
@@ -99,3 +101,29 @@ code, pre { font-family: "Fira Code", monospace; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-hairline); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
+
+input, textarea, select { color-scheme: light; }
+.dark input, .dark textarea, .dark select { color-scheme: dark; }
+
+/* Native browser elements follow theme */
+.dark { color-scheme: dark; }
+
+/* Focus ring */
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 4px; }
+button:focus-visible { border-radius: 8px; }
+
+/* Selection */
+::selection { background: var(--color-primary); color: #FFFFFF; }
+.dark ::selection { background: #3B82F6; color: #FFFFFF; }
+
+/* Code blocks in messages */
+pre { background: #F1F5F9 !important; border-radius: 8px; padding: 12px 16px; overflow-x: auto; }
+.dark pre { background: #0B1120 !important; }
+code { font-size: 0.8125rem; }
+.dark code { color: #E2E8F0; }
+pre code { background: transparent !important; padding: 0; }
+.dark pre code { color: #E2E8F0; }
+
+/* Inline code */
+:not(pre) > code { background: #E2E8F0; color: #0F172A; padding: 1px 5px; border-radius: 4px; font-size: 0.8125rem; }
+.dark :not(pre) > code { background: #1E293B; color: #CBD5E1; }

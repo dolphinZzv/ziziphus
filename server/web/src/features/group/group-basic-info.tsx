@@ -9,7 +9,7 @@ import { authStore } from '@/stores/auth-store'
 import type { ConversationDetail, JoinRequest } from '@/types/conversation'
 import type { User } from '@/types/user'
 import { ConvRole } from '@/types/conversation'
-import { X, Crown, Shield, Trash2, Check, X as XIcon, Camera, Search, Bell, Edit2 } from 'lucide-react'
+import { X, Check, X as XIcon, Camera, Bell, Edit2 } from 'lucide-react'
 import GroupEditView from './group-edit-view'
 
 interface Props { convId: string; onClose: () => void }
@@ -21,10 +21,6 @@ export default function GroupBasicInfo({ convId, onClose }: Props) {
   const [userMap, setUserMap] = useState<Record<string, User>>({})
   const [uploading, setUploading] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
-  const [showAddMember, setShowAddMember] = useState(false)
-  const [addQuery, setAddQuery] = useState('')
-  const [addResults, setAddResults] = useState<User[]>([])
-  const [memberFilter, setMemberFilter] = useState('')
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
   const [uploadingCover, setUploadingCover] = useState(false)
@@ -53,19 +49,6 @@ export default function GroupBasicInfo({ convId, onClose }: Props) {
   const isAdmin = me?.role === ConvRole.Admin || me?.role === ConvRole.Owner
   const isOwner = me?.role === ConvRole.Owner
   const uname = (id: string) => userMap[id]?.name || id
-  const urole = (id: string) => {
-    const m = detail.members.find(x => x.user_id === id)
-    if (!m) return ''
-    if (m.role === ConvRole.Owner) return t('group.owner')
-    if (m.role === ConvRole.Admin) return t('group.admin')
-    return t('group.member')
-  }
-  const roleIcon = (id: string) => {
-    const m = detail.members.find(x => x.user_id === id)
-    if (m?.role === ConvRole.Owner) return <Crown size={11} className="text-amber-500" />
-    if (m?.role === ConvRole.Admin) return <Shield size={11} className="text-blue-500" />
-    return null
-  }
 
   const actions = {
     removeMember: async (userId: string) => {
@@ -88,22 +71,7 @@ export default function GroupBasicInfo({ convId, onClose }: Props) {
       try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { cover: r.url }); setDetail({ ...detail!, cover: r.url }) } catch {}
       setUploadingCover(false)
     },
-    searchMember: async () => {
-      if (!addQuery.trim()) return
-      try { const users = await userService.search(addQuery.trim()); setAddResults(users.filter(x => !detail.members.some(m => m.user_id === x.user_id))) } catch {}
-    },
-    addMember: async (userId: string) => {
-      try {
-        await conversationService.addMembers(convId, [userId])
-        const x = addResults.find(x => x.user_id === userId)
-        if (x) setUserMap(prev => ({ ...prev, [userId]: x }))
-        setDetail(d => d ? { ...d, members: [...d.members, { conv_id: convId, user_id: userId, role: ConvRole.Member, mute: false, joined_at: Date.now(), user_type: x?.type || 0, wake_mode: x?.wake_mode || 0 }] } : null)
-        setAddResults(prev => prev.filter(x => x.user_id !== userId))
-      } catch {}
-    },
   }
-
-  const inputSm = 'w-full h-9 px-3 rounded-xl bg-[var(--color-surface-card)] text-sm border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
 
   return (
     <>
@@ -172,77 +140,6 @@ export default function GroupBasicInfo({ convId, onClose }: Props) {
             </div>
           </div>
 
-          {/* Members */}
-          <div className="border-t border-[var(--color-hairline)] pt-3 mt-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wider">{t('group.members')}</span>
-              {isAdmin && (
-                <button onClick={() => { setShowAddMember(!showAddMember); setAddQuery(''); setAddResults([]) }}
-                  className="text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)] flex items-center gap-1">
-                  + {t('group.addMember')}
-                </button>
-              )}
-            </div>
-
-            {/* Add member search */}
-            {showAddMember && (
-              <div className="mb-2 space-y-1">
-                <div className="flex gap-1">
-                  <input value={addQuery} onChange={e => setAddQuery(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') actions.searchMember() }}
-                    placeholder={t('group.searchMember')} className={inputSm} />
-                  <button onClick={actions.searchMember} className="px-3 h-9 rounded-xl bg-[var(--color-primary)] text-white text-xs">{t('group.searchBtn')}</button>
-                </div>
-                {addResults.map(u => (
-                  <div key={u.user_id} className="flex items-center gap-2 py-1 px-1 rounded-xl hover:bg-[var(--color-surface-soft)]">
-                    <div className="w-7 h-7 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-[11px] font-semibold flex-shrink-0">
-                      {u.name?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                    <div className="flex-1 min-w-0 text-[13px] text-[var(--color-ink)]">{u.name}</div>
-                    <button onClick={() => actions.addMember(u.user_id)} className="text-[11px] text-[var(--color-primary)] font-medium px-2 py-0.5 rounded-lg hover:bg-[var(--color-primary)]/5">添加</button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Member filter */}
-            <div className="mb-2">
-              <input value={memberFilter} onChange={e => setMemberFilter(e.target.value)}
-                placeholder="搜索成员..."
-                className="w-full h-8 px-3 rounded-xl bg-[var(--color-surface-soft)] text-xs border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)]" />
-            </div>
-
-            <div className="space-y-0.5 max-h-[160px] overflow-y-auto">
-              {detail.members.filter(m => {
-                if (!memberFilter.trim()) return true
-                const f = memberFilter.trim().toLowerCase()
-                return uname(m.user_id).toLowerCase().includes(f)
-              }).map(m => (
-                <div key={m.user_id} className="flex items-center gap-2 py-1 px-1 rounded-xl hover:bg-[var(--color-surface-soft)]">
-                  {userMap[m.user_id]?.avatar ? (
-                    <img src={avatarUrl(userMap[m.user_id].avatar, 64)} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-[11px] font-semibold flex-shrink-0">
-                      {uname(m.user_id).charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium text-[var(--color-ink)] flex items-center gap-1">
-                      {uname(m.user_id)}
-                      {m.user_id === currentUserId && <span className="text-[10px] text-[var(--color-muted)]">{t('group.me')}</span>}
-                      {roleIcon(m.user_id)}
-                    </div>
-                    <div className="text-[10px] text-[var(--color-muted-soft)]">{urole(m.user_id)}</div>
-                  </div>
-                  {isAdmin && m.user_id !== currentUserId && (
-                    <button onClick={() => actions.removeMember(m.user_id)} className="p-1 rounded-lg hover:bg-[var(--destructive)]/10 text-[var(--color-muted)] hover:text-[var(--destructive)]">
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* Join Requests */}
           {isAdmin && joinRequests.length > 0 && (

@@ -50,7 +50,7 @@ export default function InputBar({ convId, isP2p }: Props) {
       }),
       api.request<Array<{ id: number; name: string }>>(`/api/v1/conversations/${convId}/webhooks`).then(whs => {
         setMembers(prev => {
-          const whItems = whs.map(wh => ({ id: `wh:${wh.id}`, name: `@${wh.name}` }))
+          const whItems = whs.map(wh => ({ id: `wh:${wh.id}`, name: wh.name }))
           const userItems = prev.filter(m => !m.id.startsWith('wh:'))
           return [...userItems, ...whItems]
         })
@@ -191,7 +191,7 @@ export default function InputBar({ convId, isP2p }: Props) {
                     {m.name.charAt(0)}
                   </div>
                 )}
-                <span>{m.name}</span>
+                <span>{m.id.startsWith('wh:') ? `@${m.name}` : m.name}</span>
               </button>
             )) : (
               <div className="px-3 py-2 text-xs text-[var(--color-muted)]">无匹配成员</div>

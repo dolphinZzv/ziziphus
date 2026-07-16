@@ -39,14 +39,14 @@ export const authService = {
     return api.request<User[]>('/api/v1/users/me/agents')
   },
 
-  createAgent(data: { name: string; avatar?: string; wake_mode?: WakeMode; primary_color?: string; secondary_color?: string }) {
+  createAgent(data: { name: string; headline?: string; avatar?: string; cover?: string; wake_mode?: WakeMode; primary_color?: string; secondary_color?: string }) {
     return api.request<User>('/api/v1/users/me/agents', {
       method: 'POST',
       body: data,
     })
   },
 
-  updateAgent(agentId: string, data: { name?: string; avatar?: string; wake_mode?: WakeMode; primary_color?: string; secondary_color?: string }) {
+  updateAgent(agentId: string, data: { name?: string; headline?: string; avatar?: string; cover?: string; wake_mode?: WakeMode; primary_color?: string; secondary_color?: string }) {
     return api.request<User>(`/api/v1/users/me/agents/${agentId}`, {
       method: 'PUT',
       body: data,
