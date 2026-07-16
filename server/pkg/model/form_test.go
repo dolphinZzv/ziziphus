@@ -72,11 +72,11 @@ func TestFormDefinitionBody_RoundTrip(t *testing.T) {
 func TestFormResponseBody_RoundTrip(t *testing.T) {
 	original := FormResponseBody{
 		FormMsgID:     123456789,
-		RequestID:      1,
-		Action:         "approve",
-		ResponderID:    "user_b",
-		ResponderName:  "李四",
-		SubmittedAt:    1719532900000,
+		RequestID:     1,
+		Action:        "approve",
+		ResponderID:   "user_b",
+		ResponderName: "李四",
+		SubmittedAt:   1719532900000,
 	}
 
 	data, err := json.Marshal(original)
@@ -123,9 +123,9 @@ func TestConvType_System(t *testing.T) {
 
 func TestFormDefinitionBody_WithFields(t *testing.T) {
 	original := FormDefinitionBody{
-		FormID:  "uuid-fields",
-		Type:    "survey",
-		Title:   "问卷",
+		FormID: "uuid-fields",
+		Type:   "survey",
+		Title:  "问卷",
 		Fields: []FormField{
 			{
 				FieldID:  "f1",

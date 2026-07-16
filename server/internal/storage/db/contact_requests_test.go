@@ -119,11 +119,11 @@ func TestContactRequestRepo_InsertTx(t *testing.T) {
 		WithArgs("u1", "u2", int64(0), model.ContactRequestPending, "hello").
 		WillReturnRows(pgxmock.NewRows([]string{"id"}).AddRow(int64(42)))
 
-		id, err := repo.InsertTx(context.Background(), tx, &model.ContactRequest{
-			FromUserID: "u1", ToUserID: "u2", Status: model.ContactRequestPending, Message: "hello",
-		})
-		if err != nil {
-			t.Fatalf("InsertTx: %v", err)
+	id, err := repo.InsertTx(context.Background(), tx, &model.ContactRequest{
+		FromUserID: "u1", ToUserID: "u2", Status: model.ContactRequestPending, Message: "hello",
+	})
+	if err != nil {
+		t.Fatalf("InsertTx: %v", err)
 	}
 	if id != 42 {
 		t.Errorf("id = %d, want 42", id)
