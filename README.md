@@ -1,9 +1,9 @@
 # Ziziphus
 
 [![codecov](https://codecov.io/gh/dolphinZzv/ziziphus/branch/main/graph/badge.svg)](https://codecov.io/gh/dolphinZzv/ziziphus)
-[![Demo](https://img.shields.io/badge/demo-online-brightgreen)](https://im.odstx.com)
+[![Demo](https://img.shields.io/badge/demo-online-brightgreen)](http://ziziphus.siciv.space:10011/)
 
-> **Demo**: [https://im.odstx.com](https://im.odstx.com)
+> **Demo**: [http://ziziphus.siciv.space:10011/](http://ziziphus.siciv.space:10011/)
 
 即时通讯（IM）应用，包含 Go 后端服务、React Web 前端、macOS 与 iOS 原生客户端。
 
