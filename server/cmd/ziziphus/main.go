@@ -178,11 +178,11 @@ func main() {
 		File:         fileHandler,
 		Webhook:      webhookHandler,
 		Announcement: api.Announcement(cfg.Announcement),
-		DB:         pool,
-		RDB:        rdb,
-		LoginRL:    loginRL,
-		RegisterRL: registerRL,
-		GlobalRL:   globalRL,
+		DB:           pool,
+		RDB:          rdb,
+		LoginRL:      loginRL,
+		RegisterRL:   registerRL,
+		GlobalRL:     globalRL,
 	}
 
 	// Auth middleware

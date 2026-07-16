@@ -21,8 +21,8 @@ type Config struct {
 }
 
 var (
-	sugar        *zap.SugaredLogger
-	atomicLevel  zap.AtomicLevel
+	sugar       *zap.SugaredLogger
+	atomicLevel zap.AtomicLevel
 )
 
 // Init configures the global zap logger. Must be called once at startup.
