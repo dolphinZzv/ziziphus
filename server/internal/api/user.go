@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"net/mail"
 	"strconv"
 	"strings"
 	"time"
@@ -753,6 +754,11 @@ func (h *UserHandler) SendEmailCode(w http.ResponseWriter, r *http.Request) {
 	var req sendEmailCodeReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_params"))
+		return
+	}
+	// Validate email format
+	if _, err := mail.ParseAddress(req.Email); err != nil {
+		BadRequest(w, r, i18n.T(r.Context(), "err.invalid_email"))
 		return
 	}
 	userID := auth.UserFromCtx(r.Context())

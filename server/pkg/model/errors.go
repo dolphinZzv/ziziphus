@@ -41,4 +41,8 @@ var (
 	ErrAlreadyFriends               = &AppError{Code: ErrConflict, Message: "你们已经是好友", Key: "err.contact_request_already_friends"}
 	ErrContactRequestNotFound       = &AppError{Code: ErrNotFound, Message: "好友申请不存在", Key: "err.contact_request_not_found"}
 	ErrContactRequestAlreadyHandled = &AppError{Code: ErrConflict, Message: "该申请已被处理", Key: "err.contact_request_already_handled"}
+
+	// Ban errors
+	ErrUserBanned = &AppError{Code: ErrNoPermission, Message: "账号已被封禁", Key: "err.user_banned"}
+	ErrBanSelf    = &AppError{Code: ErrBadMessage, Message: "不能封禁自己", Key: "err.ban_self"}
 )

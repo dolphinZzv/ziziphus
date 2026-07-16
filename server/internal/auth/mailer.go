@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/smtp"
+	"strings"
 	"text/template"
 
 	"ziziphus/config"
@@ -102,9 +103,15 @@ func (m *Mailer) send(to, subject, htmlBody string) error {
 		port = "587"
 	}
 
+	// Sanitize SMTP header fields to prevent CRLF injection
+	sanitize := func(s string) string {
+		s = strings.ReplaceAll(s, "\r", "")
+		s = strings.ReplaceAll(s, "\n", "")
+		return s
+	}
 	contentType := "text/html; charset=UTF-8"
 	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: %s\r\n\r\n%s",
-		m.from, to, subject, contentType, htmlBody)
+		sanitize(m.from), sanitize(to), sanitize(subject), contentType, htmlBody)
 
 	addr := fmt.Sprintf("%s:%s", m.host, port)
 

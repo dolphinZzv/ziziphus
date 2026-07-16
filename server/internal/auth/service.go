@@ -121,6 +121,11 @@ func (s *Service) Login(ctx context.Context, account, password string) (string, 
 		return "", "", 0, "", &model.AppError{Code: model.ErrNoPermission, Message: "账号或密码错误", Key: "auth.bad_credentials"}
 	}
 
+	// Check if user is banned
+	if user.Banned {
+		return "", "", 0, "", model.ErrUserBanned
+	}
+
 	accessToken, err := s.generateAccessToken(user.ID, int(user.Type))
 	if err != nil {
 		return "", "", 0, "", err

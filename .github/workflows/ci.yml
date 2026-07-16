@@ -10,6 +10,8 @@ jobs:
   backend:
     name: Backend (test + lint)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: server
@@ -46,6 +48,8 @@ jobs:
   frontend:
     name: Frontend (lint + build)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: server/web
@@ -70,6 +74,8 @@ jobs:
   e2e:
     name: E2E tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16

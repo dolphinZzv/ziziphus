@@ -36,7 +36,7 @@ ratelimit:
 # Zap structured logger with optional file rotation (lumberjack)
 log:
   level: info           # debug, info, warn, error
-  file: ""              # log file path (empty = stdout only)
+  file: ""              # log file path, e.g. "./logs/app.log" (empty = stdout only; parent dir auto-created)
   max_size: 100         # megabytes before rotation
   max_age: 7            # days to retain old logs
   max_backups: 10       # number of old log files to retain

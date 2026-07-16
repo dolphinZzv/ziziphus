@@ -34,3 +34,4 @@ test-results
 *.tmp*.test
 bin/
 server/ziziphus
+logs

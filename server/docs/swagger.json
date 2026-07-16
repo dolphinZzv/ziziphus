@@ -4397,7 +4397,7 @@
                 },
                 "name": {
                     "type": "string",
-                    "example": "张三"
+                    "example": "Alice"
                 },
                 "password": {
                     "type": "string",
@@ -4509,6 +4509,9 @@
                 },
                 "avatar": {
                     "type": "string"
+                },
+                "banned": {
+                    "type": "boolean"
                 },
                 "cover": {
                     "type": "string"

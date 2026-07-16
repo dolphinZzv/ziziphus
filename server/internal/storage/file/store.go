@@ -2,6 +2,7 @@ package file
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -68,6 +69,9 @@ type FolderInfo struct {
 
 // ListFolders returns subdirectories under a given relative path.
 func (s *Store) ListFolders(ctx context.Context, convID, parentPath string) ([]FolderInfo, error) {
+	if _, err := s.safeRelPath(parentPath); err != nil {
+		return nil, err
+	}
 	dirPath := filepath.Join(s.basePath, convID, parentPath)
 	entries, err := afero.ReadDir(s.fs, dirPath)
 	if err != nil {
@@ -91,17 +95,29 @@ func (s *Store) ListFolders(ctx context.Context, convID, parentPath string) ([]F
 
 // CreateFolder creates a directory under the conv's file space.
 func (s *Store) CreateFolder(ctx context.Context, convID, parentPath, name string) error {
+	if _, err := s.safeRelPath(filepath.Join(parentPath, name)); err != nil {
+		return err
+	}
 	dirPath := filepath.Join(s.basePath, convID, parentPath, name)
 	return s.fs.MkdirAll(dirPath, 0o755)
 }
 
 // DeleteFolder removes a directory and all its contents.
 func (s *Store) DeleteFolder(ctx context.Context, convID, folderPath string) error {
+	if _, err := s.safeRelPath(folderPath); err != nil {
+		return err
+	}
 	return s.fs.RemoveAll(filepath.Join(s.basePath, convID, folderPath))
 }
 
 // RenameFolder renames a directory.
 func (s *Store) RenameFolder(ctx context.Context, convID, oldPath, newPath string) error {
+	if _, err := s.safeRelPath(oldPath); err != nil {
+		return err
+	}
+	if _, err := s.safeRelPath(newPath); err != nil {
+		return err
+	}
 	return s.fs.Rename(
 		filepath.Join(s.basePath, convID, oldPath),
 		filepath.Join(s.basePath, convID, newPath),
@@ -110,6 +126,12 @@ func (s *Store) RenameFolder(ctx context.Context, convID, oldPath, newPath strin
 
 // MoveFolder moves a directory to a new parent.
 func (s *Store) MoveFolder(ctx context.Context, convID, srcPath, dstParent string) error {
+	if _, err := s.safeRelPath(srcPath); err != nil {
+		return err
+	}
+	if _, err := s.safeRelPath(dstParent); err != nil {
+		return err
+	}
 	name := filepath.Base(srcPath)
 	return s.fs.Rename(
 		filepath.Join(s.basePath, convID, srcPath),
@@ -182,6 +204,17 @@ func (s *Store) WalkFiles(convID string, fn func(relPath string, info fs.FileInf
 func (s *Store) RelPath(fullPath string) string {
 	rel, _ := filepath.Rel(s.basePath, fullPath)
 	return rel
+}
+
+// safeRelPath validates that a relative user-supplied path does not contain
+// directory traversal components ("..") and returns a cleaned relative path.
+func (s *Store) safeRelPath(rel string) (string, error) {
+	clean := filepath.Clean(rel)
+	clean = strings.TrimPrefix(clean, "/")
+	if strings.Contains(clean, "..") || filepath.IsAbs(clean) {
+		return "", fmt.Errorf("path %q is not allowed", rel)
+	}
+	return clean, nil
 }
 
 func (s *Store) fullPath(relative string) string {

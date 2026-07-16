@@ -3,6 +3,7 @@ package logger
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"go.uber.org/zap"
@@ -36,15 +37,46 @@ func Init(cfg Config) {
 	encoderCfg.EncodeLevel = zapcore.CapitalLevelEncoder
 	encoderCfg.EncodeCaller = zapcore.ShortCallerEncoder
 
+	ws := newWriter(cfg)
+
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(encoderCfg),
-		newWriter(cfg),
+		ws,
 		atomicLevel,
 	)
 
 	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
 	zap.ReplaceGlobals(logger)
 	sugar = logger.Sugar()
+
+	// Log startup diagnostics to stderr so they're visible even before
+	// the file logger is fully initialized.
+	os.Stderr.WriteString("ziziphus: logger initialized level=" + cfg.Level)
+	if cfg.File != "" {
+		absPath := cfg.File
+		if !filepath.IsAbs(cfg.File) {
+			if wd, err := os.Getwd(); err == nil {
+				absPath = filepath.Join(wd, cfg.File)
+			}
+		}
+		os.Stderr.WriteString(" file=" + absPath)
+
+		// Detect common misconfiguration: path looks like a directory, not a file
+		if fi, err := os.Stat(cfg.File); err == nil && fi.IsDir() {
+			os.Stderr.WriteString(" (ERROR: path \"" + cfg.File + "\" is an existing DIRECTORY, not a file. Use a file path like \"./logs/ziziphus.log\")")
+		} else if filepath.Ext(cfg.File) == "" && !strings.Contains(cfg.File, ".") {
+			os.Stderr.WriteString(" (WARNING: no file extension — make sure \"" + cfg.File + "\" points to a file, not a directory. Try \"./logs/ziziphus.log\")")
+		}
+
+		// Verify write access by creating the file immediately
+		f, err := os.OpenFile(cfg.File, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			os.Stderr.WriteString(" (WARNING: cannot write: " + err.Error() + ")")
+		} else {
+			f.Close()
+		}
+	}
+	os.Stderr.WriteString("\n")
 }
 
 // newWriter returns a teed writer: stdout + optional file with rotation.
@@ -52,6 +84,23 @@ func newWriter(cfg Config) zapcore.WriteSyncer {
 	writers := []io.Writer{os.Stdout}
 
 	if cfg.File != "" {
+		// Ensure parent directory exists
+		if dir := filepath.Dir(cfg.File); dir != "." {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				// If it fails because dir exists as a FILE (common migration issue
+				// when config previously pointed "file" to a directory path), remove
+				// the stale file and retry.
+				if fi, statErr := os.Stat(dir); statErr == nil && !fi.IsDir() {
+					os.Stderr.WriteString("ziziphus: removing stale file \"" + dir + "\", replacing with directory\n")
+					os.Remove(dir)
+					if mkErr := os.MkdirAll(dir, 0755); mkErr != nil {
+						os.Stderr.WriteString("ziziphus: still cannot create directory \"" + dir + "\": " + mkErr.Error() + "\n")
+					}
+				} else {
+					os.Stderr.WriteString("ziziphus: cannot create directory \"" + dir + "\": " + err.Error() + "\n")
+				}
+			}
+		}
 		writers = append(writers, &lumberjack.Logger{
 			Filename:   cfg.File,
 			MaxSize:    cfg.MaxSize,

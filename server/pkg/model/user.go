@@ -35,6 +35,7 @@ type User struct {
 	UID             string         `json:"uid"`
 	PrimaryColor    string         `json:"primary_color"`
 	SecondaryColor  string         `json:"secondary_color"`
+	Banned          bool           `json:"banned"`
 	ExtMeta         map[string]any `json:"ext_meta,omitempty"`
 	WakeMode        WakeMode       `json:"wake_mode"`
 	APIKey          string         `json:"api_key"`

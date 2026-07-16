@@ -4403,7 +4403,7 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string",
-                    "example": "张三"
+                    "example": "Alice"
                 },
                 "password": {
                     "type": "string",
@@ -4515,6 +4515,9 @@ const docTemplate = `{
                 },
                 "avatar": {
                     "type": "string"
+                },
+                "banned": {
+                    "type": "boolean"
                 },
                 "cover": {
                     "type": "string"

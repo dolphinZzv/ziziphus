@@ -1,4 +1,4 @@
-import { getItem, setItem, removeItem } from '@/lib/storage'
+import { getItem, setItem, removeItem } from '@/lib/secure-storage'
 import { api } from '@/services/api-client'
 import { wsClient } from '@/services/websocket-client'
 import type { User } from '@/types/user'
