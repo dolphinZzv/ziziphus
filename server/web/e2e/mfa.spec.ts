@@ -9,8 +9,8 @@ test('MFA TOTP section visible in user settings', async ({ page }) => {
   const { token, user_id: uid } = d.data
 
   await page.addInitScript(`(() => {
-    localStorage.setItem('ziziphus_token', JSON.stringify('${token}'));
-    localStorage.setItem('ziziphus_user', JSON.stringify({
+    sessionStorage.setItem('ziziphus_token', JSON.stringify('${token}'));
+    sessionStorage.setItem('ziziphus_user', JSON.stringify({
       user_id: '${uid}', account: 'mfa_ui_${ts}', name: 'MFATest', avatar: '',
       type: 0, status: 1, uid: '', primary_color: '#0F172A', secondary_color: '#64748B',
       wake_mode: 0, api_key: '', discoverable: true, allow_direct_chat: true, created_at: Date.now(),

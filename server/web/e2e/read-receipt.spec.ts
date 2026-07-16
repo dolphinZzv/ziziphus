@@ -6,8 +6,8 @@ const TS = Date.now()
 let aTok = '', aId = '', bTok = '', bId = '', convId = ''
 
 function auth(userId: string, name: string, token: string): string {
-  return `localStorage.setItem('ziziphus_token', JSON.stringify('${token}'));
-localStorage.setItem('ziziphus_user', JSON.stringify({user_id:'${userId}',account:'',name:'${name}',avatar:'',type:0,status:1,uid:'',primary_color:'#0F172A',secondary_color:'#64748B',wake_mode:0,api_key:'',created_at:1700000000}));
+  return `sessionStorage.setItem('ziziphus_token', JSON.stringify('${token}'));
+sessionStorage.setItem('ziziphus_user', JSON.stringify({user_id:'${userId}',account:'',name:'${name}',avatar:'',type:0,status:1,uid:'',primary_color:'#0F172A',secondary_color:'#64748B',wake_mode:0,api_key:'',created_at:1700000000}));
 localStorage.setItem('ziziphus_theme', JSON.stringify('light'));
 localStorage.setItem('ziziphus_language', JSON.stringify('zh'));`
 }

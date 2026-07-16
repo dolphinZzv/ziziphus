@@ -1,8 +1,8 @@
 import { test, expect } from './fixtures/coverage'
 
 const AUTH_INIT = `
-  localStorage.setItem('ziziphus_token', JSON.stringify('test-mock-token'));
-  localStorage.setItem('ziziphus_user', JSON.stringify({
+  sessionStorage.setItem('ziziphus_token', JSON.stringify('test-mock-token'));
+  sessionStorage.setItem('ziziphus_user', JSON.stringify({
     user_id: 'user_001', account: 'testuser', name: '测试用户', avatar: '/avatars/me.jpg',
     type: 0, status: 1, uid: '', primary_color: '#0F172A', secondary_color: '#64748B',
     wake_mode: 0, api_key: '', discoverable: true, allow_direct_chat: true, created_at: 1700000000,

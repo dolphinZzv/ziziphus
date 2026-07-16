@@ -28,7 +28,8 @@ server/internal/webembed/dist/*
 !server/internal/webembed/dist/.gitkeep
 server/web/dist/
 test-results
-
+.nyc_output
+coverage/
 
 *.out
 *.tmp*.test
