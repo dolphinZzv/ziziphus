@@ -12,8 +12,14 @@ type Config struct {
 	RateLimit    RateLimitConfig    `mapstructure:"ratelimit"`
 	Storage      StorageConfig      `mapstructure:"storage"`
 	SMTP         SMTPConfig         `mapstructure:"smtp"`
+	Asynq        AsynqConfig        `mapstructure:"asynq"`
 	Announcement AnnouncementConfig `mapstructure:"announcement"`
 	Log          LogConfig          `mapstructure:"log"`
+}
+
+type AsynqConfig struct {
+	Concurrency int               `mapstructure:"concurrency"`
+	Queues      map[string]int    `mapstructure:"queues"`
 }
 
 type AppConfig struct {
@@ -194,6 +200,12 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.SMTP.From == "" {
 		cfg.SMTP.From = cfg.SMTP.User
+	}
+	if cfg.Asynq.Concurrency == 0 {
+		cfg.Asynq.Concurrency = 4
+	}
+	if cfg.Asynq.Queues == nil {
+		cfg.Asynq.Queues = map[string]int{"email": 10}
 	}
 	if cfg.Log.Level == "" {
 		cfg.Log.Level = "info"

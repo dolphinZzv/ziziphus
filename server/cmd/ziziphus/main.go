@@ -129,16 +129,13 @@ func main() {
 			DB:       cfg.Redis.DB,
 		},
 		asynq.Config{
-			Concurrency: 4,
-			Queues: map[string]int{
-				"email": 10,
-			},
+			Concurrency: cfg.Asynq.Concurrency,
+			Queues:      cfg.Asynq.Queues,
 		},
 	)
 	go func() {
 		mux := asynq.NewServeMux()
-		mux.HandleFunc(tasks.TypeEmailVerification, mailHandler.ProcessTask)
-		mux.HandleFunc(tasks.TypePasswordReset, mailHandler.ProcessTask)
+		mailHandler.RegisterHandlers(mux)
 		if err := asynqServer.Start(mux); err != nil {
 			logger.Error("asynq server error", "error", err)
 		}
