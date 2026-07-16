@@ -5,70 +5,72 @@
 
 > **Demo**: [http://ziziphus.siciv.space:10011/](http://ziziphus.siciv.space:10011/)
 
-即时通讯（IM）应用，包含 Go 后端服务、React Web 前端、macOS 与 iOS 原生客户端。
+[English](README.md) | [中文](README.zh.md)
 
-## 项目结构
+An instant messaging (IM) application with a Go backend, React web frontend, and native macOS/iOS clients.
 
-| 目录 | 说明 |
-|------|------|
-| `server/` | Go 后端服务（REST API + WebSocket） |
-| `server/web/` | Web 前端（React + TypeScript + Vite） |
-| `client/` | macOS / iOS 客户端（Swift + SwiftUI） |
-| `deps/` | 本地依赖 |
-| `bin/` | 编译产物 |
+## Project Structure
 
-## 技术栈
+| Directory | Description |
+|-----------|-------------|
+| `server/` | Go backend (REST API + WebSocket) |
+| `server/web/` | Web frontend (React + TypeScript + Vite) |
+| `client/` | macOS / iOS client (Swift + SwiftUI) |
+| `deps/` | Local dependencies |
+| `bin/` | Build artifacts |
 
-- **后端**: Go 1.26, PostgreSQL, Redis, JWT, WebSocket
-- **Web 前端**: React 19, TypeScript, Vite, Tailwind CSS 4, Zustand
-- **客户端**: Swift 6.3.2, SwiftUI, iOS 18+ / macOS 15+
+## Tech Stack
+
+- **Backend**: Go 1.26, PostgreSQL, Redis, JWT, WebSocket
+- **Web Frontend**: React 19, TypeScript, Vite, Tailwind CSS 4, Zustand
+- **Client**: Swift 6.3.2, SwiftUI, iOS 18+ / macOS 15+
 
 ---
 
-## 安装与运行
+## Installation & Running
 
-### 环境要求
+### Prerequisites
 
 - Go 1.26+
 - Node.js 22+
-- Swift 6.3.2+ (macOS 客户端需要)
-- Xcode 16+ (iOS 客户端需要)
+- Swift 6.3.2+ (macOS client)
+- Xcode 16+ (iOS client)
 - PostgreSQL 16+
 - Redis 7+
-- Docker (可选)
+- Docker (optional)
 
-### Docker 部署（推荐）
+### Docker Deployment (Recommended)
 
-#### 使用 Docker Compose 一键启动
+#### One-Click Start with Docker Compose
 
 ```bash
-# 1. 准备配置文件
+# 1. Prepare config file
 cp server/config/config.example.yaml server/config/config.yaml
-# 编辑 config.yaml，可按需修改端口、密码等
+# Edit config.yaml as needed
 
-# 2. 启动全部服务（PostgreSQL + Redis + 应用）
+# 2. Start all services (PostgreSQL + Redis + App)
 docker compose up -d
 
-# 3. 查看日志
+# 3. View logs
 docker compose logs -f app
 
-# 4. 停止
+# 4. Stop
 docker compose down
 ```
 
-这会自动启动三个容器：
+This starts three containers:
 
-| 服务 | 镜像 | 端口 |
-|------|------|------|
+| Service | Image | Port |
+|---------|-------|------|
 | postgres | `postgres:16-alpine` | 5432 |
 | redis | `redis:7-alpine` | 6379 |
-| app | 本地构建 | 8080 |
+| app | local build | 8080 |
 
-数据持久化在 Docker volume 中，重启不丢失。
+Persistent data is stored in Docker volumes.
 
-#### 连接外部 PostgreSQL / Redis
+#### Using External PostgreSQL / Redis
 
-编辑 `server/config/config.yaml`，将地址改为外部服务：
+Edit `server/config/config.yaml`:
 
 ```yaml
 postgres:
@@ -79,23 +81,23 @@ redis:
   password: "your-password"
 ```
 
-然后只启动应用容器：
+Then start only the app container:
 
 ```bash
 docker compose up -d app
 ```
 
-#### 仅构建镜像（不启动）
+#### Build Image Only
 
 ```bash
-# 完整构建（含 Web 前端 + Go 后端）
+# Full build (Web frontend + Go backend)
 docker build -t ziziphus:latest .
 
-# 仅 Go 后端（需要预先 npm run build 前端）
+# Go backend only (requires npm run build first)
 docker build -t ziziphus:latest -f server/Dockerfile server/
 ```
 
-#### 手动运行容器
+#### Run Container Manually
 
 ```bash
 docker run -d \
@@ -105,56 +107,55 @@ docker run -d \
   ziziphus:latest
 ```
 
-#### 镜像注册表
+#### Image Registry
 
-每次推送到 main 分支，CI 自动构建并推送镜像到 GitHub Container Registry：
+On every push to main, CI builds and pushes to GitHub Container Registry:
 
 ```bash
 docker pull ghcr.io/dolphinZzv/ziziphus:latest
 ```
 
-### 1. 后端服务（源码运行）
+### 1. Backend (Source Code)
 
-#### 配置
+#### Configuration
 
 ```bash
-# 复制配置文件
 cp server/config/config.example.yaml server/config/config.yaml
-# 按需编辑 config.yaml，至少配置 PostgreSQL DSN 和 JWT secret
+# Edit config.yaml — at minimum configure PostgreSQL DSN and JWT secret
 ```
 
-配置项说明：
+Key configuration:
 
-| 字段 | 说明 | 默认值 |
-|------|------|--------|
-| `server.port` | HTTP 监听端口 | `8080` |
-| `postgres.dsn` | PostgreSQL 连接串 | `postgres://postgres@localhost:5432/imdb?sslmode=disable` |
-| `redis.addr` | Redis 地址 | `localhost:6379` |
-| `jwt.secret` | JWT 签名密钥（生产环境请更换） | `change-me-to-a-random-secret` |
-| `jwt.expire_hours` | Access Token 有效期 | `1` 小时 |
-| `jwt.refresh_expire_hours` | Refresh Token 有效期 | `168` 小时（7 天） |
-| `ratelimit.msg_per_sec` | 消息发送频率限制 | `30` 条/秒 |
-| `smtp.*` | SMTP 邮件服务（用于验证码等） | — |
+| Field | Description | Default |
+|-------|-------------|---------|
+| `server.port` | HTTP listen port | `8080` |
+| `postgres.dsn` | PostgreSQL connection string | `postgres://postgres@localhost:5432/imdb?sslmode=disable` |
+| `redis.addr` | Redis address | `localhost:6379` |
+| `jwt.secret` | JWT signing key (change in production) | `change-me-to-a-random-secret` |
+| `jwt.expire_hours` | Access token lifetime | `1` hour |
+| `jwt.refresh_expire_hours` | Refresh token lifetime | `168` hours (7 days) |
+| `ratelimit.msg_per_sec` | Message rate limit | `30` msg/sec |
+| `smtp.*` | SMTP email service (for verification codes) | — |
 
-#### 安装依赖并启动
+#### Install & Run
 
 ```bash
-# 安装 Go 依赖
+# Install Go dependencies
 cd server && go mod download
 
-# 构建并启动（自动编译 Web 前端 + 启动服务）
+# Build and start (auto-compiles web frontend + starts server)
 make server
 
-# 仅启动已编译的二进制
+# Start pre-built binary only
 bin/ziziphus -c server/config/config.yaml
 
-# 停止服务
+# Stop
 make server-stop
 ```
 
-启动后 API 服务监听在 `http://localhost:8080`。
+API server listens on `http://localhost:8080`.
 
-### 2. Web 前端（开发模式）
+### 2. Web Frontend (Dev Mode)
 
 ```bash
 cd server/web
@@ -162,59 +163,59 @@ npm install
 npm run dev
 ```
 
-开发服务器启动于 `http://localhost:5173`，API 默认代理到 `http://localhost:8080`。
+Dev server at `http://localhost:5173`, API proxied to `http://localhost:8080`.
 
-生产构建：
+Production build:
 
 ```bash
 cd server/web
 npm run build
-# 构建产物自动复制到 server/internal/webembed/dist/
-# 随后编译 Go 二进制即可嵌入前端
+# Output is auto-copied to server/internal/webembed/dist/
+# Then compile Go binary to embed the frontend
 ```
 
-### 3. macOS 客户端
+### 3. macOS Client
 
 ```bash
-# 确保已安装本地依赖
-# deps/textual/ 为本地 Swift 包依赖
+# Ensure local dependencies are installed
+# deps/textual/ is a local Swift package
 
-# 构建并启动 macOS 客户端
+# Build & launch macOS client
 make macos
 ```
 
-首次运行会自动生成 `Info.plist`，并打开应用。如需清除后重新构建：
+First run auto-generates `Info.plist` and opens the app. To rebuild:
 
 ```bash
 make macos-stop
 make macos
 ```
 
-### 4. iOS 客户端
+### 4. iOS Client
 
 ```bash
-# 1) 编辑 .env 文件，设置 IOS_DEVICE 为你的真机名称
-# 2) 生成 Xcode 项目
+# 1) Edit .env, set IOS_DEVICE to your device name
+# 2) Generate Xcode project
 make xcodegen
 
-# 3) 编译并部署到真机
+# 3) Build and deploy to device
 make ios-deploy
 
-# 也可手动通过 Xcode 打开 client/IMApp.xcodeproj
-# 选择 IMApp-iOS scheme，目标选真机，Cmd+R 运行
+# Or open client/IMApp.xcodeproj in Xcode
+# Select IMApp-iOS scheme, target your device, Cmd+R
 ```
 
-> 本项目不使用模拟器，请使用真机部署（`CLAUDE.md` 约定）。
+> This project uses real devices only (no simulators — see `CLAUDE.md`).
 
-### 5. 数据库迁移
+### 5. Database Migrations
 
-数据库迁移在服务启动时自动执行（`db.RunMigrations`）。迁移脚本位于：
+Migrations run automatically on startup (`db.RunMigrations`). Scripts are in:
 
 ```
 server/internal/storage/db/migrations/
 ```
 
-如需手动执行：
+To run manually:
 
 ```bash
 psql -d imdb -f server/internal/storage/db/migrations/001_initial.sql
@@ -222,78 +223,78 @@ psql -d imdb -f server/internal/storage/db/migrations/001_initial.sql
 
 ---
 
-## 代码质量
+## Code Quality
 
 ```bash
-# Web 前端 lint
+# Web frontend lint
 make lint-web
 
-# Go 后端 lint
+# Go backend lint
 make lint-server
 
-# 全部 lint
+# All lint
 make lint
 ```
 
 ---
 
-## 部署
+## Deployment
 
-### 一键远程部署
+### One-Click Remote Deploy
 
-编辑 `.env` 文件，配置以下变量：
+Edit `.env` file:
 
-| 变量 | 说明 |
-|------|------|
-| `SSH_HOST` | 服务器地址 |
-| `SSH_PORT` | SSH 端口 |
-| `DEPLOY_PORT` | 服务端口 |
-| `DEPLOY_USER` | SSH 用户 |
-| `DEPLOY_PATH` | 部署路径 |
-| `DEPLOY_DSN` | 生产数据库连接串 |
+| Variable | Description |
+|----------|-------------|
+| `SSH_HOST` | Server address |
+| `SSH_PORT` | SSH port |
+| `DEPLOY_PORT` | Service port |
+| `DEPLOY_USER` | SSH user |
+| `DEPLOY_PATH` | Deploy path |
+| `DEPLOY_DSN` | Production database DSN |
 
-然后执行：
+Then run:
 
 ```bash
-make deploy          # 构建并部署到远程服务器（systemd 服务）
-make deploy-status   # 查看服务状态
-make deploy-logs     # 查看服务日志
+make deploy          # Build & deploy (systemd service)
+make deploy-status   # Check service status
+make deploy-logs     # View service logs
 ```
 
 ---
 
-## 架构概览
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Web 前端 (React + Vite)                         │
+│  Web Frontend (React + Vite)                     │
 │  server/web/                                     │
 └──────────────┬──────────────────────────────────┘
                │ HTTP / WebSocket
 ┌──────────────▼──────────────────────────────────┐
-│  Go 后端 (ziziphus)                              │
+│  Go Backend (ziziphus)                           │
 │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
-│  │ API 层   │ │ WebSocket │ │ 消息路由 / 推送   │ │
+│  │ API      │ │ WebSocket │ │ Message Route    │ │
 │  └──────────┘ └──────────┘ └──────────────────┘ │
 │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
-│  │ 会话管理  │ │ 网关     │ │ 文件存储          │ │
+│  │ Session  │ │ Gateway  │ │ File Storage     │ │
 │  └──────────┘ └──────────┘ └──────────────────┘ │
 │  ┌──────────┐ ┌──────────┐                       │
-│  │ PostgreSQL│ │ Redis    │                       │
+│  │PostgreSQL│ │ Redis    │                       │
 │  └──────────┘ └──────────┘                       │
 └─────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────┐
-│  macOS / iOS 客户端 (Swift + SwiftUI)             │
+│  macOS / iOS Client (Swift + SwiftUI)            │
 │  client/                                         │
 └─────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 环境变量
+## Environment Variables
 
-参考 `.env.example` 文件：
+See `.env.example` files:
 
-- `server/config/config.example.yaml` — 后端配置模版
-- `server/web/.env.example` — Web 前端环境变量模版
-- 项目根 `.env` — 部署参数（已加入 `.gitignore`，不会提交）
+- `server/config/config.example.yaml` — Backend config template
+- `server/web/.env.example` — Web frontend env template
+- Root `.env` — Deploy parameters (gitignored)
