@@ -24,7 +24,8 @@ panda_ai
 deps/textual/
 
 # Embedded web frontend build output
-server/internal/webembed/dist/
+server/internal/webembed/dist/*
+!server/internal/webembed/dist/.gitkeep
 server/web/dist/
 test-results
 
