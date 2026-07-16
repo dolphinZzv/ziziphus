@@ -23,6 +23,9 @@ func NewStore(fs afero.Fs, basePath string) *Store {
 }
 
 func (s *Store) Save(ctx context.Context, path string, r io.Reader) (int64, error) {
+	if _, err := s.safeRelPath(path); err != nil {
+		return 0, err
+	}
 	fullPath := s.fullPath(path)
 	if err := s.fs.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 		return 0, err
@@ -36,18 +39,30 @@ func (s *Store) Save(ctx context.Context, path string, r io.Reader) (int64, erro
 }
 
 func (s *Store) Open(ctx context.Context, path string) (io.ReadCloser, error) {
+	if _, err := s.safeRelPath(path); err != nil {
+		return nil, err
+	}
 	return s.fs.Open(s.fullPath(path))
 }
 
 func (s *Store) Delete(ctx context.Context, path string) error {
+	if _, err := s.safeRelPath(path); err != nil {
+		return err
+	}
 	return s.fs.Remove(s.fullPath(path))
 }
 
 func (s *Store) Exists(ctx context.Context, path string) (bool, error) {
+	if _, err := s.safeRelPath(path); err != nil {
+		return false, err
+	}
 	return afero.Exists(s.fs, s.fullPath(path))
 }
 
 func (s *Store) Size(ctx context.Context, path string) (int64, error) {
+	if _, err := s.safeRelPath(path); err != nil {
+		return 0, err
+	}
 	fi, err := s.fs.Stat(s.fullPath(path))
 	if err != nil {
 		return 0, err
@@ -141,6 +156,12 @@ func (s *Store) MoveFolder(ctx context.Context, convID, srcPath, dstParent strin
 
 // MoveFile moves a file to a different folder.
 func (s *Store) MoveFile(ctx context.Context, srcRelPath, dstRelPath string) error {
+	if _, err := s.safeRelPath(srcRelPath); err != nil {
+		return err
+	}
+	if _, err := s.safeRelPath(dstRelPath); err != nil {
+		return err
+	}
 	if err := s.fs.MkdirAll(filepath.Dir(s.fullPath(dstRelPath)), 0o755); err != nil {
 		return err
 	}
@@ -209,10 +230,20 @@ func (s *Store) RelPath(fullPath string) string {
 // safeRelPath validates that a relative user-supplied path does not contain
 // directory traversal components ("..") and returns a cleaned relative path.
 func (s *Store) safeRelPath(rel string) (string, error) {
+	// Check raw input for ".." before filepath.Clean can resolve it.
+	if strings.Contains(filepath.ToSlash(rel), "..") {
+		return "", fmt.Errorf("path %q contains directory traversal", rel)
+	}
 	clean := filepath.Clean(rel)
 	clean = strings.TrimPrefix(clean, "/")
-	if strings.Contains(clean, "..") || filepath.IsAbs(clean) {
-		return "", fmt.Errorf("path %q is not allowed", rel)
+	if filepath.IsAbs(clean) {
+		return "", fmt.Errorf("path %q is absolute", rel)
+	}
+	// Check that the resolved path stays within the base directory.
+	resolved := filepath.Join(s.basePath, clean)
+	basePrefix := s.basePath + string(filepath.Separator)
+	if !strings.HasPrefix(resolved, basePrefix) && resolved != s.basePath {
+		return "", fmt.Errorf("path %q escapes base directory", rel)
 	}
 	return clean, nil
 }
