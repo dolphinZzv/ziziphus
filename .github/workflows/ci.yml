@@ -25,14 +25,14 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Create web dist dir (for //go:embed)
+        run: mkdir -p internal/webembed/dist
+
       - name: Lint
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.12.2
           working-directory: server
-
-      - name: Create web dist dir (for //go:embed)
-        run: mkdir -p internal/webembed/dist
 
       - name: Build
         run: go build ./...
