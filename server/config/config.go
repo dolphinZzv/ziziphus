@@ -18,8 +18,8 @@ type Config struct {
 }
 
 type AsynqConfig struct {
-	Concurrency int               `mapstructure:"concurrency"`
-	Queues      map[string]int    `mapstructure:"queues"`
+	Concurrency int            `mapstructure:"concurrency"`
+	Queues      map[string]int `mapstructure:"queues"`
 }
 
 type AppConfig struct {

@@ -275,10 +275,15 @@ var ctxTODO = context.Background()
 // Password reset
 // ---------------------------------------------------------------------------
 
+type mailerForPasswordReset interface {
+	Enabled() bool
+	SendPasswordResetCode(to, code string) error
+}
+
 // RequestPasswordReset generates a 6-digit reset code, stores it, and sends it via email.
 // Returns the user ID (so the frontend can track the reset session) and the code for dev mode.
 // If mailer is nil or its Enabled() returns false, returns an error.
-func (s *Service) RequestPasswordReset(ctx context.Context, accountOrEmail string, resetStore passwordResetStore, mailer interface{ Enabled() bool; SendPasswordResetCode(to, code string) error }) (string, string, error) {
+func (s *Service) RequestPasswordReset(ctx context.Context, accountOrEmail string, resetStore passwordResetStore, mailer mailerForPasswordReset) (string, string, error) {
 	// Look up by account first, then by email
 	user, err := s.userRepo.GetByAccount(ctx, accountOrEmail)
 	if err != nil {
@@ -317,7 +322,7 @@ func (s *Service) VerifyResetCode(ctx context.Context, userID, code string, rese
 		return &model.AppError{Code: model.ErrBadMessage, Message: "no reset code found", Key: "auth.reset_code_invalid"}
 	}
 	if time.Now().After(pr.ExpiresAt) {
-		resetStore.Delete(ctx, userID)
+		_ = resetStore.Delete(ctx, userID)
 		return &model.AppError{Code: model.ErrBadMessage, Message: "reset code expired", Key: "auth.reset_code_expired"}
 	}
 	if pr.Code != code {
