@@ -44,7 +44,7 @@ func userColumnOrder() []string {
 	return []string{
 		"id", "type", "name", "email", "avatar", "cover", "status",
 		"created_at", "account", "primary_color", "secondary_color",
-		"uid", "wake_mode", "api_key", "discoverable", "allow_direct_chat",
+		"uid", "wake_mode", "api_key", "discoverable", "allow_direct_chat", "headline",
 	}
 }
 
@@ -58,12 +58,12 @@ func TestUserRepo_Create(t *testing.T) {
 	repo := NewUserRepo(mock)
 	u := userTestUser()
 
-	cols := `INSERT INTO users \(id, type, name, email, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat\) VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9, \$10, \$11, \$12, \$13, \$14, \$15, \$16, \$17, \$18\)`
+	cols := `INSERT INTO users \(id, type, name, email, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline\) VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9, \$10, \$11, \$12, \$13, \$14, \$15, \$16, \$17, \$18, \$19\)`
 	mock.ExpectExec(cols).
 		WithArgs(u.ID, u.Type, u.Name, u.Email, u.Avatar, u.Cover, u.Status,
 			u.Password, u.ExtMeta, AnyTime{}, u.Account,
 			u.PrimaryColor, u.SecondaryColor, u.UID, u.WakeMode,
-			u.APIKey, u.Discoverable, u.AllowDirectChat).
+			u.APIKey, u.Discoverable, u.AllowDirectChat, u.Headline).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	err = repo.Create(context.Background(), u)
@@ -89,7 +89,7 @@ func TestUserRepo_Create_Error(t *testing.T) {
 		WithArgs(u.ID, u.Type, u.Name, u.Email, u.Avatar, u.Cover, u.Status,
 			u.Password, u.ExtMeta, AnyTime{}, u.Account,
 			u.PrimaryColor, u.SecondaryColor, u.UID, u.WakeMode,
-			u.APIKey, u.Discoverable, u.AllowDirectChat).
+			u.APIKey, u.Discoverable, u.AllowDirectChat, u.Headline).
 		WillReturnError(context.DeadlineExceeded)
 
 	err = repo.Create(context.Background(), u)
@@ -103,7 +103,7 @@ func fullUserCols() []string {
 		"id", "type", "name", "email", "avatar", "cover", "status",
 		"password", "ext_meta",
 		"created_at", "account", "primary_color", "secondary_color",
-		"uid", "wake_mode", "api_key", "discoverable", "allow_direct_chat",
+		"uid", "wake_mode", "api_key", "discoverable", "allow_direct_chat", "headline",
 	}
 }
 
@@ -121,9 +121,9 @@ func TestUserRepo_GetByID(t *testing.T) {
 		AddRow("u1", model.UserHuman, "Alice", "", "av.jpg", "", 1,
 			"pwd_hash", map[string]any{},
 			now, "alice", "#f00", "#0f0",
-			"", 0, "", true, true)
+			"", 0, "", true, true, "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline FROM users WHERE id = $1`)).
 		WithArgs("u1").
 		WillReturnRows(rows)
 
@@ -163,7 +163,7 @@ func TestUserRepo_GetByID_NotFound(t *testing.T) {
 
 	repo := NewUserRepo(mock)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline FROM users WHERE id = $1`)).
 		WithArgs("nonexistent").
 		WillReturnError(context.DeadlineExceeded)
 
@@ -186,12 +186,12 @@ func TestUserRepo_GetByIDs(t *testing.T) {
 	rows := pgxmock.NewRows(userColumnOrder()).
 		AddRow("u1", model.UserHuman, "Alice", "", "av1.jpg", "cover1", 1,
 			now, "alice", "", "",
-			"", 0, "", true, false).
+			"", 0, "", true, false, "").
 		AddRow("u2", model.UserHuman, "Bob", "", "av2.jpg", "cover2", 1,
 			now, "bob", "", "",
-			"", 0, "", false, true)
+			"", 0, "", false, true, "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE id = ANY($1)`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline FROM users WHERE id = ANY($1)`)).
 		WithArgs([]string{"u1", "u2"}).
 		WillReturnRows(rows)
 
@@ -232,12 +232,12 @@ func TestUserRepo_Search(t *testing.T) {
 	rows := pgxmock.NewRows(userColumnOrder()).
 		AddRow("u1", model.UserHuman, "Alice", "", "av.jpg", "cv.jpg", 1,
 			now, "alice", "", "",
-			"", 0, "", false, false).
+			"", 0, "", false, false, "").
 		AddRow("u3", model.UserHuman, "Alicia", "", "av3.jpg", "cv3.jpg", 1,
 			now, "alicia", "", "",
-			"", 0, "", false, false)
+			"", 0, "", false, false, "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline FROM users WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`)).
 		WithArgs("%ali%", 10, 0).
 		WillReturnRows(rows)
 
@@ -270,7 +270,7 @@ func TestUserRepo_Search_Empty(t *testing.T) {
 		WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(0))
 
 	rows := pgxmock.NewRows(userColumnOrder())
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline FROM users WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`)).
 		WithArgs("%zzz%", 10, 0).
 		WillReturnRows(rows)
 
@@ -300,9 +300,9 @@ func TestUserRepo_GetByAccount(t *testing.T) {
 		AddRow("u1", model.UserHuman, "Alice", "", "av.jpg", "cv.jpg", 1,
 			"pwd", map[string]any{},
 			now, "alice", "", "",
-			"", 0, "", false, false)
+			"", 0, "", false, false, "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE account = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline FROM users WHERE account = $1`)).
 		WithArgs("alice").
 		WillReturnRows(rows)
 
@@ -328,7 +328,7 @@ func TestUserRepo_Update(t *testing.T) {
 	repo := NewUserRepo(mock)
 
 	mock.ExpectExec(`UPDATE users SET name = \$1, avatar = \$2, cover = \$3, email = \$4, primary_color = \$5, secondary_color = \$6, discoverable = \$7, allow_direct_chat = \$8, headline = \$9 WHERE id = \$10`).
-		WithArgs("NewName", "new_av.jpg", "cover.jpg", "test@email.com", "#FF0000", "#00FF00", true, true, "u1").
+		WithArgs("NewName", "new_av.jpg", "cover.jpg", "test@email.com", "#FF0000", "#00FF00", true, true, "", "u1").
 		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 	err = repo.Update(context.Background(), "u1", "NewName", "new_av.jpg", "cover.jpg", "test@email.com", "#FF0000", "#00FF00", "", true, true)
@@ -382,12 +382,12 @@ func TestUserRepo_ListAgents(t *testing.T) {
 	rows := pgxmock.NewRows(userColumnOrder()).
 		AddRow("agent_1", model.UserAgent, "Bot1", "", "", "", 0,
 			now, "", "", "",
-			"owner_1", 0, "", false, false).
+			"owner_1", 0, "", false, false, "").
 		AddRow("agent_2", model.UserAgent, "Bot2", "", "a.jpg", "c.jpg", 0,
 			now, "", "", "",
-			"owner_1", 0, "key_2", false, false)
+			"owner_1", 0, "key_2", false, false, "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE type = $1 AND uid = $2 ORDER BY created_at ASC`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline FROM users WHERE type = $1 AND uid = $2 ORDER BY created_at ASC`)).
 		WithArgs(model.UserAgent, "owner_1").
 		WillReturnRows(rows)
 
@@ -419,7 +419,7 @@ func TestUserRepo_UpdateAgent(t *testing.T) {
 	repo := NewUserRepo(mock)
 
 	mock.ExpectExec(`UPDATE users SET name = \$1, avatar = \$2, cover = \$3, primary_color = \$4, secondary_color = \$5, wake_mode = \$6, discoverable = \$7, allow_direct_chat = \$8, headline = \$9 WHERE id = \$10 AND type = \$11 AND uid = \$12`).
-		WithArgs("AgentX", "av.png", "cv.png", "#111", "#222", model.WakeModeAll, true, false, "agent_1", model.UserAgent, "owner_1").
+		WithArgs("AgentX", "av.png", "cv.png", "#111", "#222", model.WakeModeAll, true, false, "", "agent_1", model.UserAgent, "owner_1").
 		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 	err = repo.UpdateAgent(context.Background(), "agent_1", "owner_1", "AgentX", "av.png", "cv.png", "#111", "#222", "", model.WakeModeAll, true, false)
@@ -466,9 +466,9 @@ func TestUserRepo_GetByAPIKey(t *testing.T) {
 	rows := pgxmock.NewRows(userColumnOrder()).
 		AddRow("agent_1", model.UserAgent, "Bot", "", "", "", 0,
 			now, "", "", "",
-			"owner_1", 0, "sk-test-123", false, false)
+			"owner_1", 0, "sk-test-123", false, false, "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE api_key = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline FROM users WHERE api_key = $1`)).
 		WithArgs("sk-test-123").
 		WillReturnRows(rows)
 
@@ -496,7 +496,7 @@ func TestUserRepo_GetByAPIKey_NotFound(t *testing.T) {
 
 	repo := NewUserRepo(mock)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat FROM users WHERE api_key = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline FROM users WHERE api_key = $1`)).
 		WithArgs("invalid-key").
 		WillReturnError(context.DeadlineExceeded)
 

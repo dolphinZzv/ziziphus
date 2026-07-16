@@ -44,9 +44,9 @@ func TestFileRepo_Insert(t *testing.T) {
 		CreatedAt:    time.Now().UnixMilli(),
 	}
 
-	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO files (file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`)).
+	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO files (file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, folder_path, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`)).
 		WithArgs(f.FileID, f.UploaderID, f.Name, f.Size, f.ContentType,
-			f.Width, f.Height, f.URL, f.ThumbnailURL, f.ConvID, AnyTime{}).
+			f.Width, f.Height, f.URL, f.ThumbnailURL, f.ConvID, f.FolderPath, AnyTime{}).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	err = repo.Insert(context.Background(), f)
@@ -68,7 +68,7 @@ func TestFileRepo_Insert_Error(t *testing.T) {
 	repo := NewFileRepo(mock)
 
 	mock.ExpectExec(`INSERT INTO files`).
-		WithArgs("", "", "", int64(0), 0, int32(0), int32(0), "", "", "", AnyTime{}).
+		WithArgs("", "", "", int64(0), 0, int32(0), int32(0), "", "", "", "", AnyTime{}).
 		WillReturnError(context.DeadlineExceeded)
 
 	err = repo.Insert(context.Background(), &model.FileInfo{})
@@ -87,10 +87,10 @@ func TestFileRepo_GetByID(t *testing.T) {
 	repo := NewFileRepo(mock)
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "created_at"}).
-		AddRow("f1", "u1", "photo.jpg", int64(1024), 0, int32(800), int32(600), "/files/f1.jpg", "/files/f1_thumb.jpg", nil, now)
+	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "COALESCE(folder_path,'')", "created_at"}).
+		AddRow("f1", "u1", "photo.jpg", int64(1024), 0, int32(800), int32(600), "/files/f1.jpg", "/files/f1_thumb.jpg", nil, "", now)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, created_at FROM files WHERE file_id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, COALESCE(folder_path,''), created_at FROM files WHERE file_id = $1`)).
 		WithArgs("f1").
 		WillReturnRows(rows)
 
@@ -121,7 +121,7 @@ func TestFileRepo_GetByID_NotFound(t *testing.T) {
 
 	repo := NewFileRepo(mock)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, created_at FROM files WHERE file_id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, COALESCE(folder_path,''), created_at FROM files WHERE file_id = $1`)).
 		WithArgs("nonexistent").
 		WillReturnError(context.DeadlineExceeded)
 
