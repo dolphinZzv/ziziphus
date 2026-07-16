@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/spf13/afero"
 	"ziziphus/config"
 	"ziziphus/internal/api"
@@ -23,6 +24,7 @@ import (
 	"ziziphus/internal/storage/cache"
 	"ziziphus/internal/storage/db"
 	"ziziphus/internal/storage/file"
+	"ziziphus/internal/tasks"
 	"ziziphus/internal/webembed"
 	"ziziphus/pkg/logger"
 	"ziziphus/pkg/model"
@@ -109,6 +111,39 @@ func main() {
 	emailVerifyRepo := db.NewEmailVerifyRepo(pool)
 	mailer := auth.NewMailer(cfg.SMTP, cfg.App.Name)
 
+	// Asynq task queue (Redis-backed) for async email processing
+	asynqClient := asynq.NewClient(asynq.RedisClientOpt{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+	defer asynqClient.Close()
+
+	mailDispatcher := tasks.NewMailDispatcher(asynqClient, mailer.Enabled())
+	mailHandler := tasks.NewMailHandler(mailer)
+
+	asynqServer := asynq.NewServer(
+		asynq.RedisClientOpt{
+			Addr:     cfg.Redis.Addr,
+			Password: cfg.Redis.Password,
+			DB:       cfg.Redis.DB,
+		},
+		asynq.Config{
+			Concurrency: 4,
+			Queues: map[string]int{
+				"email": 10,
+			},
+		},
+	)
+	go func() {
+		mux := asynq.NewServeMux()
+		mux.HandleFunc(tasks.TypeEmailVerification, mailHandler.ProcessTask)
+		mux.HandleFunc(tasks.TypePasswordReset, mailHandler.ProcessTask)
+		if err := asynqServer.Start(mux); err != nil {
+			logger.Error("asynq server error", "error", err)
+		}
+	}()
+
 	// Caches
 	sessCache := cache.NewSessionCache(rdb)
 	seqCache := cache.NewSeqCache(rdb)
@@ -163,7 +198,7 @@ func main() {
 
 	// HTTP API handlers
 	passwordResetRepo := db.NewPasswordResetRepo(pool)
-userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailer, passwordResetRepo, cfg.Server.RegistrationAllowed(), cfg.App.Name)
+userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailDispatcher, passwordResetRepo, cfg.Server.RegistrationAllowed(), cfg.App.Name)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, receiptRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
@@ -293,6 +328,10 @@ userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo
 	logger.Info("shutting down...")
 
 	cancel()
+
+	// Graceful shutdown of asynq worker
+	asynqServer.Shutdown()
+
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 	_ = srv.Shutdown(shutdownCtx)
