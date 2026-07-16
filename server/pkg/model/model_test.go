@@ -559,7 +559,7 @@ func TestAppError_Constants(t *testing.T) {
 		if ErrBadMsgContent.Code != ErrBadMessage {
 			t.Errorf("Code = %d, want %d", ErrBadMsgContent.Code, ErrBadMessage)
 		}
-		if ErrBadMsgContent.Message != "消息内容非法" {
+		if ErrBadMsgContent.Message != "illegal message content" {
 			t.Errorf("Message = %q", ErrBadMsgContent.Message)
 		}
 	})
@@ -568,7 +568,7 @@ func TestAppError_Constants(t *testing.T) {
 		if ErrConvNotFound.Code != ErrNotFound {
 			t.Errorf("Code = %d, want %d", ErrConvNotFound.Code, ErrNotFound)
 		}
-		if ErrConvNotFound.Message != "会话不存在或无权限" {
+		if ErrConvNotFound.Message != "conversation not found or no permission" {
 			t.Errorf("Message = %q", ErrConvNotFound.Message)
 		}
 	})
@@ -577,7 +577,7 @@ func TestAppError_Constants(t *testing.T) {
 		if ErrRateLimited.Code != ErrRateLimit {
 			t.Errorf("Code = %d, want %d", ErrRateLimited.Code, ErrRateLimit)
 		}
-		if ErrRateLimited.Message != "消息频率超限" {
+		if ErrRateLimited.Message != "rate limited" {
 			t.Errorf("Message = %q", ErrRateLimited.Message)
 		}
 	})
@@ -586,7 +586,7 @@ func TestAppError_Constants(t *testing.T) {
 		if ErrNotInConv.Code != ErrNoPermission {
 			t.Errorf("Code = %d, want %d", ErrNotInConv.Code, ErrNoPermission)
 		}
-		if ErrNotInConv.Message != "发送者不在会话中" {
+		if ErrNotInConv.Message != "sender not in conversation" {
 			t.Errorf("Message = %q", ErrNotInConv.Message)
 		}
 	})
@@ -595,7 +595,7 @@ func TestAppError_Constants(t *testing.T) {
 		if ErrMsgTooLarge.Code != ErrTooLarge {
 			t.Errorf("Code = %d, want %d", ErrMsgTooLarge.Code, ErrTooLarge)
 		}
-		if ErrMsgTooLarge.Message != "消息体过大" {
+		if ErrMsgTooLarge.Message != "message body too large" {
 			t.Errorf("Message = %q", ErrMsgTooLarge.Message)
 		}
 	})
@@ -604,7 +604,7 @@ func TestAppError_Constants(t *testing.T) {
 		if ErrInternalServer.Code != ErrInternal {
 			t.Errorf("Code = %d, want %d", ErrInternalServer.Code, ErrInternal)
 		}
-		if ErrInternalServer.Message != "服务端内部错误" {
+		if ErrInternalServer.Message != "internal server error" {
 			t.Errorf("Message = %q", ErrInternalServer.Message)
 		}
 	})

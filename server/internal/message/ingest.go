@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"ziziphus/internal/metrics"
+	"ziziphus/pkg/i18n"
 	"ziziphus/pkg/logger"
 	"ziziphus/pkg/model"
 	"ziziphus/pkg/protocol"
@@ -414,15 +415,18 @@ func (in *Ingest) handleFormResponse(ctx context.Context, senderID string, sessi
 	sysB := model.MakeSystemConvID(req.ToUserID)   // B's system conv
 	sysA := model.MakeSystemConvID(req.FromUserID) // A's system conv
 
+	// Determine recipient languages from stored preferences.
+	langA := getUserLang(in.userDB, ctx, req.FromUserID)
+	langB := getUserLang(in.userDB, ctx, req.ToUserID)
+
 	if newStatus == model.ContactRequestApproved {
 		in.ensureContacts(ctx, req.FromUserID, req.ToUserID)
-		_, _ = in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s approved your friend request", responderName))
-		_, _ = in.SendSystemMessage(ctx, sysB, fmt.Sprintf("You approved %s's friend request", initiatorName))
+		_, _ = in.SendSystemMessage(ctx, sysA, i18n.TWithLang(langA, "contact_request.approved_by", responderName))
+		_, _ = in.SendSystemMessage(ctx, sysB, i18n.TWithLang(langB, "contact_request.you_approved", initiatorName))
 	} else {
-		_, _ = in.SendSystemMessage(ctx, sysA, fmt.Sprintf("%s rejected your friend request", responderName))
-		_, _ = in.SendSystemMessage(ctx, sysB, fmt.Sprintf("You rejected %s's friend request", initiatorName))
+		_, _ = in.SendSystemMessage(ctx, sysA, i18n.TWithLang(langA, "contact_request.rejected_by", responderName))
+		_, _ = in.SendSystemMessage(ctx, sysB, i18n.TWithLang(langB, "contact_request.you_rejected", initiatorName))
 	}
-
 	// Push the FormResponse to the sender's own system conversation.
 	targets := in.router.Route(ctx, msg)
 	if len(targets) > 0 {
@@ -439,6 +443,14 @@ func (in *Ingest) handleFormResponse(ctx context.Context, senderID string, sessi
 
 // ensureContacts creates bidirectional contacts and ensures the P2P conversation exists.
 // It is idempotent — safe to call multiple times.
+// getUserLang retrieves a user's stored language preference, falling back to zh-Hans.
+func getUserLang(userDB userGetter, ctx context.Context, userID string) i18n.Lang {
+	if u, err := userDB.GetByID(ctx, userID); err == nil && u != nil && u.Language != "" {
+		return i18n.Lang(u.Language)
+	}
+	return i18n.LangZH
+}
+
 func (in *Ingest) ensureContacts(ctx context.Context, userA, userB string) {
 	if in.contactRepo != nil {
 		_ = in.contactRepo.AddContact(ctx, userA, userB)

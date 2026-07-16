@@ -63,7 +63,7 @@ func NewService(jwtSecret string, accessExpireHours, refreshExpireHours int, use
 }
 
 // Register creates a new user with a bcrypt-hashed password and returns tokens.
-func (s *Service) Register(ctx context.Context, name, password, account, email string) (*model.User, string, string, error) {
+func (s *Service) Register(ctx context.Context, name, password, account, email, language string) (*model.User, string, string, error) {
 	if len(password) < 8 {
 		return nil, "", "", &model.AppError{Code: model.ErrBadMessage, Message: "password must be at least 8 characters", Key: "auth.password_too_short"}
 	}

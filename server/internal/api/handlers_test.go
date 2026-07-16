@@ -78,6 +78,7 @@ type mockUserRepo struct {
 	getByAPIKeyFunc       func(ctx context.Context, apiKey string) (*model.User, error)
 	updateAgentAPIKeyFunc func(ctx context.Context, agentID, uid, apiKey string) error
 	deleteAccountFunc     func(ctx context.Context, userID string) error
+	updateLanguageFunc    func(ctx context.Context, userID, language string) error
 }
 
 func (m *mockUserRepo) Create(ctx context.Context, u *model.User) error {
@@ -160,6 +161,13 @@ func (m *mockUserRepo) UpdateAgentAPIKey(ctx context.Context, agentID, uid, apiK
 func (m *mockUserRepo) DeleteAccount(ctx context.Context, userID string) error {
 	if m.deleteAccountFunc != nil {
 		return m.deleteAccountFunc(ctx, userID)
+	}
+	return nil
+}
+
+func (m *mockUserRepo) UpdateLanguage(ctx context.Context, userID, language string) error {
+	if m.updateLanguageFunc != nil {
+		return m.updateLanguageFunc(ctx, userID, language)
 	}
 	return nil
 }

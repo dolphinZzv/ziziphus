@@ -56,6 +56,8 @@ var Messages = map[string]map[Lang]string{
 	"sys.member_added":   {LangZH: "%s 被加入群", LangEN: "%s joined the group"},
 	"sys.member_removed": {LangZH: "%s 被移出群", LangEN: "%s was removed from the group"},
 	"sys.member_left":    {LangZH: "%s 退出了群", LangEN: "%s left the group"},
+	"sys.file_uploaded":  {LangZH: "%s 上传了文件: %s", LangEN: "%s uploaded: %s"},
+	"sys.file_deleted":   {LangZH: "%s 删除了文件: %s", LangEN: "%s deleted: %s"},
 
 	// ===== Friend request messages =====
 	"contact_request.title":              {LangZH: "好友申请", LangEN: "Friend Request"},

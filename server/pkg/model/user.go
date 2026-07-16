@@ -40,6 +40,7 @@ type User struct {
 	WakeMode        WakeMode       `json:"wake_mode"`
 	APIKey          string         `json:"api_key"`
 	Headline        string         `json:"headline,omitempty"`
+	Language        string         `json:"language,omitempty"`
 	Discoverable    bool           `json:"discoverable"`
 	AllowDirectChat bool           `json:"allow_direct_chat"`
 	CreatedAt       int64          `json:"created_at"`

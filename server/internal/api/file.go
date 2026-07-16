@@ -748,7 +748,7 @@ func (h *FileHandler) sendFileChangeNotify(ctx context.Context, convID, userID, 
 	if u, err := h.userDB.GetByID(ctx, userID); err == nil && u != nil {
 		userName = u.Name
 	}
-	body := fmt.Sprintf("%s uploaded: %s", userName, fileName)
+	body := i18n.T(ctx, "sys.file_uploaded", userName, fileName)
 	_, _ = h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
 }
 
@@ -766,6 +766,6 @@ func (h *FileHandler) sendFileDeleteNotify(ctx context.Context, convID, userID, 
 	if u, err := h.userDB.GetByID(ctx, userID); err == nil && u != nil {
 		userName = u.Name
 	}
-	body := fmt.Sprintf("%s deleted: %s", userName, fileName)
+	body := i18n.T(ctx, "sys.file_deleted", userName, fileName)
 	_, _ = h.sysMsg.SendSystemMessage(ctx, convID, body, userID)
 }

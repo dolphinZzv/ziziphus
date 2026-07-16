@@ -74,7 +74,7 @@ func TestRegister_Success(t *testing.T) {
 		account  = "alice_account"
 	)
 
-	user, accessToken, refreshToken, err := svc.Register(ctx, name, password, account, "")
+	user, accessToken, refreshToken, err := svc.Register(ctx, name, password, account, "", "")
 	if err != nil {
 		t.Fatalf("Register returned unexpected error: %v", err)
 	}
@@ -140,12 +140,12 @@ func TestRegister_DuplicateAccount(t *testing.T) {
 	svc, _, _ := setupService(t)
 	ctx := context.Background()
 
-	_, _, _, err := svc.Register(ctx, "alice", "pass1long", "same_account", "")
+	_, _, _, err := svc.Register(ctx, "alice", "pass1long", "same_account", "", "")
 	if err != nil {
 		t.Fatalf("first Register: %v", err)
 	}
 
-	_, _, _, err = svc.Register(ctx, "bob", "pass2long", "same_account", "")
+	_, _, _, err = svc.Register(ctx, "bob", "pass2long", "same_account", "", "")
 	if err == nil {
 		t.Fatal("expected error for duplicate account, got nil")
 	}
@@ -166,7 +166,7 @@ func TestRegister_RepoError(t *testing.T) {
 	repo.err = expected
 	t.Cleanup(func() { repo.err = nil })
 
-	_, _, _, err := svc.Register(ctx, "bob", "secret12", "bob_account", "")
+	_, _, _, err := svc.Register(ctx, "bob", "secret12", "bob_account", "", "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -183,7 +183,7 @@ func TestLogin_Success(t *testing.T) {
 	svc, _, _ := setupService(t)
 	ctx := context.Background()
 
-	user, _, _, err := svc.Register(ctx, "carol", "hunter2!", "carol_account", "")
+	user, _, _, err := svc.Register(ctx, "carol", "hunter2!", "carol_account", "", "")
 	if err != nil {
 		t.Fatalf("Register: %v", err)
 	}
@@ -220,7 +220,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 	svc, _, _ := setupService(t)
 	ctx := context.Background()
 
-	_, _, _, err := svc.Register(ctx, "dave", "real-password", "dave_account", "")
+	_, _, _, err := svc.Register(ctx, "dave", "real-password", "dave_account", "", "")
 	if err != nil {
 		t.Fatalf("Register: %v", err)
 	}
@@ -254,8 +254,8 @@ func TestLogin_UserNotFound(t *testing.T) {
 	}
 	// Unified message: both "user not found" and "wrong password" return the same message
 	// to prevent user enumeration.
-	if appErr.Message != "账号或密码错误" {
-		t.Errorf("AppError.Message = %q; want %q (unified to prevent enumeration)", appErr.Message, "账号或密码错误")
+	if appErr.Message != "invalid account or password" {
+		t.Errorf("AppError.Message = %q; want %q (unified to prevent enumeration)", appErr.Message, "invalid account or password")
 	}
 }
 
@@ -265,7 +265,7 @@ func TestLogin_UnifiedErrorMessage(t *testing.T) {
 	svc, _, _ := setupService(t)
 	ctx := context.Background()
 
-	_, _, _, err := svc.Register(ctx, "eve", "good-password", "eve_account", "")
+	_, _, _, err := svc.Register(ctx, "eve", "good-password", "eve_account", "", "")
 	if err != nil {
 		t.Fatalf("Register: %v", err)
 	}
@@ -302,7 +302,7 @@ func TestRegister_PasswordMinLength(t *testing.T) {
 	svc, _, _ := setupService(t)
 	ctx := context.Background()
 
-	_, _, _, err := svc.Register(ctx, "short", "1234567", "short_account", "")
+	_, _, _, err := svc.Register(ctx, "short", "1234567", "short_account", "", "")
 	if err == nil {
 		t.Fatal("expected error for password < 8 chars, got nil")
 	}
@@ -316,7 +316,7 @@ func TestParseToken_Valid(t *testing.T) {
 	svc, _, _ := setupService(t)
 
 	// generateAccessToken is unexported; use Register to get a real token
-	user, token, _, err := svc.Register(context.Background(), "test", "testpass", "test_parse", "")
+	user, token, _, err := svc.Register(context.Background(), "test", "testpass", "test_parse", "", "")
 	if err != nil {
 		t.Fatalf("Register: %v", err)
 	}

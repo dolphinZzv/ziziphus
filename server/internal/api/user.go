@@ -48,6 +48,7 @@ type userRepo interface {
 	GetByAPIKey(ctx context.Context, apiKey string) (*model.User, error)
 	UpdateAgentAPIKey(ctx context.Context, agentID, uid, apiKey string) error
 	DeleteAccount(ctx context.Context, userID string) error
+	UpdateLanguage(ctx context.Context, userID, language string) error
 }
 
 type sessionChecker interface {
@@ -96,7 +97,8 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		BadRequest(w, r, i18n.T(r.Context(), "err.name_password_required"))
 		return
 	}
-	user, accessToken, refreshToken, err := h.authSvc.Register(r.Context(), req.Name, req.Password, req.Account, req.Email)
+	lang := string(i18n.LangFromCtx(r.Context()))
+	user, accessToken, refreshToken, err := h.authSvc.Register(r.Context(), req.Name, req.Password, req.Account, req.Email, lang)
 	if err != nil {
 		if appErr, ok := err.(*model.AppError); ok {
 			Error(w, r, http.StatusBadRequest, appErr)
@@ -197,6 +199,10 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	user, _ := h.userRepo.GetByID(r.Context(), userID)
 	if user != nil {
 		user.Password = ""
+		lang := string(i18n.LangFromCtx(r.Context()))
+		if lang != "" {
+			_ = h.userRepo.UpdateLanguage(r.Context(), userID, lang)
+		}
 	}
 	JSON(w, map[string]interface{}{
 		"user_id":       userID,
