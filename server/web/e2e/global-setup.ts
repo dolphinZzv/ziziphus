@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-async function globalSetup(config: FullConfig) {
+async function globalSetup(_config: FullConfig) {
   const coverageDir = path.resolve(__dirname, '../../../../coverage')
   if (fs.existsSync(coverageDir)) {
     fs.rmSync(coverageDir, { recursive: true, force: true })
