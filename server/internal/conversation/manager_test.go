@@ -325,7 +325,7 @@ func TestCreateGroup_CreatesGroupWithOwnerAndMembers(t *testing.T) {
 		userRepo.addUser(u)
 	}
 
-	got, err := mgr.CreateGroup(ctx, name, ownerID, memberIDs, gen)
+	got, err := mgr.CreateGroup(ctx, name, "", ownerID, memberIDs, gen)
 	if err != nil {
 		t.Fatalf("CreateGroup returned error: %v", err)
 	}
@@ -397,7 +397,7 @@ func TestCreateGroup_DedupesOwnerFromMemberList(t *testing.T) {
 		userRepo.addUser(u)
 	}
 
-	got, err := mgr.CreateGroup(ctx, "dedup", ownerID, memberIDs, gen)
+	got, err := mgr.CreateGroup(ctx, "dedup", "", ownerID, memberIDs, gen)
 	if err != nil {
 		t.Fatalf("CreateGroup returned error: %v", err)
 	}
