@@ -17,6 +17,7 @@ type Config struct {
 	Storage      StorageConfig      `yaml:"storage"`
 	SMTP         SMTPConfig         `yaml:"smtp"`
 	Announcement AnnouncementConfig `yaml:"announcement"`
+	Log          LogConfig          `yaml:"log"`
 }
 
 type AnnouncementConfig struct {
@@ -72,6 +73,16 @@ type JWTConfig struct {
 type SnowflakeConfig struct {
 	WorkerID  int64  `yaml:"worker_id"`
 	StartTime string `yaml:"start_time"`
+}
+
+// LogConfig controls logger behaviour.
+type LogConfig struct {
+	Level      string `yaml:"level"`       // debug, info, warn, error (default: info)
+	File       string `yaml:"file"`        // log file path (empty = stdout only)
+	MaxSize    int    `yaml:"max_size"`    // megabytes before rotation (default: 100)
+	MaxAge     int    `yaml:"max_age"`     // days to retain old logs (default: 7)
+	MaxBackups int    `yaml:"max_backups"` // number of old log files to retain (default: 10)
+	Compress   bool   `yaml:"compress"`    // compress rotated files (default: true)
 }
 
 type RateLimitConfig struct {
@@ -149,5 +160,17 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.SMTP.From == "" {
 		cfg.SMTP.From = cfg.SMTP.User
+	}
+	if cfg.Log.Level == "" {
+		cfg.Log.Level = "info"
+	}
+	if cfg.Log.MaxSize == 0 {
+		cfg.Log.MaxSize = 100
+	}
+	if cfg.Log.MaxAge == 0 {
+		cfg.Log.MaxAge = 7
+	}
+	if cfg.Log.MaxBackups == 0 {
+		cfg.Log.MaxBackups = 10
 	}
 }

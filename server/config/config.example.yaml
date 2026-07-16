@@ -33,6 +33,15 @@ ratelimit:
   max_body_bytes: 10240
   burst_size: 50
 
+# Zap structured logger with optional file rotation (lumberjack)
+log:
+  level: info           # debug, info, warn, error
+  file: ""              # log file path (empty = stdout only)
+  max_size: 100         # megabytes before rotation
+  max_age: 7            # days to retain old logs
+  max_backups: 10       # number of old log files to retain
+  compress: true        # compress rotated files
+
 # Global announcement shown to all users
 announcement:
   enabled: false

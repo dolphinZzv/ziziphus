@@ -7,7 +7,7 @@ COPY server/web/package.json server/web/package-lock.json ./
 RUN npm ci
 
 COPY server/web/ ./
-RUN npm run build
+RUN mkdir -p /internal/webembed && npm run build
 
 # ── Go build stage ─────────────────────────────────────────────
 FROM golang:1.26-bookworm AS gobuilder

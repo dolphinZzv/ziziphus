@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"net/http"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"ziziphus/pkg/i18n"
+	"ziziphus/pkg/logger"
 )
 
 type Handlers struct {
@@ -171,11 +171,13 @@ func requestLogger(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 
 		latency := time.Since(start)
-		log.Printf("%s %s %d %s",
-			r.Method,
-			sanitized,
-			ww.Status(),
-			latency.Round(time.Millisecond),
+		logger.Info("request",
+			"method", r.Method,
+			"path", sanitized,
+			"status", ww.Status(),
+			"latency_ms", latency.Milliseconds(),
+			"ip", r.RemoteAddr,
+			"ua", r.UserAgent(),
 		)
 	})
 }

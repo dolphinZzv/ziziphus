@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -54,7 +53,14 @@ func main() {
 		fmt.Fprintf(os.Stderr, "config validation failed: %v\n", err)
 		os.Exit(1)
 	}
-	logger.SetLevel(slog.LevelInfo)
+	logger.Init(logger.Config{
+		Level:      cfg.Log.Level,
+		File:       cfg.Log.File,
+		MaxSize:    cfg.Log.MaxSize,
+		MaxAge:     cfg.Log.MaxAge,
+		MaxBackups: cfg.Log.MaxBackups,
+		Compress:   cfg.Log.Compress,
+	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -172,10 +178,11 @@ func main() {
 		File:         fileHandler,
 		Webhook:      webhookHandler,
 		Announcement: api.Announcement(cfg.Announcement),
-		DB:           pool,
-		RDB:          rdb,
-		LoginRL:      loginRL, RegisterRL: registerRL,
-		GlobalRL: globalRL,
+		DB:         pool,
+		RDB:        rdb,
+		LoginRL:    loginRL,
+		RegisterRL: registerRL,
+		GlobalRL:   globalRL,
 	}
 
 	// Auth middleware
@@ -227,4 +234,5 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 	_ = srv.Shutdown(shutdownCtx)
+	logger.Sync()
 }

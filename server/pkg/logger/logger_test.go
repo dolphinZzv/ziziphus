@@ -3,23 +3,48 @@ package logger
 import (
 	"bytes"
 	"encoding/json"
-	"log/slog"
 	"testing"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-// captureLogs swaps the global slog default for one that writes to a
-// buffer, runs fn, restores the original default, and returns the captured
-// output.
+// captureLogs replaces the global zap logger with one that writes to a buffer,
+// runs fn, then restores the original.
 func captureLogs(t *testing.T, fn func()) string {
 	t.Helper()
+
 	var buf bytes.Buffer
 
-	old := slog.Default()
-	h := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: programLevel})
-	slog.SetDefault(slog.New(h))
-	t.Cleanup(func() { slog.SetDefault(old) })
+	// Use the same encoder config as Init for consistent field naming.
+	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.TimeKey = "time"
+	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderCfg.EncodeLevel = zapcore.CapitalLevelEncoder
+	encoderCfg.EncodeCaller = zapcore.ShortCallerEncoder
+
+	// Use a fresh atomic level for capture so we don't depend on Init.
+	lvl := zap.NewAtomicLevelAt(zapcore.DebugLevel)
+
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderCfg),
+		zapcore.AddSync(&buf),
+		lvl,
+	)
+
+	oldLogger := zap.L()
+	newLogger := zap.New(core)
+	zap.ReplaceGlobals(newLogger)
+	sugar = newLogger.Sugar()
+	t.Cleanup(func() {
+		zap.ReplaceGlobals(oldLogger)
+		if oldLogger != nil {
+			sugar = oldLogger.Sugar()
+		}
+	})
 
 	fn()
+	_ = sugar.Sync()
 	return buf.String()
 }
 
@@ -94,26 +119,40 @@ func TestError_WritesJSON(t *testing.T) {
 }
 
 func TestDebug_SuppressedAtInfoLevel(t *testing.T) {
-	// Ensure level is Info (as init() sets it).
-	programLevel.Set(slog.LevelInfo)
+	var buf bytes.Buffer
+	lvl := zap.NewAtomicLevelAt(zapcore.InfoLevel)
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(&buf), lvl)
+	zap.ReplaceGlobals(zap.New(core))
+	sugar = zap.L().Sugar()
 
-	out := captureLogs(t, func() {
-		Debug("debug message")
-	})
-	if out != "" {
-		t.Errorf("expected no output at Info level, got: %s", out)
+	Debug("debug message")
+	_ = sugar.Sync()
+
+	if buf.Len() > 0 {
+		t.Errorf("expected no output at Info level, got: %s", buf.String())
 	}
 }
 
 func TestDebug_VisibleAfterSetLevel(t *testing.T) {
-	programLevel.Set(slog.LevelDebug)
-	t.Cleanup(func() { programLevel.Set(slog.LevelInfo) })
+	var buf bytes.Buffer
+	atomicLevel = zap.NewAtomicLevelAt(zapcore.InfoLevel)
+	encCfg := zap.NewProductionEncoderConfig()
+	encCfg.EncodeLevel = zapcore.CapitalLevelEncoder
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(encCfg), zapcore.AddSync(&buf), atomicLevel)
+	zap.ReplaceGlobals(zap.New(core))
+	sugar = zap.L().Sugar()
 
-	out := captureLogs(t, func() {
-		Debug("debug message")
-	})
-	m := jsonLine(t, out)
+	SetLevel("debug")
+	Debug("debug message")
+	_ = sugar.Sync()
 
+	if buf.Len() == 0 {
+		t.Fatal("expected debug output, got nothing")
+	}
+	var m map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &m); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
 	if m["msg"] != "debug message" {
 		t.Errorf(`msg = %v, want "debug message"`, m["msg"])
 	}
@@ -123,26 +162,42 @@ func TestDebug_VisibleAfterSetLevel(t *testing.T) {
 }
 
 func TestSetLevel_RestrictsOutput(t *testing.T) {
-	programLevel.Set(slog.LevelWarn)
-	t.Cleanup(func() { programLevel.Set(slog.LevelInfo) })
+	var buf bytes.Buffer
+	atomicLevel = zap.NewAtomicLevelAt(zapcore.InfoLevel)
+	encCfg := zap.NewProductionEncoderConfig()
+	encCfg.EncodeLevel = zapcore.CapitalLevelEncoder
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(encCfg), zapcore.AddSync(&buf), atomicLevel)
+	zap.ReplaceGlobals(zap.New(core))
+	sugar = zap.L().Sugar()
 
-	out := captureLogs(t, func() {
-		Info("should be suppressed")
-		Warn("should appear")
-	})
-	m := jsonLine(t, out)
+	SetLevel("warn")
+	Info("should be suppressed")
+	Warn("should appear")
+	_ = sugar.Sync()
 
-	if m["msg"] != "should appear" {
-		t.Errorf(`msg = %v, want "should appear"`, m["msg"])
+	if buf.Len() == 0 {
+		t.Fatal("expected at least one log line")
 	}
-	if m["level"] != "WARN" {
-		t.Errorf(`level = %v, want "WARN"`, m["level"])
-	}
-}
 
-func TestWithContext_ReturnsLogger(t *testing.T) {
-	logger := WithContext(nil, "req_id", "abc-123")
-	if logger == nil {
-		t.Fatal("WithContext returned nil")
+	// Parse each JSON line
+	var sawSuppressed, sawAppear bool
+	for _, line := range bytes.Split(bytes.TrimSpace(buf.Bytes()), []byte("\n")) {
+		var m map[string]any
+		if err := json.Unmarshal(line, &m); err != nil {
+			continue
+		}
+		switch m["msg"] {
+		case "should be suppressed":
+			sawSuppressed = true
+		case "should appear":
+			sawAppear = true
+		}
+	}
+
+	if sawSuppressed {
+		t.Error("Info message 'should be suppressed' was logged but should have been filtered by SetLevel(warn)")
+	}
+	if !sawAppear {
+		t.Error("Warn message 'should appear' was not logged")
 	}
 }
