@@ -4,10 +4,80 @@ import (
 	"context"
 	"regexp"
 	"testing"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v4"
 	"ziziphus/pkg/model"
 )
+
+func TestMFARepo_Get(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewMFARepo(mock)
+	now := time.Now()
+
+	rows := pgxmock.NewRows([]string{"user_id", "mfa_type", "enabled", "secret", "created_at", "updated_at"}).
+		AddRow("user_1", model.MFATOTP, true, "testsecret", now, now)
+
+	mock.ExpectQuery(regexp.QuoteMeta(
+		`SELECT user_id, mfa_type, enabled, secret, created_at, updated_at FROM user_mfa WHERE user_id = $1`,
+	)).
+		WithArgs("user_1").
+		WillReturnRows(rows)
+
+	m, err := repo.Get(context.Background(), "user_1")
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if m == nil {
+		t.Fatal("Get returned nil")
+	}
+	if m.UserID != "user_1" {
+		t.Errorf("UserID = %q, want user_1", m.UserID)
+	}
+	if m.MFAType != model.MFATOTP {
+		t.Errorf("MFAType = %d, want %d", m.MFAType, model.MFATOTP)
+	}
+	if !m.Enabled {
+		t.Error("Enabled = false, want true")
+	}
+	if m.Secret != "testsecret" {
+		t.Errorf("Secret = %q, want testsecret", m.Secret)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
+func TestMFARepo_Get_NotFound(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewMFARepo(mock)
+
+	mock.ExpectQuery(regexp.QuoteMeta(
+		`SELECT user_id, mfa_type, enabled, secret, created_at, updated_at FROM user_mfa WHERE user_id = $1`,
+	)).
+		WithArgs("nonexistent").
+		WillReturnError(pgx.ErrNoRows)
+
+	m, err := repo.Get(context.Background(), "nonexistent")
+	if err == nil {
+		t.Fatal("Get expected error for non-existent user, got nil")
+	}
+	if m != nil {
+		t.Errorf("Get expected nil, got %v", m)
+	}
+}
 
 func TestMFARepo_Upsert(t *testing.T) {
 	mock, err := pgxmock.NewPool()

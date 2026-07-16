@@ -594,6 +594,136 @@ func TestUserRepo_DeleteAccount(t *testing.T) {
 	}
 }
 
+func TestUserRepo_BanUser(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewUserRepo(mock)
+
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE users SET banned = true WHERE id = $1`)).
+		WithArgs("u1").
+		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+	err = repo.BanUser(context.Background(), "u1")
+	if err != nil {
+		t.Fatalf("BanUser: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
+func TestUserRepo_UnbanUser(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewUserRepo(mock)
+
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE users SET banned = false WHERE id = $1`)).
+		WithArgs("u1").
+		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+	err = repo.UnbanUser(context.Background(), "u1")
+	if err != nil {
+		t.Fatalf("UnbanUser: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
+func TestUserRepo_UpdateLanguage(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewUserRepo(mock)
+
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE users SET language = $1 WHERE id = $2`)).
+		WithArgs("zh-CN", "u1").
+		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+	err = repo.UpdateLanguage(context.Background(), "u1", "zh-CN")
+	if err != nil {
+		t.Fatalf("UpdateLanguage: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
+func TestUserRepo_IsBanned(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewUserRepo(mock)
+
+	t.Run("banned user returns true", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT banned FROM users WHERE id = $1`)).
+			WithArgs("u_banned").
+			WillReturnRows(pgxmock.NewRows([]string{"banned"}).AddRow(true))
+
+		banned, err := repo.IsBanned(context.Background(), "u_banned")
+		if err != nil {
+			t.Fatalf("IsBanned: %v", err)
+		}
+		if !banned {
+			t.Error("IsBanned = false, want true")
+		}
+	})
+
+	t.Run("not banned user returns false", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT banned FROM users WHERE id = $1`)).
+			WithArgs("u_active").
+			WillReturnRows(pgxmock.NewRows([]string{"banned"}).AddRow(false))
+
+		banned, err := repo.IsBanned(context.Background(), "u_active")
+		if err != nil {
+			t.Fatalf("IsBanned: %v", err)
+		}
+		if banned {
+			t.Error("IsBanned = true, want false")
+		}
+	})
+}
+
+func TestUserRepo_UpdateBanned(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewUserRepo(mock)
+
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE users SET banned = $1 WHERE id = $2`)).
+		WithArgs(true, "u1").
+		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+	err = repo.UpdateBanned(context.Background(), "u1", true)
+	if err != nil {
+		t.Fatalf("UpdateBanned: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
 // AnyTime is a custom matcher for time.Time values in pgxmock.
 type AnyTime struct{}
 

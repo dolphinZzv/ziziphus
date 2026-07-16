@@ -52,6 +52,29 @@ func TestContactRepo_Add(t *testing.T) {
 	}
 }
 
+func TestContactRepo_AddContact(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewContactRepo(mock)
+
+	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO contacts (user_id, contact_id, nickname, added_at) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, contact_id) DO NOTHING`)).
+		WithArgs("u1", "u2", "", AnyTime{}).
+		WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
+	err = repo.AddContact(context.Background(), "u1", "u2")
+	if err != nil {
+		t.Fatalf("AddContact: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
 func TestContactRepo_Remove(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	if err != nil {

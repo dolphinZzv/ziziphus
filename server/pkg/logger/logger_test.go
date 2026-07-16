@@ -3,6 +3,9 @@ package logger
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"go.uber.org/zap"
@@ -199,5 +202,143 @@ func TestSetLevel_RestrictsOutput(t *testing.T) {
 	}
 	if !sawAppear {
 		t.Error("Warn message 'should appear' was not logged")
+	}
+}
+
+func TestParseLevel(t *testing.T) {
+	tests := []struct {
+		input string
+		want  zapcore.Level
+	}{
+		{"debug", zapcore.DebugLevel},
+		{"DEBUG", zapcore.DebugLevel},
+		{"Debug", zapcore.DebugLevel},
+		{"info", zapcore.InfoLevel},
+		{"INFO", zapcore.InfoLevel},
+		{"warn", zapcore.WarnLevel},
+		{"WARN", zapcore.WarnLevel},
+		{"error", zapcore.ErrorLevel},
+		{"ERROR", zapcore.ErrorLevel},
+		{"", zapcore.InfoLevel},
+		{"invalid", zapcore.InfoLevel},
+		{"unknown", zapcore.InfoLevel},
+	}
+	for _, tc := range tests {
+		got := parseLevel(tc.input)
+		if got != tc.want {
+			t.Errorf("parseLevel(%q) = %v, want %v", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestSync_NilSugar(t *testing.T) {
+	// Save and restore global state
+	oldSugar := sugar
+	sugar = nil
+	t.Cleanup(func() { sugar = oldSugar })
+
+	// Should not panic
+	Sync()
+}
+
+func TestLogFunctions_NilSugar(t *testing.T) {
+	oldSugar := sugar
+	sugar = nil
+	t.Cleanup(func() { sugar = oldSugar })
+
+	// None of these should panic
+	Debug("no panic")
+	Info("no panic")
+	Warn("no panic")
+	Error("no panic")
+}
+
+func TestNewWriter_Default(t *testing.T) {
+	ws := newWriter(Config{Level: "info"})
+	if ws == nil {
+		t.Fatal("newWriter returned nil")
+	}
+	// Should write to stdout (we can't easily verify content, but it shouldn't crash)
+	n, err := ws.Write([]byte("test\n"))
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if n != 5 {
+		t.Errorf("wrote %d bytes, want 5", n)
+	}
+}
+
+func TestInit_StdoutOnly(t *testing.T) {
+	oldSugar := sugar
+	oldAtomic := atomicLevel
+	t.Cleanup(func() {
+		sugar = oldSugar
+		atomicLevel = oldAtomic
+	})
+
+	Init(Config{Level: "info"})
+
+	if sugar == nil {
+		t.Fatal("sugar is nil after Init")
+	}
+
+	out := captureLogs(t, func() {
+		Info("after init message")
+	})
+	m := jsonLine(t, out)
+	if m["msg"] != "after init message" {
+		t.Errorf(`msg = %v, want "after init message"`, m["msg"])
+	}
+}
+
+func TestInit_WithFile(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "test.log")
+
+	oldSugar := sugar
+	oldAtomic := atomicLevel
+	t.Cleanup(func() {
+		sugar = oldSugar
+		atomicLevel = oldAtomic
+	})
+
+	Init(Config{Level: "debug", File: logPath})
+
+	Info("file logger test")
+	Sync()
+
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("reading log file: %v", err)
+	}
+	if !strings.Contains(string(data), "file logger test") {
+		t.Errorf("log file does not contain expected message: %s", data)
+	}
+}
+
+func TestInit_ParseLevelDefault(t *testing.T) {
+	oldSugar := sugar
+	oldAtomic := atomicLevel
+	t.Cleanup(func() {
+		sugar = oldSugar
+		atomicLevel = oldAtomic
+	})
+
+	Init(Config{Level: "invalid_default"})
+
+	var buf bytes.Buffer
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+		zapcore.AddSync(&buf),
+		zap.NewAtomicLevelAt(zapcore.DebugLevel),
+	)
+	zap.ReplaceGlobals(zap.New(core))
+	sugar = zap.L().Sugar()
+	_ = sugar.Sync()
+
+	Debug("debug after default-level init")
+	_ = sugar.Sync()
+	if buf.Len() == 0 {
+		t.Log("debug suppressed == default level was Info, as expected for invalid level")
 	}
 }

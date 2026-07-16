@@ -536,6 +536,142 @@ func TestConvRepo_GetUserConvs(t *testing.T) {
 	}
 }
 
+func TestConvRepo_IsDirectChatBlocked(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewConvRepo(mock)
+
+	t.Run("blocked user returns true", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT COALESCE(allow_direct_chat, true) FROM users WHERE id = $1`)).
+			WithArgs("u_blocked").
+			WillReturnRows(pgxmock.NewRows([]string{"allow_direct_chat"}).AddRow(false))
+
+		blocked, err := repo.IsDirectChatBlocked(context.Background(), "u_blocked")
+		if err != nil {
+			t.Fatalf("IsDirectChatBlocked: %v", err)
+		}
+		if !blocked {
+			t.Error("IsDirectChatBlocked = false, want true")
+		}
+	})
+
+	t.Run("allowed user returns false", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT COALESCE(allow_direct_chat, true) FROM users WHERE id = $1`)).
+			WithArgs("u_allowed").
+			WillReturnRows(pgxmock.NewRows([]string{"allow_direct_chat"}).AddRow(true))
+
+		blocked, err := repo.IsDirectChatBlocked(context.Background(), "u_allowed")
+		if err != nil {
+			t.Fatalf("IsDirectChatBlocked: %v", err)
+		}
+		if blocked {
+			t.Error("IsDirectChatBlocked = true, want false")
+		}
+	})
+}
+
+func TestConvRepo_UpdateHeadline(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewConvRepo(mock)
+
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE conversations SET headline = $1 WHERE conv_id = $2`)).
+		WithArgs("New Headline", "conv_1").
+		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+	err = repo.UpdateHeadline(context.Background(), "conv_1", "New Headline")
+	if err != nil {
+		t.Fatalf("UpdateHeadline: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
+func TestConvRepo_UpdateSettings(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewConvRepo(mock)
+
+	settings := map[string]any{"discoverable": false}
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE conversations SET settings = $1 WHERE conv_id = $2`)).
+		WithArgs(settings, "conv_1").
+		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+	err = repo.UpdateSettings(context.Background(), "conv_1", settings)
+	if err != nil {
+		t.Fatalf("UpdateSettings: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("expectations not met: %v", err)
+	}
+}
+
+func TestConvRepo_GetSettings(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewConvRepo(mock)
+
+	expected := map[string]any{"discoverable": true, "mute": false}
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COALESCE(settings, '{}') FROM conversations WHERE conv_id = $1`)).
+		WithArgs("conv_1").
+		WillReturnRows(pgxmock.NewRows([]string{"settings"}).AddRow(expected))
+
+	settings, err := repo.GetSettings(context.Background(), "conv_1")
+	if err != nil {
+		t.Fatalf("GetSettings: %v", err)
+	}
+	if settings == nil {
+		t.Fatal("GetSettings returned nil")
+	}
+	if settings["discoverable"] != true {
+		t.Errorf("discoverable = %v, want true", settings["discoverable"])
+	}
+}
+
+func TestConvRepo_GetSettings_Empty(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatalf("pgxmock.NewPool: %v", err)
+	}
+	defer mock.Close()
+
+	repo := NewConvRepo(mock)
+
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COALESCE(settings, '{}') FROM conversations WHERE conv_id = $1`)).
+		WithArgs("conv_empty").
+		WillReturnRows(pgxmock.NewRows([]string{"settings"}).AddRow(map[string]any{}))
+
+	settings, err := repo.GetSettings(context.Background(), "conv_empty")
+	if err != nil {
+		t.Fatalf("GetSettings: %v", err)
+	}
+	if settings == nil {
+		t.Fatal("GetSettings returned nil")
+	}
+	if len(settings) != 0 {
+		t.Errorf("settings = %v, want empty map", settings)
+	}
+}
+
 func TestConvRepo_GetUserConvs_NoLastMsg(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	if err != nil {

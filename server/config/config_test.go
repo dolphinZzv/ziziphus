@@ -166,6 +166,96 @@ func TestLoad_MinimalConfig_AppliesDefaults(t *testing.T) {
 	}
 }
 
+func TestServerConfig_RegistrationAllowed(t *testing.T) {
+	t.Run("nil AllowRegistration returns true", func(t *testing.T) {
+		s := ServerConfig{AllowRegistration: nil}
+		if !s.RegistrationAllowed() {
+			t.Error("RegistrationAllowed() = false, want true")
+		}
+	})
+
+	t.Run("true AllowRegistration returns true", func(t *testing.T) {
+		v := true
+		s := ServerConfig{AllowRegistration: &v}
+		if !s.RegistrationAllowed() {
+			t.Error("RegistrationAllowed() = false, want true")
+		}
+	})
+
+	t.Run("false AllowRegistration returns false", func(t *testing.T) {
+		v := false
+		s := ServerConfig{AllowRegistration: &v}
+		if s.RegistrationAllowed() {
+			t.Error("RegistrationAllowed() = true, want false")
+		}
+	})
+}
+
+func TestRateLimitConfig_HTTPRateLimitEnabled(t *testing.T) {
+	t.Run("nil APIEnabled returns true", func(t *testing.T) {
+		r := RateLimitConfig{APIEnabled: nil}
+		if !r.HTTPRateLimitEnabled() {
+			t.Error("HTTPRateLimitEnabled() = false, want true")
+		}
+	})
+
+	t.Run("true APIEnabled returns true", func(t *testing.T) {
+		v := true
+		r := RateLimitConfig{APIEnabled: &v}
+		if !r.HTTPRateLimitEnabled() {
+			t.Error("HTTPRateLimitEnabled() = false, want true")
+		}
+	})
+
+	t.Run("false APIEnabled returns false", func(t *testing.T) {
+		v := false
+		r := RateLimitConfig{APIEnabled: &v}
+		if r.HTTPRateLimitEnabled() {
+			t.Error("HTTPRateLimitEnabled() = true, want false")
+		}
+	})
+}
+
+func TestConfig_Validate(t *testing.T) {
+	t.Run("short JWT secret returns error", func(t *testing.T) {
+		c := &Config{JWT: JWTConfig{Secret: "short"}}
+		err := c.Validate()
+		if err == nil {
+			t.Fatal("Validate() expected error for short JWT secret, got nil")
+		}
+	})
+
+	t.Run("empty SMTP host and user is valid", func(t *testing.T) {
+		c := &Config{JWT: JWTConfig{Secret: "this-is-a-long-enough-secret-key-32+"}}
+		err := c.Validate()
+		if err != nil {
+			t.Fatalf("Validate() = %v, want nil", err)
+		}
+	})
+
+	t.Run("SMTP host set but user empty returns error", func(t *testing.T) {
+		c := &Config{
+			JWT:  JWTConfig{Secret: "this-is-a-long-enough-secret-key-32+"},
+			SMTP: SMTPConfig{Host: "smtp.example.com", User: ""},
+		}
+		err := c.Validate()
+		if err == nil {
+			t.Fatal("Validate() expected error for SMTP host without user, got nil")
+		}
+	})
+
+	t.Run("SMTP host and user both set is valid", func(t *testing.T) {
+		c := &Config{
+			JWT:  JWTConfig{Secret: "this-is-a-long-enough-secret-key-32+"},
+			SMTP: SMTPConfig{Host: "smtp.example.com", User: "user"},
+		}
+		err := c.Validate()
+		if err != nil {
+			t.Fatalf("Validate() = %v, want nil", err)
+		}
+	})
+}
+
 func TestSetDefaults(t *testing.T) {
 	t.Run("non-zero values are not overwritten", func(t *testing.T) {
 		cfg := &Config{
