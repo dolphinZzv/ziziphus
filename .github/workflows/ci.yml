@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  backend-test:
-    name: Backend unit tests
+  backend:
+    name: Backend (test + lint)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,5 +25,126 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Run tests
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: server
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
         run: go test ./... -v -count=1
+
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: imdb
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+          cache-dependency-path: server/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/web/package-lock.json
+
+      - name: Install Go dependencies
+        run: go mod download
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: server/web
+
+      - name: Setup config
+        run: cp config/config.example.yaml config/config.yaml
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: server/web
+
+      - name: Build backend
+        run: go build -o ./bin/ziziphus ./cmd/ziziphus/
+
+      - name: Start backend
+        run: |
+          ./bin/ziziphus -c config/config.yaml &
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Backend ready"
+              break
+            fi
+            echo "Waiting for backend... ($i)"
+            sleep 2
+          done
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+        working-directory: server/web
+
+      - name: Run E2E tests
+        run: npx playwright test
+        working-directory: server/web
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: server/web/test-results/
+          retention-days: 3
