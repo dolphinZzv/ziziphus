@@ -8,6 +8,7 @@
     "build": "vite build && rm -rf ../internal/webembed/dist && cp -r dist ../internal/webembed/dist",
     "lint": "oxlint",
     "test": "playwright test",
+    "test:coverage": "COVERAGE=true playwright test",
     "preview": "vite preview"
   },
   "dependencies": {

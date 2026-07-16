@@ -132,12 +132,15 @@ jobs:
         run: npm run build
         working-directory: server/web
 
-      - name: Build backend
-        run: go build -o ./bin/ziziphus ./cmd/ziziphus/
+      - name: Build backend (with coverage)
+        run: go build -cover -o ./bin/ziziphus ./cmd/ziziphus/
 
       - name: Start backend
         run: |
-          ./bin/ziziphus -c config/config.yaml &
+          COVER_DIR="${GITHUB_WORKSPACE}/coverage/backend"
+          mkdir -p "$COVER_DIR"
+          echo "GOCOVERDIR=$COVER_DIR" >> "$GITHUB_ENV"
+          GOCOVERDIR="$COVER_DIR" ./bin/ziziphus -c config/config.yaml &
           for i in $(seq 1 15); do
             if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
               echo "Backend ready"
@@ -154,6 +157,21 @@ jobs:
       - name: Run E2E tests
         run: npx playwright test
         working-directory: server/web
+
+      - name: Stop backend
+        run: pkill -f "bin/ziziphus" || true
+
+      - name: Merge coverage data
+        run: |
+          mkdir -p coverage
+          go tool covdata textfmt -i="$GOCOVERDIR" -o=coverage/coverage.out
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: server/coverage/
+          retention-days: 7
 
       - name: Upload test results
         if: failure()

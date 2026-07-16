@@ -11,7 +11,7 @@ async function globalSetup(config: FullConfig) {
   if (fs.existsSync(coverageDir)) {
     fs.rmSync(coverageDir, { recursive: true, force: true })
   }
-  fs.mkdirSync(coverageDir, { recursive: true })
+  fs.mkdirSync(path.join(coverageDir, 'backend'), { recursive: true })
   console.log(`Coverage directory: ${coverageDir}`)
 }
 

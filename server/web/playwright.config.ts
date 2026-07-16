@@ -11,6 +11,7 @@ export default defineConfig({
   reporter: 'list',
   timeout: 30000,
   globalSetup: './e2e/global-setup.ts',
+  globalTeardown: './e2e/global-teardown.ts',
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
@@ -22,9 +23,17 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: process.env.CI ? {
-    command: 'npx vite --host 0.0.0.0 --port 5173',
-    url: 'http://localhost:5173',
-    reuseExistingServer: false,
-  } : undefined,
+  webServer: [
+    ...(process.env.CI || process.env.COVERAGE ? [{
+      command: 'npx vite --host 0.0.0.0 --port 5173',
+      url: 'http://localhost:5173',
+      reuseExistingServer: false,
+    }] : []),
+    ...(process.env.COVERAGE ? [{
+      command: 'bash ./e2e/start-backend.sh',
+      url: 'http://localhost:8080/health',
+      reuseExistingServer: false,
+      timeout: 60000,
+    }] : []),
+  ],
 })
