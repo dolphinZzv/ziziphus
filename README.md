@@ -7,7 +7,13 @@
 
 [English](README.md) | [中文](README.zh.md)
 
-An instant messaging (IM) application with a Go backend, React web frontend, and native macOS/iOS clients.
+An instant messaging (IM) application — Go backend powering multiple frontends.
+
+**Supported clients, by priority:**
+1. 🌐 **React Web** — full-featured SPA
+2. 🖥 **macOS** — native SwiftUI app
+3. 📱 **iOS** — native SwiftUI app
+4. 🤖 **Android** — (coming soon)
 
 ## Project Structure
 
@@ -23,7 +29,7 @@ An instant messaging (IM) application with a Go backend, React web frontend, and
 
 - **Backend**: Go 1.26, PostgreSQL, Redis, JWT, WebSocket
 - **Web Frontend**: React 19, TypeScript, Vite, Tailwind CSS 4, Zustand
-- **Client**: Swift 6.3.2, SwiftUI, iOS 18+ / macOS 15+
+- **Native Client**: Swift 6.3.2, SwiftUI, iOS 18+ / macOS 15+
 
 ---
 

@@ -7,7 +7,13 @@
 
 [中文](README.zh.md) | [English](README.md)
 
-即时通讯（IM）应用，包含 Go 后端服务、React Web 前端、macOS 与 iOS 原生客户端。
+即时通讯（IM）应用 — Go 后端驱动多端客户端。
+
+**客户端支持优先级：**
+1. 🌐 **React Web** — 功能完整的 SPA
+2. 🖥 **macOS** — 原生 SwiftUI 应用
+3. 📱 **iOS** — 原生 SwiftUI 应用
+4. 🤖 **Android** — 即将支持
 
 ## 项目结构
 
@@ -23,7 +29,7 @@
 
 - **后端**: Go 1.26, PostgreSQL, Redis, JWT, WebSocket
 - **Web 前端**: React 19, TypeScript, Vite, Tailwind CSS 4, Zustand
-- **客户端**: Swift 6.3.2, SwiftUI, iOS 18+ / macOS 15+
+- **原生客户端**: Swift 6.3.2, SwiftUI, iOS 18+ / macOS 15+
 
 ---
 
