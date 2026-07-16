@@ -125,4 +125,3 @@ func TestGenerateEmailOTP_Unique(t *testing.T) {
 		t.Error("too many collisions in OTPs")
 	}
 }
-

@@ -248,7 +248,9 @@ func (m *mockConvManager) GetOrCreateP2P(_ context.Context, userA, userB string)
 	return m.convs[convID], nil
 }
 
-func (m *mockConvManager) IsDirectChatBlocked(_ context.Context, _ string) (bool, error) { return false, nil }
+func (m *mockConvManager) IsDirectChatBlocked(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
 
 func (m *mockConvManager) GetOrCreateSystemConv(_ context.Context, userID string) (*model.Conversation, error) {
 	convID := model.MakeSystemConvID(userID)
@@ -333,8 +335,12 @@ func (m *mockUserGetter) GetByID(_ context.Context, id string) (*model.User, err
 
 type mockWhForwarder struct{}
 
-func (m *mockWhForwarder) ListByConvID(_ context.Context, _ string) ([]*model.ConvWebhook, error) { return nil, nil }
-func (m *mockWhForwarder) GetByConvIDAndName(_ context.Context, _, _ string) (*model.ConvWebhook, error) { return nil, nil }
+func (m *mockWhForwarder) ListByConvID(_ context.Context, _ string) ([]*model.ConvWebhook, error) {
+	return nil, nil
+}
+func (m *mockWhForwarder) GetByConvIDAndName(_ context.Context, _, _ string) (*model.ConvWebhook, error) {
+	return nil, nil
+}
 
 type mockContactRequestDB struct{}
 
@@ -409,7 +415,7 @@ func newIngestFixture(ratePerSec, burst, maxBody int, defaultID int64) (
 	router := NewRouter(sessGtr, convMgr, connReg)
 	pusher := NewPusher(connReg, receiptW)
 	contactReqDB := &mockContactRequestDB{}
-		ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{})
+	ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{})
 	return
 }
 
