@@ -1,0 +1,31 @@
+# Build output
+ziziphus
+*.test
+*.out
+
+# Config with secrets
+config/config.yaml
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swpd
+
+# OS
+.DS_Store
+
+# Test coverage
+coverage.out
+*.cov.out
+
+# Data
+data/
+
+# Web — only embedded dist is needed
+web/node_modules/
+web/src/

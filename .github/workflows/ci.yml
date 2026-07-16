@@ -148,3 +148,171 @@ jobs:
           name: playwright-results
           path: server/web/test-results/
           retention-days: 3
+
+  container:
+    name: Container (build + smoke + push)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: imdb
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ziziphus:ci-test
+
+      - name: Generate config
+        run: |
+          cat > /tmp/config.yaml << 'EOF'
+          server:
+            port: 8080
+          postgres:
+            dsn: "postgres://postgres@localhost:5432/imdb?sslmode=disable"
+            max_conns: 20
+            migrations: "internal/storage/db/migrations"
+          redis:
+            addr: "localhost:6379"
+            password: ""
+            db: 0
+          jwt:
+            secret: "ci-smoke-test-secret"
+            expire_hours: 1
+            refresh_expire_hours: 168
+          snowflake:
+            worker_id: 1
+            start_time: "2025-01-01T00:00:00Z"
+          ratelimit:
+            msg_per_sec: 30
+            max_body_bytes: 10240
+            burst_size: 50
+          smtp:
+            host: ""
+            port: "587"
+            user: ""
+            password: ""
+            from: ""
+          storage:
+            local_path: "data/files"
+            base_url: "/files"
+          EOF
+
+      - name: Start container
+        run: |
+          docker run -d --rm --name ziziphus-smoke \
+            --network host \
+            -v /tmp/config.yaml:/app/config/config.yaml:ro \
+            ziziphus:ci-test
+
+      - name: Wait for healthy
+        run: |
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Container ready"
+              break
+            fi
+            echo "Waiting... ($i)"
+            sleep 2
+          done
+          curl -s http://localhost:8080/health
+
+      - name: Smoke — Register
+        run: |
+          ACC="smoke_$(date +%s)"
+          echo "SMOKE_ACCOUNT=$ACC" >> $GITHUB_ENV
+          RESP=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/v1/users/register \
+            -H 'Content-Type: application/json' \
+            -d "{\"name\":\"SmokeTest\",\"account\":\"$ACC\",\"password\":\"test123456\"}")
+          HTTP_CODE=$(echo "$RESP" | tail -1)
+          BODY=$(echo "$RESP" | sed '$d')
+          echo "HTTP $HTTP_CODE"
+          echo "$BODY" | python3 -m json.tool
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Register failed"
+            exit 1
+          fi
+          TOKEN=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
+          if [ -z "$TOKEN" ]; then
+            echo "No token in register response"
+            exit 1
+          fi
+          echo "Register OK, got token"
+
+      - name: Smoke — Login
+        run: |
+          RESP=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/v1/users/login \
+            -H 'Content-Type: application/json' \
+            -d "{\"account\":\"$SMOKE_ACCOUNT\",\"password\":\"test123456\"}")
+          HTTP_CODE=$(echo "$RESP" | tail -1)
+          BODY=$(echo "$RESP" | sed '$d')
+          echo "HTTP $HTTP_CODE"
+          echo "$BODY" | python3 -m json.tool
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Login failed"
+            exit 1
+          fi
+          TOKEN=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
+          if [ -z "$TOKEN" ]; then
+            echo "No token in login response"
+            exit 1
+          fi
+          echo "Login OK, got token"
+
+      - name: Container logs (on failure)
+        if: failure()
+        run: docker logs ziziphus-smoke
+
+      - name: Push image
+        if: success()
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

@@ -18,6 +18,7 @@ import (
 	"ziziphus/internal/conversation"
 	"ziziphus/internal/gateway"
 	"ziziphus/internal/handler"
+	"ziziphus/internal/healthcheck"
 	"ziziphus/internal/message"
 	"ziziphus/internal/session"
 	"ziziphus/internal/storage/cache"
@@ -61,6 +62,12 @@ func main() {
 		os.Exit(1)
 	}
 	defer rdb.Close()
+
+	// Startup dependency check
+	if err := healthcheck.Check(ctx, pool, rdb); err != nil {
+		logger.Error("dependency check failed", "error", err)
+		os.Exit(1)
+	}
 
 	// Repos
 	userRepo := db.NewUserRepo(pool)

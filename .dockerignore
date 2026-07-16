@@ -1,0 +1,51 @@
+# Build output
+server/ziziphus
+*.test
+*.out
+
+# Config with secrets
+server/config/config.yaml
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swpd
+
+# OS
+.DS_Store
+
+# Test coverage
+server/coverage.out
+server/*.cov.out
+
+# Data
+data/
+server/data/
+
+# Web build output (rebuilt in Docker)
+server/web/node_modules/
+server/web/dist/
+server/internal/webembed/dist/
+
+# E2E
+server/web/test-results/
+server/web/e2e/
+
+# Dependencies
+deps/
+
+# Docs / misc
+ROBOT.md
+TODO.md
+env
+.venv
+.omo
+
+# Binaries
+bin/
+panda_ai
