@@ -28,8 +28,17 @@ HAS_ERRORS=0
 
 # --- Go lint ---
 if [ -n "$CHANGED_GO" ]; then
+    # Run gofmt on staged files (catches formatting even if alignment changes mix old + new lines)
+    GO_FILES=$(echo "$CHANGED_GO" | sed "s|^server/||")
+    cd "$SERVER_DIR"
+    UNFORMATTED=$(gofmt -l $GO_FILES)
+    if [ -n "$UNFORMATTED" ]; then
+        echo "  ✖ gofmt errors — run 'gofmt -w' on:" >&2
+        echo "$UNFORMATTED" >&2
+        HAS_ERRORS=1
+    fi
+
     if command -v golangci-lint &>/dev/null; then
-        cd "$SERVER_DIR"
         echo "  → golangci-lint ($(echo "$CHANGED_GO" | wc -l | tr -d ' ') files)..."
         if ! golangci-lint run >&2; then
             echo "  ✖ Go lint errors found. Fix them before pushing." >&2

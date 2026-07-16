@@ -4,9 +4,9 @@ package i18n
 // Keys follow a semantic dot-notation convention.
 var Messages = map[string]map[Lang]string{
 	// ===== Auth =====
-	"auth.account_exists": {LangZH: "账户已存在", LangEN: "Account already exists"},
-	"auth.user_not_found": {LangZH: "用户不存在", LangEN: "User not found"},
-	"auth.wrong_password": {LangZH: "密码错误", LangEN: "Wrong password"},
+	"auth.account_exists":        {LangZH: "账户已存在", LangEN: "Account already exists"},
+	"auth.user_not_found":        {LangZH: "用户不存在", LangEN: "User not found"},
+	"auth.wrong_password":        {LangZH: "密码错误", LangEN: "Wrong password"},
 	"auth.password_too_short":    {LangZH: "密码长度不能少于8位", LangEN: "Password must be at least 8 characters"},
 	"auth.bad_credentials":       {LangZH: "账号或密码错误", LangEN: "Invalid account or password"},
 	"auth.invalid_refresh_token": {LangZH: "刷新令牌无效或已过期", LangEN: "Refresh token is invalid or has expired"},
