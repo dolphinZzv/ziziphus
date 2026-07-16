@@ -1,5 +1,10 @@
 # Ziziphus
 
+[![CI](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg)](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
+[![Backend](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg?query=branch:main+job:"Backend+\(test+%2B+lint\)")](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
+[![Frontend](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg?query=branch:main+job:"Frontend+\(lint+%2B+build\)")](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
+[![E2E](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg?query=branch:main+job:"E2E+tests")](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
+[![Container](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg?query=branch:main+job:"Container+\(build+%2B+smoke+%2B+push\)")](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/dolphinZzv/ziziphus/branch/main/graph/badge.svg)](https://codecov.io/gh/dolphinZzv/ziziphus)
 [![Demo](https://img.shields.io/badge/demo-online-brightgreen)](http://ziziphus.siciv.space:10011/)
 
