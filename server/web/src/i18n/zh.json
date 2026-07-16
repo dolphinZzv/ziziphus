@@ -1,8 +1,5 @@
 {
-  "app": {
-    "name": "Ziziphus",
-    "tagline": "智能即时通讯"
-  },
+  "app": {},
   "auth": {
     "login": "登录",
     "register": "注册",

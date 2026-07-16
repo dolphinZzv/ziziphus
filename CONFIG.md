@@ -10,6 +10,18 @@ Configuration is managed via [Viper](https://github.com/spf13/viper), supporting
 ## Hot-reload
 
 Config sections marked **Hot-reload: ✅** can be changed at runtime without restarting the server.
+
+---
+
+## `app`
+
+| Key | Type | Default | Description | Hot-reload |
+|-----|------|---------|-------------|:----------:|
+| `name` | string | `Ziziphus` | Application name (email subjects, TOTP issuer, page title) | ✅ |
+| `headline` | string | `""` | Short app tagline / description | ✅ |
+| `env` | string | `development` | Runtime environment (`development`, `staging`, `production`) | ✅ |
+
+> The `/api/v1/app/info` endpoint always returns the latest values from the config manager.
 Sections marked **❌** require a full restart — they affect startup-time initialization
 (connection pools, crypto keys, etc.).
 

@@ -20,6 +20,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
   const [savedAccounts, setSavedAccounts] = useState(getSavedAccounts)
+  const [appName, setAppName] = useState('Ziziphus')
+
+  // Fetch app name from server
+  useEffect(() => {
+    fetch('/api/v1/app/info')
+      .then(r => r.json())
+      .then(d => { if (d.data?.name) setAppName(d.data.name) })
+      .catch(() => { /* use default */ })
+  }, [])
 
   // Redirect when logged in
   useEffect(() => { if (isLoggedIn) navigate('/chat', { replace: true }) }, [isLoggedIn, navigate])
@@ -60,7 +69,7 @@ export default function LoginPage() {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
         <div className="text-center">
-          <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">ziziphus</h1>
+          <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
           <p className="text-sm text-[var(--color-muted)] mt-2">{t('auth.mfaTitle')}</p>
           <div className="inline-block mt-2 px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-medium">
             {mfaTypeLabel}
@@ -86,7 +95,7 @@ export default function LoginPage() {
     <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
       {/* Logo */}
       <div className="text-center">
-        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">ziziphus</h1>
+        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-[320px] flex flex-col gap-4">

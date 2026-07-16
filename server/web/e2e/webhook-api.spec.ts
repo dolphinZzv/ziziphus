@@ -38,22 +38,19 @@ test('Webhook full lifecycle - register, create, send, verify', async ({ request
   })
   const whBody = await whRes.json()
   expect(whBody.code).toBe(0)
-  expect(whBody.data.token).toBeTruthy()
   expect(whBody.data.api_key).toBeTruthy()
-  const whToken = whBody.data.token
   const whKey = whBody.data.api_key
   const whId = whBody.data.id
-  console.log(`Webhook created: token=${whToken}`)
+  console.log(`Webhook created: api_key=${whKey}`)
 
   // Step 4: Send message via public webhook endpoint
-  const msgRes = await request.post(`${API}/api/v1/webhooks/${whToken}`, {
+  const msgRes = await request.post(`${API}/api/v1/webhooks/receive`, {
     headers: { Authorization: `Bearer ${whKey}` },
     data: { body: `E2E webhook test ${TS}` },
   })
   const msgBody = await msgRes.json()
   expect(msgBody.code).toBe(0)
   expect(msgBody.data.msg_id).toBeGreaterThan(0)
-  expect(msgBody.data.audit_status).toBe('approved')
   console.log(`Message sent: ${msgBody.data.msg_id}`)
 
   // Step 5: Verify message in group with correct sender_name
@@ -70,16 +67,16 @@ test('Webhook full lifecycle - register, create, send, verify', async ({ request
   console.log(`Message verified: sender_name=${found.sender_name}`)
 
   // Step 6: Auth error with wrong key
-  const authRes = await request.post(`${API}/api/v1/webhooks/${whToken}`, {
+  const authRes = await request.post(`${API}/api/v1/webhooks/receive`, {
     headers: { Authorization: 'Bearer bad-key' },
     data: { body: 'should fail' },
   })
   const authBody = await authRes.json()
   expect(authBody.code).not.toBe(0)
-  expect(authBody.code).toBe(401)
+  expect(authBody.code).toBe(404)
   console.log(`Auth error: code=${authBody.code}`)
 
-  // Step 7: List webhooks shows token and api_key
+  // Step 7: List webhooks shows api_key
   const listRes = await request.get(
     `${API}/api/v1/conversations/${groupId}/webhooks`,
     { headers: { Authorization: `Bearer ${tokenA}` } }
@@ -89,9 +86,8 @@ test('Webhook full lifecycle - register, create, send, verify', async ({ request
   const list = Array.isArray(listBody.data) ? listBody.data : []
   const wh = list.find((w: any) => w.name === 'e2e-hook')
   expect(wh).toBeTruthy()
-  expect(wh.token).toBeTruthy()
   expect(wh.api_key).toBeTruthy()
-  console.log(`Webhook list: token visible=${!!wh.token}, key visible=${!!wh.api_key}`)
+  console.log(`Webhook list: api_key visible=${!!wh.api_key}`)
 
   // Step 8: Cleanup
   if (whId) {

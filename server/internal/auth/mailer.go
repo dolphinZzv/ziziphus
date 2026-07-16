@@ -28,22 +28,38 @@ var emailTemplates = map[string]map[string]string{
 }
 
 type TemplateData struct {
-	Code string
+	AppName string
+	Code    string
 }
 
 type Mailer struct {
-	cfg atomic.Pointer[config.SMTPConfig]
+	cfg     atomic.Pointer[config.SMTPConfig]
+	appName atomic.Pointer[string]
 }
 
-func NewMailer(cfg config.SMTPConfig) *Mailer {
+func NewMailer(cfg config.SMTPConfig, appName string) *Mailer {
 	m := &Mailer{}
 	m.cfg.Store(&cfg)
+	m.appName.Store(&appName)
 	return m
 }
 
 // UpdateConfig hot-reloads the SMTP configuration at runtime.
 func (m *Mailer) UpdateConfig(cfg config.SMTPConfig) {
 	m.cfg.Store(&cfg)
+}
+
+// SetAppName updates the application name used in email subjects and templates.
+func (m *Mailer) SetAppName(name string) {
+	m.appName.Store(&name)
+}
+
+func (m *Mailer) appNameVal() string {
+	p := m.appName.Load()
+	if p == nil {
+		return "Ziziphus"
+	}
+	return *p
 }
 
 func (m *Mailer) cfgVal() config.SMTPConfig {
@@ -74,12 +90,14 @@ func (m *Mailer) SendVerificationCodeLang(to, code, lang string) error {
 		return fmt.Errorf("mailer disabled")
 	}
 
+	appName := m.appNameVal()
+
 	// Build subject
 	subjects := map[string]string{
-		"zh": "Ziziphus - 邮箱验证码",
-		"en": "Ziziphus - Email Verification Code",
+		"zh": appName + " - 邮箱验证码",
+		"en": appName + " - Email Verification Code",
 	}
-	subject := "Ziziphus - Verification Code"
+	subject := appName + " - Verification Code"
 	if s, ok := subjects[lang]; ok {
 		subject = s
 	}
@@ -98,7 +116,7 @@ func (m *Mailer) SendVerificationCodeLang(to, code, lang string) error {
 	}
 
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, TemplateData{Code: code}); err != nil {
+	if err := tmpl.Execute(&buf, TemplateData{AppName: appName, Code: code}); err != nil {
 		return fmt.Errorf("execute template: %w", err)
 	}
 

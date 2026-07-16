@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { authStore } from '@/stores/auth-store'
@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [appName, setAppName] = useState('Ziziphus')
   const [email, setEmail] = useState('')
   const [localError, setLocalError] = useState('')
 
@@ -28,11 +29,18 @@ export default function RegisterPage() {
 
   const inputClass = 'w-full h-12 px-4 rounded-xl bg-[var(--color-surface-soft)] text-[var(--color-ink)] text-sm placeholder:text-[var(--color-muted)] outline-none border border-transparent focus:border-[var(--color-primary)]/40 focus:bg-[var(--color-surface-card)] transition-colors'
 
+  useEffect(() => {
+    fetch('/api/v1/app/info')
+      .then(r => r.json())
+      .then(d => { if (d.data?.name) setAppName(d.data.name) })
+      .catch(() => { /* use default */ })
+  }, [])
+
   return (
     <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
       {/* Logo */}
       <div className="text-center">
-        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">ziziphus</h1>
+        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-[320px] flex flex-col gap-4">

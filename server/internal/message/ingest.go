@@ -33,6 +33,7 @@ type Ingest struct {
 	contactRepo  contactCreator
 	userDB       userGetter
 	whDB         whForwarder
+	appName      string
 }
 
 type userGetter interface {
@@ -81,7 +82,7 @@ type convManager interface {
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
 }
 
-func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager, contactReqDB contactRequestDB, contactRepo contactCreator, userDB userGetter, whDB whForwarder) *Ingest {
+func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager, contactReqDB contactRequestDB, contactRepo contactCreator, userDB userGetter, whDB whForwarder, appName string) *Ingest {
 	return &Ingest{
 		store:        store,
 		router:       router,
@@ -94,6 +95,7 @@ func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *Ra
 		contactRepo:  contactRepo,
 		userDB:       userDB,
 		whDB:         whDB,
+		appName:      appName,
 	}
 }
 
@@ -520,7 +522,7 @@ func (in *Ingest) sendWebhookWithRetry(ctx context.Context, wh *model.ConvWebhoo
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", "Ziziphus-Webhook/1.0")
+		req.Header.Set("User-Agent", in.appName + "-Webhook/1.0")
 		req.Header.Set("X-Signature", computeSignature([]byte(wh.APIKeyHash), body))
 		for _, h := range wh.Headers {
 			req.Header.Set(h.Key, h.Value)

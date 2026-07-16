@@ -107,7 +107,7 @@ func main() {
 	fileRepo := db.NewFileRepo(pool)
 	mfaRepo := db.NewMFARepo(pool)
 	emailVerifyRepo := db.NewEmailVerifyRepo(pool)
-	mailer := auth.NewMailer(cfg.SMTP)
+	mailer := auth.NewMailer(cfg.SMTP, cfg.App.Name)
 
 	// Caches
 	sessCache := cache.NewSessionCache(rdb)
@@ -147,7 +147,7 @@ func main() {
 
 	// Ingest pipeline
 	contactReqRepo := db.NewContactRequestRepo(pool)
-	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr, contactReqRepo, contactRepo, userRepo, webhookRepo)
+	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr, contactReqRepo, contactRepo, userRepo, webhookRepo, cfg.App.Name)
 
 	// Sync handler
 	syncHandler := message.NewSyncHandler(msgRepo, seqCache)
@@ -162,7 +162,7 @@ func main() {
 	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL, convMgr, ingest, userRepo)
 
 	// HTTP API handlers
-	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailer, cfg.Server.RegistrationAllowed())
+	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailer, cfg.Server.RegistrationAllowed(), cfg.App.Name)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, receiptRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
@@ -199,6 +199,7 @@ func main() {
 		File:         fileHandler,
 		Webhook:      webhookHandler,
 		Announcement: api.Announcement(cfgMgr),
+		AppInfo:      api.AppInfo(cfgMgr),
 		DB:           pool,
 		RDB:          rdb,
 		LoginRL:      loginRL,

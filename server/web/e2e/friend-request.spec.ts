@@ -137,7 +137,7 @@ test.describe('Friend Request — Full Flow', () => {
     await page.addInitScript(auth(aId, '发A', aTok))
     await page.goto('/chat', { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(3000)
-    await expect(page.getByText('收B')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: '收 收B' })).toBeVisible({ timeout: 10000 })
   })
 })
 

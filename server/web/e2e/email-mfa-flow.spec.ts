@@ -35,7 +35,7 @@ test.describe('Email MFA Flow', () => {
 
     // Login - should trigger MFA challenge WITH a new code
     const r4 = await request.post(`${API}/api/v1/users/login`, {
-      data: { account: `emf_${ts}`, password: 'test123' },
+      data: { account: `emf_${ts}`, password: 'test123456' },
     })
     const d4 = await r4.json()
     expect(d4.code).toBe(0)

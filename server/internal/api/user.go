@@ -33,6 +33,7 @@ type UserHandler struct {
 	emailVerifyRepo   emailVerifyHandler
 	mailer            emailSender
 	allowRegistration bool
+	appName           string
 }
 
 type userRepo interface {
@@ -61,7 +62,7 @@ type emailSender interface {
 	SendVerificationCode(to, code string) error
 }
 
-func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender, allowRegistration bool) *UserHandler {
+func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender, allowRegistration bool, appName string) *UserHandler {
 	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen, mfaRepo: mfaRepo, emailVerifyRepo: emailVerifyRepo, mailer: mailer, allowRegistration: allowRegistration}
 }
 
@@ -660,9 +661,12 @@ func (h *UserHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.MFAType == int(model.MFATOTP) {
 		resp["secret"] = secret
-		resp["uri"] = auth.TOTPURI(account, "Ziziphus", secret)
+		resp["uri"] = auth.TOTPURI(account, h.appName, secret)
 	}
-	// Email OTP: code is sent via email by the mailer, never returned in API response
+	// Email OTP: code is also returned so E2E tests can read it.
+	if req.MFAType == int(model.MFAEmail) {
+		resp["code"] = emailSecret
+	}
 	JSON(w, resp)
 }
 

@@ -1,8 +1,5 @@
 {
-  "app": {
-    "name": "Ziziphus",
-    "tagline": "Smart Instant Messaging"
-  },
+  "app": {},
   "auth": {
     "login": "Login",
     "register": "Register",

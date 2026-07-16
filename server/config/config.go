@@ -3,6 +3,7 @@ package config
 import "fmt"
 
 type Config struct {
+	App          AppConfig          `mapstructure:"app"`
 	Server       ServerConfig       `mapstructure:"server"`
 	Postgres     PostgresConfig     `mapstructure:"postgres"`
 	Redis        RedisConfig        `mapstructure:"redis"`
@@ -13,6 +14,12 @@ type Config struct {
 	SMTP         SMTPConfig         `mapstructure:"smtp"`
 	Announcement AnnouncementConfig `mapstructure:"announcement"`
 	Log          LogConfig          `mapstructure:"log"`
+}
+
+type AppConfig struct {
+	Name     string `mapstructure:"name"`
+	Headline string `mapstructure:"headline"`
+	Env      string `mapstructure:"env"`
 }
 
 type AnnouncementConfig struct {
@@ -125,6 +132,12 @@ func Load(path string) (*Config, error) {
 }
 
 func setDefaults(cfg *Config) {
+	if cfg.App.Name == "" {
+		cfg.App.Name = "Ziziphus"
+	}
+	if cfg.App.Env == "" {
+		cfg.App.Env = "development"
+	}
 	if cfg.Server.Port == 0 {
 		cfg.Server.Port = 8080
 	}
