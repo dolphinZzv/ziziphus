@@ -30,10 +30,11 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    ports:
-      - "${APP_PORT:-8080}:8080"
+    expose:
+      - 8080
     volumes:
       - ./server/config/config.yaml:/app/config/config.yaml:ro
+      - files_data:/app/data/files
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,6 +42,22 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "${CADDY_HTTP_PORT:-80}:80"
+      - "${CADDY_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
 volumes:
   pgdata:
   redisdata:
+  files_data:
+  caddy_data:
+  caddy_config:

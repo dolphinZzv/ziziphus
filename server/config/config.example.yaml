@@ -1,5 +1,8 @@
 # IM Server Configuration
 # Copy this file to config.yaml and adjust for your environment.
+#
+# IMPORTANT: JWT secret can be overridden via JWT_SECRET env var.
+#   Generate one:  openssl rand -base64 32
 server:
   port: 8080
   # allow_registration: true   # set to false to disable new account registration
@@ -16,7 +19,8 @@ redis:
 
 jwt:
   # CHANGE THIS in production — generate a random 256-bit key.
-  secret: "change-me-to-a-random-secret"
+  # Can also be set via JWT_SECRET environment variable (takes precedence).
+  secret: "change-me-to-a-random-secret-at-least-32-chars"
   expire_hours: 1       # access token lifetime in hours
   refresh_expire_hours: 168  # refresh token lifetime in hours
 

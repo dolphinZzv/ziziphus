@@ -1,0 +1,22 @@
+{$DOMAIN:localhost} {
+    # Reverse proxy to the Go app (internal Docker network)
+    reverse_proxy app:8080 {
+        # Upgrade WebSocket connections
+        header_up Upgrade {>Upgrade}
+        header_up Connection {>Connection}
+    }
+
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Access logs
+    log {
+        output file /data/access.log
+        format json
+    }
+}

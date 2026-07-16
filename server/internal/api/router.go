@@ -3,7 +3,6 @@ package api
 import (
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -27,13 +26,21 @@ type Handlers struct {
 	DB           *pgxpool.Pool
 	RDB          *redis.Client
 	LoginRL      *LoginRateLimiter
+	RegisterRL   *RegisterLimiter
+	GlobalRL     *GlobalRateLimiter
 }
 
 func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(requestLogger)
 	r.Use(chimw.Recoverer)
+	r.Use(securityHeaders)
 	r.Use(i18n.Middleware)
+
+	// Global per-IP rate limiting (DDoS deterrent). Excludes health/metrics.
+	if h.GlobalRL != nil {
+		r.Use(h.GlobalRL.Middleware)
+	}
 
 	// Public routes
 	r.Group(func(r chi.Router) {
@@ -41,7 +48,12 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		if h.LoginRL != nil {
 			r.Use(h.LoginRL.Middleware)
 		}
-		r.Post("/api/v1/users/register", h.User.Register)
+		// Register has an additional stricter per-IP limiter
+		if h.RegisterRL != nil {
+			r.With(h.RegisterRL.Middleware).Post("/api/v1/users/register", h.User.Register)
+		} else {
+			r.Post("/api/v1/users/register", h.User.Register)
+		}
 		r.Post("/api/v1/users/login", h.User.Login)
 		r.Post("/api/v1/users/refresh", h.User.Refresh)
 		r.Get("/api/v1/version", h.GetVersion)
@@ -168,4 +180,12 @@ func requestLogger(next http.Handler) http.Handler {
 	})
 }
 
-var _ = strings.TrimSpace // ensure "strings" import is used
+// securityHeaders sets standard HTTP security headers.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		next.ServeHTTP(w, r)
+	})
+}

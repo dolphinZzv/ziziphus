@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net"
@@ -9,12 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"ziziphus/pkg/model"
 )
 
-// LoginRateLimiter limits failed login attempts per IP.
-// It's an in-memory rate limiter suitable for single-instance deployments.
-// For multi-instance deployments, extend with Redis-backed storage.
+// LoginRateLimiter limits failed login attempts per IP+account.
+// Uses Redis when rdb is set; falls back to in-memory for tests.
 type LoginRateLimiter struct {
 	mu           sync.Mutex
 	attempts     map[string]*loginAttempt
@@ -22,6 +23,8 @@ type LoginRateLimiter struct {
 	windowDur    time.Duration
 	lockoutDur   time.Duration
 	cleanupTick  time.Duration
+
+	rdb redis.Cmdable
 }
 
 type loginAttempt struct {
@@ -30,37 +33,81 @@ type loginAttempt struct {
 	lockedUntil time.Time
 }
 
-// NewLoginRateLimiter creates a new login rate limiter.
-// maxAttempts: max requests per window before lockout.
-// window: the time window for counting attempts.
-// lockout: how long to lock out after exceeding max attempts.
-func NewLoginRateLimiter(maxAttempts int, window, lockout time.Duration) *LoginRateLimiter {
+// NewLoginRateLimiter creates a login rate limiter.
+// If rdb is nil, uses in-memory storage (suitable for tests / single-instance).
+func NewLoginRateLimiter(maxAttempts int, window, lockout time.Duration, rdb redis.Cmdable) *LoginRateLimiter {
 	rl := &LoginRateLimiter{
 		attempts:     make(map[string]*loginAttempt),
 		maxPerWindow: maxAttempts,
 		windowDur:    window,
 		lockoutDur:   lockout,
 		cleanupTick:  time.Minute,
+		rdb:          rdb,
 	}
-	go rl.cleanupLoop()
+	if rdb == nil {
+		go rl.cleanupLoop()
+	}
 	return rl
 }
 
 // Allow checks whether a request from the given IP should be allowed.
-// Returns nil if allowed, or an AppError if rate limited.
-func (rl *LoginRateLimiter) Allow(ip string) error {
+func (rl *LoginRateLimiter) Allow(key string) error {
+	if rl.rdb != nil {
+		return rl.allowRedis(key)
+	}
+	return rl.allowMemory(key)
+}
+
+// Reset clears the rate limit for a given IP.
+func (rl *LoginRateLimiter) Reset(ip string) {
+	if rl.rdb != nil {
+		rl.rdb.Del(context.Background(), "rl:login:"+ip, "rl:login:lock:"+ip)
+		return
+	}
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	delete(rl.attempts, ip)
+}
+
+// allowRedis uses Redis INCR + EXPIRE for atomic window counting.
+func (rl *LoginRateLimiter) allowRedis(key string) error {
+	lockKey := "rl:login:lock:" + key
+	winKey := "rl:login:" + key
+
+	// Check lockout
+	n, err := rl.rdb.Exists(context.Background(), lockKey).Result()
+	if err == nil && n > 0 {
+		return model.ErrRateLimited
+	}
+
+	// INCR — returns 1 on first creation
+	count, err := rl.rdb.Incr(context.Background(), winKey).Result()
+	if err != nil {
+		return nil // fail open on Redis error
+	}
+	if count == 1 {
+		rl.rdb.Expire(context.Background(), winKey, rl.windowDur)
+	}
+
+	if int(count) > rl.maxPerWindow {
+		if rl.lockoutDur > 0 {
+			rl.rdb.Set(context.Background(), lockKey, 1, rl.lockoutDur)
+			rl.rdb.Del(context.Background(), winKey) // reset window so lockout expiry = fresh start
+		}
+		return model.ErrRateLimited
+	}
+	return nil
+}
+
+func (rl *LoginRateLimiter) allowMemory(key string) error {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
 	now := time.Now()
-
-	a, ok := rl.attempts[ip]
+	a, ok := rl.attempts[key]
 	if !ok {
-		rl.attempts[ip] = &loginAttempt{
-			count:       0,
-			windowStart: now,
-		}
-		a = rl.attempts[ip]
+		rl.attempts[key] = &loginAttempt{windowStart: now}
+		a = rl.attempts[key]
 	}
 
 	// Reset window if expired
@@ -91,13 +138,6 @@ func (rl *LoginRateLimiter) Allow(ip string) error {
 	return nil
 }
 
-// Reset clears the rate limit for a given IP.
-func (rl *LoginRateLimiter) Reset(ip string) {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-	delete(rl.attempts, ip)
-}
-
 // Middleware creates an HTTP middleware that rate-limits requests by IP.
 func (rl *LoginRateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -109,13 +149,12 @@ func (rl *LoginRateLimiter) Middleware(next http.Handler) http.Handler {
 			data, _ := io.ReadAll(r.Body)
 			r.Body.Close()
 			if len(data) > 0 {
-				var body map[string]interface{}
+				var body map[string]any
 				if json.Unmarshal(data, &body) == nil {
 					if account, ok := body["account"].(string); ok && account != "" {
 						key = ip + ":" + account
 					}
 				}
-				// Restore body for the next handler
 				r.Body = io.NopCloser(bytes.NewReader(data))
 			} else {
 				r.Body = io.NopCloser(bytes.NewReader(data))

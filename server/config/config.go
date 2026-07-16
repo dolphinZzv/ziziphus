@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -89,7 +90,27 @@ func Load(path string) (*Config, error) {
 		return nil, err
 	}
 	setDefaults(&cfg)
+
+	// Environment variable overrides (12-factor)
+	if secret := os.Getenv("JWT_SECRET"); secret != "" {
+		cfg.JWT.Secret = secret
+	}
+
 	return &cfg, nil
+}
+
+// Validate checks production-critical configuration values.
+// Returns an error describing the first problem found.
+func (c *Config) Validate() error {
+	if len(c.JWT.Secret) < 32 {
+		return fmt.Errorf("JWT secret must be at least 32 characters long (got %d). "+
+			"Generate one with: openssl rand -base64 32, then set JWT_SECRET env var or update config.yaml",
+			len(c.JWT.Secret))
+	}
+	if c.SMTP.Host != "" && c.SMTP.User == "" {
+		return fmt.Errorf("SMTP host set but user is empty")
+	}
+	return nil
 }
 
 func setDefaults(cfg *Config) {

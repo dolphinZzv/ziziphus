@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewLoginRateLimiter(t *testing.T) {
-	rl := NewLoginRateLimiter(5, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(5, time.Minute, time.Minute, nil)
 	if rl == nil {
 		t.Fatal("NewLoginRateLimiter returned nil")
 	}
@@ -24,7 +24,7 @@ func TestNewLoginRateLimiter(t *testing.T) {
 }
 
 func TestAllow_FirstAttempt(t *testing.T) {
-	rl := NewLoginRateLimiter(3, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(3, time.Minute, time.Minute, nil)
 	err := rl.Allow("192.168.1.1")
 	if err != nil {
 		t.Errorf("Allow() returned error for first attempt: %v", err)
@@ -32,7 +32,7 @@ func TestAllow_FirstAttempt(t *testing.T) {
 }
 
 func TestAllow_WithinLimit(t *testing.T) {
-	rl := NewLoginRateLimiter(3, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(3, time.Minute, time.Minute, nil)
 	for i := 0; i < 3; i++ {
 		if err := rl.Allow("10.0.0.1"); err != nil {
 			t.Fatalf("attempt %d: Allow() returned unexpected error: %v", i+1, err)
@@ -41,7 +41,7 @@ func TestAllow_WithinLimit(t *testing.T) {
 }
 
 func TestAllow_ExceedsLimit(t *testing.T) {
-	rl := NewLoginRateLimiter(2, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(2, time.Minute, time.Minute, nil)
 	_ = rl.Allow("10.0.0.1")
 	_ = rl.Allow("10.0.0.1")
 	err := rl.Allow("10.0.0.1")
@@ -54,7 +54,7 @@ func TestAllow_ExceedsLimit(t *testing.T) {
 }
 
 func TestAllow_DifferentKeysIndependent(t *testing.T) {
-	rl := NewLoginRateLimiter(1, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(1, time.Minute, time.Minute, nil)
 	if err := rl.Allow("10.0.0.1"); err != nil {
 		t.Fatalf("first IP attempt: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestAllow_DifferentKeysIndependent(t *testing.T) {
 }
 
 func TestAllow_WindowReset(t *testing.T) {
-	rl := NewLoginRateLimiter(1, 50*time.Millisecond, 0)
+	rl := NewLoginRateLimiter(1, 50*time.Millisecond, 0, nil)
 	if err := rl.Allow("10.0.0.1"); err != nil {
 		t.Fatalf("first attempt: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestAllow_WindowReset(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	rl := NewLoginRateLimiter(1, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(1, time.Minute, time.Minute, nil)
 	_ = rl.Allow("10.0.0.1")
 	if err := rl.Allow("10.0.0.1"); err == nil {
 		t.Fatal("expected rate limit before reset")
@@ -119,7 +119,7 @@ func TestClientIP_NoPortInRemoteAddr(t *testing.T) {
 }
 
 func TestMiddleware_PassesThroughWhenNoAccount(t *testing.T) {
-	rl := NewLoginRateLimiter(1, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(1, time.Minute, time.Minute, nil)
 	called := false
 	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
@@ -139,7 +139,7 @@ func TestMiddleware_PassesThroughWhenNoAccount(t *testing.T) {
 }
 
 func TestMiddleware_RateLimits(t *testing.T) {
-	rl := NewLoginRateLimiter(1, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(1, time.Minute, time.Minute, nil)
 	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -164,7 +164,7 @@ func TestMiddleware_RateLimits(t *testing.T) {
 }
 
 func TestMiddleware_AccountFromForm(t *testing.T) {
-	rl := NewLoginRateLimiter(1, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(1, time.Minute, time.Minute, nil)
 	called := false
 	handler := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
@@ -185,7 +185,7 @@ func TestMiddleware_AccountFromForm(t *testing.T) {
 }
 
 func TestConcurrent_Allow_RaceFree(t *testing.T) {
-	rl := NewLoginRateLimiter(5, time.Minute, time.Minute)
+	rl := NewLoginRateLimiter(5, time.Minute, time.Minute, nil)
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
@@ -198,7 +198,7 @@ func TestConcurrent_Allow_RaceFree(t *testing.T) {
 }
 
 func TestAllow_LockoutDuration(t *testing.T) {
-	rl := NewLoginRateLimiter(1, time.Hour, 50*time.Millisecond)
+	rl := NewLoginRateLimiter(1, time.Hour, 50*time.Millisecond, nil)
 	_ = rl.Allow("10.0.0.1")
 	_ = rl.Allow("10.0.0.1") // rate limited, locked
 

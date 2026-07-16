@@ -50,6 +50,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "load config: %v\n", err)
 		os.Exit(1)
 	}
+	if err := cfg.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "config validation failed: %v\n", err)
+		os.Exit(1)
+	}
 	logger.SetLevel(slog.LevelInfo)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -154,6 +158,11 @@ func main() {
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
 	sessionHandler := api.NewSessionHandler(sessMgr, gwMgr)
 	webhookHandler := api.NewWebhookHandler(webhookRepo, sf, convMgr, userRepo, msgRepo, msgRouter, pusher, seqCache, ingest)
+	// Rate limiters (Redis-backed)
+	loginRL := api.NewLoginRateLimiter(10, time.Minute, 5*time.Minute, rdb)
+	registerRL := api.NewRegisterLimiter(5, time.Hour, rdb) // 5 registrations/hour/IP
+	globalRL := api.NewGlobalRateLimiter(100, 200, rdb)     // 100 req/s burst 200 per IP
+
 	handlers := &api.Handlers{
 		User:         userHandler,
 		Conversation: convHandler,
@@ -165,6 +174,8 @@ func main() {
 		Announcement: api.Announcement(cfg.Announcement),
 		DB:           pool,
 		RDB:          rdb,
+		LoginRL:      loginRL, RegisterRL: registerRL,
+		GlobalRL: globalRL,
 	}
 
 	// Auth middleware
