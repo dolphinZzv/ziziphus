@@ -1,3 +1,4 @@
+import { getItem as getSecureItem } from '@/lib/secure-storage'
 import { getItem, getDeviceId, safeUUID } from '@/lib/storage'
 import { MessageType, type WSFrame, type MsgPushPayload } from '@/types/ws'
 import type {
@@ -43,7 +44,7 @@ export class WebSocketClient {
   connect(token: string) {
     this.token = token
     this.shouldReconnect = true
-    this.sessionId = getItem<string>('session_id', null) ?? null
+    this.sessionId = getSecureItem<string>('session_id', null) ?? null
     this.doConnect()
   }
 

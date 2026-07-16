@@ -1,3 +1,4 @@
+import { getItem as getSecureItem } from '@/lib/secure-storage'
 import { getServerUrl, getItem } from '@/lib/storage'
 import type { APIResponse } from '@/types/api'
 
@@ -26,7 +27,7 @@ async function request<T>(
     })
   }
 
-  const token = getItem<string>('token', '')
+  const token = getSecureItem<string>('token', '')
   const lang = getItem<string>('language', 'auto')
   const reqHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...headers }
   if (token) reqHeaders['Authorization'] = `Bearer ${token}`
@@ -90,7 +91,7 @@ export function uploadFile(
     if (convId) formData.append('conv_id', convId)
     if (folderPath) formData.append('folder_path', folderPath)
 
-    const token = getItem<string>('token', '')
+    const token = getSecureItem<string>('token', '')
     xhr.open('POST', getBaseURL() + '/api/v1/files/upload')
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
 
