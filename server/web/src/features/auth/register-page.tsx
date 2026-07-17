@@ -25,6 +25,7 @@ export default function RegisterPage() {
     if (!account.trim()) { setLocalError(t('auth.accountRequired', '请填写账号')); return }
     if (!name.trim()) { setLocalError(t('auth.nameRequired', '请填写昵称')); return }
     if (!password.trim()) { setLocalError(t('auth.passwordRequired', '请填写密码')); return }
+    if (password.trim().length < 8) { setLocalError(t('auth.passwordTooShort', '密码至少8位')); return }
     if (password !== confirmPassword) { setLocalError(t('auth.passwordMismatch')); return }
     try { await authStore.register(account.trim(), name.trim(), password.trim(), email.trim() || undefined) } catch {}
   }
