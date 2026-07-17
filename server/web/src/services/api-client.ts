@@ -1,4 +1,4 @@
-import { getItem as getSecureItem } from '@/lib/secure-storage'
+import { getItem as getSecureItem, setItem as setSecureItem } from '@/lib/secure-storage'
 import { getServerUrl, getItem } from '@/lib/storage'
 import type { APIResponse } from '@/types/api'
 
@@ -6,6 +6,26 @@ let _logout: (() => void) | null = null
 
 /** Internal: called by auth-store to wire up auto-logout on 401. */
 export function __setLogoutHandler(fn: () => void) { _logout = fn }
+
+/** Try to refresh the access token using the stored refresh token. Returns the new token or null. */
+async function tryRefreshToken(): Promise<string | null> {
+  const refreshToken = getSecureItem<string>('refresh_token', '')
+  if (!refreshToken) return null
+  try {
+    const lang = getItem<string>('language', 'auto')
+    const resp = await fetch(getBaseURL() + '/api/v1/users/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(lang && lang !== 'auto' ? { 'X-Language': lang } : {}) },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+    if (!resp.ok) { /* refresh failed */ return null }
+    const json = await resp.json()
+    if (json.code !== 0 || !json.data?.token) return null
+    const newToken = json.data.token as string
+    setSecureItem('token', newToken)
+    return newToken
+  } catch { return null }
+}
 
 function getBaseURL(): string {
   const custom = getServerUrl()
@@ -39,7 +59,7 @@ async function request<T>(
   // Send user's language preference so server can render i18n messages
   if (lang && lang !== 'auto') reqHeaders['X-Language'] = lang
 
-  let resp: Response
+  let resp: Response | undefined
   let lastErr: APIError | null = null
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -48,18 +68,34 @@ async function request<T>(
         headers: reqHeaders,
         body: body ? JSON.stringify(body) : undefined,
       })
-            break
+      break
     } catch {
       lastErr = new APIError(-1, 'Network request failed')
-            if (attempt < maxAttempts - 1) {
+      if (attempt < maxAttempts - 1) {
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1))) // exponential backoff
       }
-          }
+    }
   }
-  if (!resp!) throw lastErr || new APIError(-1, 'Request failed')
+  if (!resp) throw lastErr || new APIError(-1, 'Request failed')
 
   if (resp.status === 401) {
-    // Auto-logout so the user sees the login screen instead of "连接已断开"
+    // Try refreshing the token once before giving up
+    const newToken = await tryRefreshToken()
+    if (newToken) {
+      // Retry the original request with the new token
+      reqHeaders['Authorization'] = `Bearer ${newToken}`
+      try {
+        resp = await fetch(url.toString(), { method, headers: reqHeaders, body: body ? JSON.stringify(body) : undefined })
+        if (resp.ok) {
+          const text = await resp.text()
+          let json: APIResponse<T>
+          try { json = JSON.parse(text) } catch { throw new APIError(resp.status, `Server error (${resp.status})`) }
+          if (json.code !== 0) throw new APIError(json.code, json.msg || 'Request failed')
+          return json.data as T
+        }
+      } catch (e) { if (e instanceof APIError) throw e }
+    }
+    // Refresh failed or retry failed — logout
     _logout?.()
     throw new APIError(401, 'Unauthorized, please login again')
   }
