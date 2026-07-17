@@ -320,6 +320,13 @@ export const chatStore = {
   },
 
   handlePush(payload: MsgPushPayload) {
+    // Skip push if this message already exists locally (from sendMessage).
+    // The local message has the correct sender_id; the push may have a stale one.
+    const existingMsgs = state.messagesByConvId.get(payload.conv_id)
+    if (existingMsgs?.some(m => m.msg_id === payload.msg_id || (m.client_seq === payload.client_seq && payload.client_seq > 0))) {
+      return
+    }
+
     const msg: Message = {
       msg_id: payload.msg_id,
       conv_id: payload.conv_id,
