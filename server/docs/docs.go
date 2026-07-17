@@ -2742,6 +2742,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/i18n/detect": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Detect language",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/api.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/api.detectLangResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/messages/{msg_id}/receipts": {
             "get": {
                 "security": [
@@ -4472,6 +4503,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "api.detectLangResp": {
+            "type": "object",
+            "properties": {
+                "language": {
                     "type": "string"
                 }
             }

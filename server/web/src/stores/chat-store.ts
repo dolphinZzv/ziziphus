@@ -320,9 +320,15 @@ export const chatStore = {
   },
 
   handlePush(payload: MsgPushPayload) {
+    // If the push has no sender_id, use the current user (could be our own message)
+    if (!payload.sender_id) {
+      const me = getItem<any>('user', null)
+      if (me?.user_id) payload.sender_id = me.user_id
+    }
+
     const existingMsgs = state.messagesByConvId.get(payload.conv_id)
 
-    // If this msg_id already exists, update it in-place but KEEP local sender_id.
+    // If this msg_id already exists, just update status/timestamp, keep everything else
     const existingIdx = existingMsgs?.findIndex(m => m.msg_id === payload.msg_id && m.msg_id > 0)
     if (existingIdx !== undefined && existingIdx >= 0 && existingMsgs) {
       const msgs = [...existingMsgs]
@@ -333,9 +339,8 @@ export const chatStore = {
       return
     }
 
-    // If there is a pending local message (msg_id=0, not yet acked), update it
-    // but KEEP the local sender_id.
-    const pendingIdx = existingMsgs?.findIndex(m => m.sender_id && m.msg_id === 0)
+    // If there is a pending local message (msg_id=0), update it with server data
+    const pendingIdx = existingMsgs?.findIndex(m => m.msg_id === 0 && m.sender_id)
     if (pendingIdx !== undefined && pendingIdx >= 0 && existingMsgs) {
       const msgs = [...existingMsgs]
       msgs[pendingIdx] = { ...msgs[pendingIdx], msg_id: payload.msg_id, conv_seq: payload.conv_seq, timestamp: payload.timestamp, status: MsgStatus.Delivered }

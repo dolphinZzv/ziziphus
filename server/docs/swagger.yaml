@@ -108,6 +108,11 @@ definitions:
       user_id:
         type: string
     type: object
+  api.detectLangResp:
+    properties:
+      language:
+        type: string
+    type: object
   api.healthResp:
     properties:
       components:
@@ -2075,6 +2080,23 @@ paths:
           schema:
             $ref: '#/definitions/api.APIResponse'
       summary: Health check
+      tags:
+      - system
+  /i18n/detect:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/api.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/api.detectLangResp'
+              type: object
+      summary: Detect language
       tags:
       - system
   /messages/{msg_id}/receipts:
