@@ -2,16 +2,13 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { conversationService } from '@/services/conversation-service'
 import { getConvSettings, toggleConvSetting, subscribe as settingsSubscribe } from '@/stores/conversation-settings-store'
-import { X, EyeOff, FileUp, Search, ArrowLeft, PenLine } from 'lucide-react'
+import { X, EyeOff, FileUp, Search, ArrowLeft } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-breakpoint'
-import GroupEditView from './group-edit-view'
 
 interface Props { convId: string; onClose: () => void }
 
 export default function GroupSettings({ convId, onClose }: Props) { const isMobile=useIsMobile()
   const { t } = useTranslation()
-  const [showEdit, setShowEdit] = useState(false)
-  const [detail, setDetail] = useState<{ name: string; headline: string; notice: string; primary_color?: string } | null>(null)
   const [showAgentResponseOnly, setShowAgentResponseOnly] = useState(
     () => getConvSettings(convId).showAgentResponseOnly
   )
@@ -28,10 +25,6 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
       if (res.settings?.fileChangeNotify) setFileChangeNotify(true)
       // discoverable defaults to true when not set
       setDiscoverable(res.settings?.discoverable !== false)
-    }).catch(() => {})
-    // Fetch group detail for edit view
-    conversationService.getDetail(convId).then(d => {
-      setDetail({ name: d.name, headline: d.headline || '', notice: d.notice || '', primary_color: d.primary_color })
     }).catch(() => {})
   }, [convId])
 
@@ -112,28 +105,7 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
             </button>
           </label>
         </div>
-
-        {/* Edit group button — always visible */}
-        {detail && (
-          <button onClick={() => setShowEdit(true)}
-            className="w-full flex items-center gap-2 px-5 py-3 border-t border-[var(--color-hairline)] text-sm text-[var(--color-primary)] hover:bg-[var(--color-surface-soft)] transition-colors font-medium">
-            <PenLine size={15} /> {t('group.editGroup', '编辑群信息')}
-          </button>
-        )}
       </div>
-
-      {/* Group edit overlay */}
-      {showEdit && detail && (
-        <GroupEditView
-          convId={convId}
-          name={detail.name}
-          headline={detail.headline}
-          notice={detail.notice}
-          primaryColor={detail.primary_color}
-          onClose={() => setShowEdit(false)}
-          onSaved={data => setDetail({ ...detail, ...data })}
-        />
-      )}
     </div>
   )
 }

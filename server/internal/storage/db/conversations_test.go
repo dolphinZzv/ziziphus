@@ -92,10 +92,10 @@ func TestConvRepo_Get(t *testing.T) {
 	repo := NewConvRepo(mock)
 	now := time.Now()
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline, COALESCE(primary_color, '') FROM conversations WHERE conv_id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT conv_id, type, name, owner_id, avatar, cover, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline, COALESCE(primary_color, '') FROM conversations WHERE conv_id = $1`)).
 		WithArgs("conv1").
-		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "type", "name", "owner_id", "avatar", "notice", "max_members", "last_msg_id", "last_msg_at", "created_at", "settings", "headline", "primary_color"}).
-			AddRow("conv1", model.ConvP2P, "test", "u1", "av.jpg", "notice", 2, int64(100), &now, now, map[string]any{}, "", ""))
+		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "type", "name", "owner_id", "avatar", "cover", "notice", "max_members", "last_msg_id", "last_msg_at", "created_at", "settings", "headline", "primary_color"}).
+			AddRow("conv1", model.ConvP2P, "test", "u1", "av.jpg", "cover.jpg", "notice", 2, int64(100), &now, now, map[string]any{}, "", ""))
 
 	c, err := repo.Get(context.Background(), "conv1")
 	if err != nil {
@@ -124,8 +124,8 @@ func TestConvRepo_Get_NoLastMsg(t *testing.T) {
 
 	mock.ExpectQuery(`FROM conversations WHERE conv_id`).
 		WithArgs("conv_new").
-		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "type", "name", "owner_id", "avatar", "notice", "max_members", "last_msg_id", "last_msg_at", "created_at", "settings", "headline", "primary_color"}).
-			AddRow("conv_new", model.ConvP2P, "new", "u1", "", "", 2, nil, nil, now, map[string]any{}, "", ""))
+		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "type", "name", "owner_id", "avatar", "cover", "notice", "max_members", "last_msg_id", "last_msg_at", "created_at", "settings", "headline", "primary_color"}).
+			AddRow("conv_new", model.ConvP2P, "new", "u1", "", "", "", 2, nil, nil, now, map[string]any{}, "", ""))
 
 	c, err := repo.Get(context.Background(), "conv_new")
 	if err != nil {

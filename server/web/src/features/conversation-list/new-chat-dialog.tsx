@@ -5,6 +5,7 @@ import { contactStore } from '@/stores/contact-store'
 import { uiStore } from '@/stores/ui-store'
 import { useSyncExternalStore } from 'react'
 import { X, Search, MessageCircle } from 'lucide-react'
+import { avatarUrl } from '@/lib/file'
 
 interface Props { onClose: () => void }
 
@@ -48,10 +49,14 @@ export default function NewChatDialog({ onClose }: Props) {
             return (
               <button key={c.user_id} type="button" onClick={() => handleCreate(c.user_id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-soft)] transition-colors">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-                  style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
+                {c.avatar ? (
+                  <img src={avatarUrl(c.avatar)} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="text-left min-w-0 flex-1">
                   <div className="text-sm font-medium text-[var(--color-ink)]">{displayName}</div>
                   {c.headline && <div className="text-xs text-[var(--color-muted)] truncate">{c.headline}</div>}

@@ -851,8 +851,8 @@ func TestSendSystemMessage(t *testing.T) {
 	if msg.ConvID != "conv_sys" {
 		t.Errorf("msg.ConvID = %q; want conv_sys", msg.ConvID)
 	}
-	if msg.SenderID != "" {
-		t.Errorf("msg.SenderID = %q; want empty string", msg.SenderID)
+	if msg.SenderID != "system" {
+		t.Errorf("msg.SenderID = %q; want system", msg.SenderID)
 	}
 	if msg.ContentType != model.ContentSystem {
 		t.Errorf("msg.ContentType = %d; want %d", msg.ContentType, model.ContentSystem)

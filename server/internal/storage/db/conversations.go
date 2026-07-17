@@ -39,9 +39,9 @@ func (r *ConvRepo) Get(ctx context.Context, convID string) (*model.Conversation,
 	var lastMsgAt *time.Time
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline, COALESCE(primary_color, '')
+		`SELECT conv_id, type, name, owner_id, avatar, cover, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline, COALESCE(primary_color, '')
 		 FROM conversations WHERE conv_id = $1`, convID).
-		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt, &c.Settings, &c.Headline, &c.PrimaryColor)
+		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Cover, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt, &c.Settings, &c.Headline, &c.PrimaryColor)
 	if err != nil {
 		return nil, err
 	}

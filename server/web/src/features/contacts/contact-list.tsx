@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
 import { X, MessageCircle, Trash2, Search, ArrowLeft } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-breakpoint'
+import { avatarUrl } from '@/lib/file'
 
 interface Props { onClose: () => void; inline?: boolean }
 
@@ -63,10 +64,14 @@ export default function ContactList({ onClose, inline }: Props) { const isMobile
           return (
             <div key={contact.user_id} className="flex items-center gap-3 px-3 h-12 rounded-xl hover:bg-[var(--color-surface-soft)] group">
               <div className="relative">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold"
-                  style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
+                {contact.avatar ? (
+                  <img src={avatarUrl(contact.avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold"
+                    style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--color-surface-card)] ${isOnline ? 'bg-[var(--success)]' : 'bg-[var(--color-muted)]'}`} />
               </div>
               <div className="flex-1 min-w-0">

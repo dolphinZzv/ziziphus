@@ -8,7 +8,7 @@ import { userService } from '@/services/user-service'
 import { formatTime } from '@/lib/time'
 import { avatarUrl } from '@/lib/file'
 import { cn } from '@/lib/cn'
-import { Check, CheckCheck, Clock, AlertCircle, Copy, Reply, Cpu, PenLine, Trash2, MoreHorizontal } from 'lucide-react'
+import { Check, CheckCheck, Clock, AlertCircle, Copy, Reply, Cpu, PenLine, Trash2, MoreHorizontal, Bot } from 'lucide-react'
 import TextBubble from './text-bubble'
 import ImageBubble from './image-bubble'
 import FileBubble from './file-bubble'
@@ -36,7 +36,7 @@ function useSenderInfo(userId: string, isOwn: boolean): { avatar?: string; isAge
   const [info, setInfo] = useState<{ avatar?: string; isAgent: boolean }>(initial)
   useEffect(() => {
     // Skip sender lookup if no valid userId
-    if (!userId || userId.startsWith('webhook:')) return
+    if (!userId || userId.startsWith('webhook:') || userId === 'system') return
     const cached = senderCache.get(userId)
     if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
       if (!info.avatar && cached.avatar) setInfo({ avatar: cached.avatar, isAgent: cached.type === 1 })
@@ -229,9 +229,18 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
   // System messages and recalled messages — centered, no avatar, distinct style
   const isCentered = message.content_type === ContentType.System || message.content_type === ContentType.Recall
 
+  const isSystem = message.content_type === ContentType.System
+
   if (isCentered) {
     return (
       <div className="flex justify-center my-2">
+        {isSystem && (
+          <div className="flex items-center gap-1.5 mr-1.5">
+            <div className="w-5 h-5 rounded-full bg-[var(--color-accent)]/10 flex items-center justify-center flex-shrink-0">
+              <Bot size={11} className="text-[var(--color-accent)]" />
+            </div>
+          </div>
+        )}
         <span className="inline-block px-3 py-1 rounded-full bg-[var(--color-surface-soft)] text-[11px] text-[var(--color-muted)] max-w-[85%] text-center">
           {message.content_type === ContentType.Recall ? String(t('chat.recalled')) : message.body}
         </span>

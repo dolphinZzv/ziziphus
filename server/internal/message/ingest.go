@@ -220,7 +220,8 @@ func (in *Ingest) SendSystemMessage(ctx context.Context, convID, body string, se
 	msg := &model.Message{
 		MsgID:           msgID,
 		ConvID:          convID,
-		SenderID:        "",
+		SenderID:        "system",
+		SenderName:      "System",
 		SenderSessionID: strconv.FormatInt(msgID, 10),
 		ContentType:     model.ContentSystem,
 		Body:            body,
