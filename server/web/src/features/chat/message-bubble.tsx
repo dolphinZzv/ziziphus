@@ -22,6 +22,9 @@ import { useTranslation } from 'react-i18next'
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 const senderCache = new Map<string, { avatar: string; type: number; ts: number }>()
 
+// Global singleton: only one UserCard visible at a time
+let globalUserCardCloser: (() => void) | null = null
+
 function useSenderInfo(userId: string, isOwn: boolean): { avatar?: string; isAgent: boolean } {
   // For own messages, use local user info directly — no API call needed
   const me = isOwn ? authStore.state.user : null
@@ -126,12 +129,24 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
   const canEdit = isOwn && (message.content_type === ContentType.Text || message.content_type === ContentType.Edit) && (Date.now() - msgTimestampMs) < 300000 // 5 min
   const canRecall = isOwn && (Date.now() - msgTimestampMs) < 120000 // 2 min
 
+  const handleShowUserCard = (pos: { x: number; y: number }) => {
+    // Close any other open UserCard first
+    globalUserCardCloser?.()
+    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+    setHoverUser(true)
+    setUserCardPos(pos)
+    globalUserCardCloser = () => {
+      setHoverUser(false)
+      setUserCardPos(null)
+      globalUserCardCloser = null
+    }
+  }
   const handleMouseEnter = () => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current)
     setHoverUser(true)
   }
   const handleMouseLeave = () => {
-    hoverTimer.current = setTimeout(() => setHoverUser(false), 200)
+    hoverTimer.current = setTimeout(() => { setHoverUser(false); setUserCardPos(null) }, 200)
   }
 
   const handleReply = () => { chatStore.setReplyTo(message.conv_id, message); setShowMenu(false) }
@@ -186,7 +201,7 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
     clickable ? (
       <button
         ref={avatarRef}
-        onMouseEnter={() => { const r = avatarRef.current?.getBoundingClientRect(); if (r) setUserCardPos({ x: r.left, y: r.bottom + 4 }); handleMouseEnter() }}
+        onMouseEnter={() => { const r = avatarRef.current?.getBoundingClientRect(); if (r) handleShowUserCard({ x: r.left, y: r.bottom + 4 }); else handleMouseEnter() }}
         onMouseLeave={handleMouseLeave} className="flex-shrink-0 self-start mt-1">
         <div className="relative">
           {avatar ? (

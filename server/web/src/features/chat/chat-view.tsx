@@ -21,11 +21,13 @@ import WebhookPanel from '@/features/group/webhook-panel'
 import MemberListView from '@/features/group/member-list-view'
 import AddMemberView from '@/features/group/add-member-view'
 import HistoryView from '@/features/history/history-view'
-import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X, Trash2, UserPlus, ArrowLeft } from 'lucide-react'
+import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X, Trash2, UserPlus, ArrowLeft, Pin, PinOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useIsMobile } from '@/hooks/use-breakpoint'
 import FilePanel from './file-panel'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export default function ChatView() {
   const { convId } = useParams<{ convId: string }>()
@@ -347,6 +349,11 @@ export default function ChatView() {
               <Search size={17} />
             </button>
           )}
+          <button onClick={() => conv?.pinned ? conversationStore.unpin(convId) : conversationStore.pin(convId)}
+            className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+            title={conv?.pinned ? t('common.unpin') : t('common.pin')}>
+            {conv?.pinned ? <PinOff size={16} /> : <Pin size={16} />}
+          </button>
           <button onClick={() => setShowFiles(!showFiles)}
             className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors hidden sm:inline-flex"
             title={t('conversation.files')}>
@@ -463,7 +470,7 @@ export default function ChatView() {
       {isGroup && groupNotice && (
         <div className="px-4 py-2 bg-[var(--color-warning)]/5 text-xs text-[var(--color-body)] leading-relaxed">
           <span className="text-[var(--color-muted)] mr-1">📢</span>
-          {groupNotice}
+          <GroupNotice text={groupNotice} />
         </div>
       )}
 
@@ -503,6 +510,14 @@ export default function ChatView() {
       {/* File panel sidebar */}
       {showFiles && <FilePanel convId={convId} onClose={() => setShowFiles(false)} width={filePanelWidth} />}
       {dragging && <div className="fixed inset-0 z-50 cursor-col-resize" style={{ userSelect: 'none' } as React.CSSProperties} />}
+    </div>
+  )
+}
+
+function GroupNotice({ text }: { text: string }) {
+  return (
+    <div className="prose prose-xs dark:prose-invert max-w-none text-current [&_p]:my-0 [&_code]:text-[11px] [&_a]:text-current [&_a]:underline">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
     </div>
   )
 }
