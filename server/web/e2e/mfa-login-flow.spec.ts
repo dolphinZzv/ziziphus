@@ -14,6 +14,6 @@ test.describe('MFA Login Flow (browser)', () => {
     await inputs.nth(3).fill('test123456')
     await inputs.nth(4).fill('test123456')
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=MFALoginUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=MFALoginUser').first()).toBeVisible({ timeout: 15000 })
   })
 })

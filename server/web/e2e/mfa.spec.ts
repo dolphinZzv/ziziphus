@@ -15,11 +15,11 @@ test.describe('MFA Settings UI', () => {
     await inputs.nth(3).fill(ALICE.pass)
     await inputs.nth(4).fill(ALICE.pass)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=MFAUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=MFAUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     // ✅ Verify: logged into chat
-    await expect(page).toHaveURL(/\/chat/, { timeout: 5000 })
+    await expect(page).toHaveURL(/\/conversations/, { timeout: 5000 })
 
     // Open profile
     await page.locator('text=MFAUser').first().click({ force: true })

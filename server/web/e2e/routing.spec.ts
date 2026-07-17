@@ -48,6 +48,6 @@ test.describe('Routing & Auth Guard', () => {
   test('/login redirects to /chat when cached auth exists', async ({ page }) => {
     await page.addInitScript(AUTH_INIT)
     await page.goto('/login')
-    await expect(page).toHaveURL('/chat')
+    await expect(page).toHaveURL(/\/conversations/)
   })
 })

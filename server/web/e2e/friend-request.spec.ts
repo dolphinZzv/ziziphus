@@ -15,7 +15,7 @@ test.describe('Friend Request Flow (browser)', () => {
     await inputs.nth(3).fill(A.password)
     await inputs.nth(4).fill(A.password)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=FriendA')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=FriendA').first()).toBeVisible({ timeout: 15000 })
   })
 
   test('register user B', async ({ page }) => {
@@ -28,7 +28,7 @@ test.describe('Friend Request Flow (browser)', () => {
     await inputs.nth(3).fill(B.password)
     await inputs.nth(4).fill(B.password)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=FriendB')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=FriendB').first()).toBeVisible({ timeout: 15000 })
   })
 
   test('login A and view conversations', async ({ page }) => {
@@ -36,7 +36,7 @@ test.describe('Friend Request Flow (browser)', () => {
     await page.fill('input[type="text"]', A.account)
     await page.fill('input[type="password"]', A.password)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=FriendA')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=FriendA').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
   })
 
@@ -45,7 +45,7 @@ test.describe('Friend Request Flow (browser)', () => {
     await page.fill('input[type="text"]', A.account)
     await page.fill('input[type="password"]', A.password)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=FriendA')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=FriendA').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
     const contactBtn = page.locator('button:has(svg.lucide-users), a[href*="contact"]').first()
     if (await contactBtn.isVisible({ timeout: 3000 }).catch(() => false)) {

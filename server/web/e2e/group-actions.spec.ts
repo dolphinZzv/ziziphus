@@ -16,7 +16,7 @@ test.describe('Group Actions', () => {
     await inputs.nth(3).fill(ALICE.pass)
     await inputs.nth(4).fill(ALICE.pass)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=Alice')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=Alice').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     // Create group
@@ -53,7 +53,7 @@ test.describe('Group Actions', () => {
 
     // Verify: group no longer in conversation list after disband
     await page.waitForTimeout(1000)
-    await expect(page.locator(`text=${GROUP}`)).not.toBeVisible({ timeout: 5000 })
+    await expect(page.locator(`text=${GROUP}`).first()).not.toBeVisible({ timeout: 5000 })
   })
 
   test('Bob joins group and leaves', async ({ browser }) => {
@@ -69,7 +69,7 @@ test.describe('Group Actions', () => {
     await inputs.nth(3).fill(BOB.pass)
     await inputs.nth(4).fill(BOB.pass)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=Bob')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=Bob').first()).toBeVisible({ timeout: 15000 })
     await page.close()
 
     // Alice creates group with Bob as member
@@ -78,7 +78,7 @@ test.describe('Group Actions', () => {
     await page.fill('input[type="text"]', ALICE.account)
     await page.fill('input[type="password"]', ALICE.pass)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=Alice')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=Alice').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     const plusBtn = page.locator('button').filter({ has: page.locator('svg.lucide-plus') })
@@ -105,7 +105,7 @@ test.describe('Group Actions', () => {
     await page.fill('input[type="text"]', BOB.account)
     await page.fill('input[type="password"]', BOB.pass)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=Bob')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=Bob').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     // Click group and open more menu
@@ -129,7 +129,7 @@ test.describe('Group Actions', () => {
 
     // Verify: group no longer in Bob's conversation list after leave
     await page.waitForTimeout(1000)
-    await expect(page.locator(`text=Leave_${ts}`)).not.toBeVisible({ timeout: 5000 })
+    await expect(page.locator(`text=Leave_${ts}`).first()).not.toBeVisible({ timeout: 5000 })
     await bobCtx.close()
   })
 })

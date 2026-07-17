@@ -15,11 +15,11 @@ test.describe('Full Browser Flow', () => {
     await inputs.nth(3).fill(ALICE.pass)
     await inputs.nth(4).fill(ALICE.pass)
     await page.click('button[type="submit"]')
-    await expect(page.locator(`text=${ALICE.name}`)).toBeVisible({ timeout: 15000 })
+    await expect(page.locator(`text=${ALICE.name}`).first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     // ✅ Verify: logged in and on chat page
-    await expect(page).toHaveURL(/\/chat/, { timeout: 5000 })
+    await expect(page).toHaveURL(/\/conversations/, { timeout: 5000 })
 
     // ===== Open profile from sidebar =====
     await page.waitForTimeout(2000)

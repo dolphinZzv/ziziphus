@@ -16,7 +16,7 @@ async function registerUser(ctx: import('@playwright/test').BrowserContext, acct
   await inputs.nth(3).fill(pass)
   await inputs.nth(4).fill(pass)
   await page.click('button[type="submit"]')
-  await expect(page.locator(`text=${name}`)).toBeVisible({ timeout: 15000 })
+  await expect(page.locator(`text=${name}`).first()).toBeVisible({ timeout: 15000 })
   await page.waitForTimeout(2000)
   await page.close()
 }
@@ -77,9 +77,9 @@ test.describe('Group Detail Features', () => {
     await inputs.nth(3).fill(ALICE.pass)
     await inputs.nth(4).fill(ALICE.pass)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=AliceGS')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=AliceGS').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
-    await expect(page).toHaveURL(/\/chat/, { timeout: 5000 })
+    await expect(page).toHaveURL(/\/conversations/, { timeout: 5000 })
 
     const GROUP = `GS_${ts}`
     await createGroupWithMember(page, GROUP, 'GDSBob')
@@ -134,9 +134,9 @@ test.describe('Group Detail Features', () => {
     await inputs.nth(3).fill(ALICE.pass)
     await inputs.nth(4).fill(ALICE.pass)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=AliceML')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=AliceML').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
-    await expect(page).toHaveURL(/\/chat/, { timeout: 5000 })
+    await expect(page).toHaveURL(/\/conversations/, { timeout: 5000 })
 
     // Open + menu → Create Group
     const plusBtn = page.locator('button').filter({ has: page.locator('svg.lucide-plus') })
@@ -226,9 +226,9 @@ test.describe('Group Detail Features', () => {
     await inputs.nth(3).fill(ALICE.pass)
     await inputs.nth(4).fill(ALICE.pass)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=AliceAS')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=AliceAS').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
-    await expect(page).toHaveURL(/\/chat/, { timeout: 5000 })
+    await expect(page).toHaveURL(/\/conversations/, { timeout: 5000 })
 
     // Create a group (need a member - use Alice's own name? No that won't work)
     // Instead, create group with Bob as member via the create dialog

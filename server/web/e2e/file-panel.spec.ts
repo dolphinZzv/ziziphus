@@ -17,7 +17,7 @@ test.describe('File Panel', () => {
     await inputs.nth(3).fill(PASSWORD)
     await inputs.nth(4).fill(PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=FileTester')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=FileTester').first()).toBeVisible({ timeout: 15000 })
     await page.close()
   })
 
@@ -26,7 +26,7 @@ test.describe('File Panel', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=FileTester')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=FileTester').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     // Click file panel button in sidebar

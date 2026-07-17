@@ -14,7 +14,7 @@ test.describe('Chat UI', () => {
     await inputs.nth(3).fill('test123456')
     await inputs.nth(4).fill('test123456')
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=ChatTester')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=ChatTester').first()).toBeVisible({ timeout: 15000 })
   })
 
   test('input bar renders with send button', async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('Chat UI', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', 'test123456')
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=ChatTester')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=ChatTester').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(3000)
   })
 })

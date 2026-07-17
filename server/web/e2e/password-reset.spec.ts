@@ -26,9 +26,9 @@ test.describe('Password Reset', () => {
     await regInputs.nth(3).fill(PASSWORD)
     await regInputs.nth(4).fill(PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=PWResetUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=PWResetUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
-    await expect(page).toHaveURL(/\/chat/, { timeout: 5000 })
+    await expect(page).toHaveURL(/\/conversations/, { timeout: 5000 })
 
     // ===== Logout by clearing session =====
     await page.evaluate(() => {
@@ -106,7 +106,7 @@ test.describe('Password Reset', () => {
     await page.getByPlaceholder('账号').fill(ACCOUNT)
     await page.getByPlaceholder('密码').fill(NEW_PASSWORD)
     await page.getByText('登录').click()
-    await expect(page.locator('text=PWResetUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=PWResetUser').first()).toBeVisible({ timeout: 15000 })
     await expect(page).toHaveURL(/\/chat/, { timeout: 5000 })
   })
 })

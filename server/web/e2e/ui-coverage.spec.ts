@@ -15,7 +15,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await inputs.nth(3).fill(PASSWORD)
     await inputs.nth(4).fill(PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
   })
 
   test('2. login and view conversations', async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(3000)
   })
 
@@ -32,7 +32,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     const plusBtn = page.locator('button').filter({ has: page.locator('svg.lucide-plus') })
@@ -52,7 +52,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(3000)
 
     // Click first conversation in sidebar
@@ -75,7 +75,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     const settingsBtn = page.locator('a[href*="settings"], button:has(svg.lucide-settings)')
@@ -90,7 +90,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     // Click user name/avatar for profile
@@ -106,7 +106,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     const contactBtn = page.locator('a[href*="contact"], button:has(svg.lucide-users)')
@@ -121,7 +121,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     const agentBtn = page.locator('button:has(svg.lucide-bot)')
@@ -136,7 +136,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(2000)
 
     const sessionBtn = page.locator('button:has(svg.lucide-monitor), button:has(svg.lucide-smartphone)')
@@ -151,7 +151,7 @@ test.describe('UI Coverage — full browser interaction', () => {
     await page.fill('input[type="text"]', ACCOUNT)
     await page.fill('input[type="password"]', PASSWORD)
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=UiUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=UiUser').first()).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(3000)
 
     const convItems = page.locator('[class*="conversation"]')

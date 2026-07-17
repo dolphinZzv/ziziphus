@@ -13,6 +13,6 @@ test.describe('Email Verify (browser)', () => {
     await inputs.nth(3).fill('test123456')
     await inputs.nth(4).fill('test123456')
     await page.click('button[type="submit"]')
-    await expect(page.locator('text=EmailUser')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=EmailUser').first()).toBeVisible({ timeout: 15000 })
   })
 })
