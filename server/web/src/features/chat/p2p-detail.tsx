@@ -4,12 +4,16 @@ import { useTranslation } from 'react-i18next'
 import { userService } from '@/services/user-service'
 import { conversationService } from '@/services/conversation-service'
 import { conversationStore } from '@/stores/conversation-store'
+import { getConvSettings, subscribe as settingsSubscribe } from '@/stores/conversation-settings-store'
 import { fileService } from '@/services/file-service'
 import { contactRequestService } from '@/services/contact-request-service'
 import { authStore } from '@/stores/auth-store'
 import { contactStore } from '@/stores/contact-store'
-import { ArrowLeft, X } from 'lucide-react'
+import { ArrowLeft, X, Camera, Check, Copy, UserPlus, LogOut, EyeOff, Cpu } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-breakpoint'
+import { UserType } from '@/types/user'
+import { ConvType } from '@/types/conversation'
+import { avatarUrl } from '@/lib/file'
 
 interface Props { convId: string; onClose: () => void }
 
