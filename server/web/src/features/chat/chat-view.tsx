@@ -20,9 +20,10 @@ import WebhookPanel from '@/features/group/webhook-panel'
 import MemberListView from '@/features/group/member-list-view'
 import AddMemberView from '@/features/group/add-member-view'
 import HistoryView from '@/features/history/history-view'
-import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X, Trash2, UserPlus } from 'lucide-react'
+import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X, Trash2, UserPlus, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 import FilePanel from './file-panel'
 
 export default function ChatView() {
@@ -44,6 +45,7 @@ export default function ChatView() {
   })
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
   const conversations = useSyncExternalStore(conversationStore.subscribe, () => conversationStore.state.conversations)
+  const isMobile = useIsMobile()
   const [showDetail, setShowDetail] = useState(false)
   const [showGroupBasic, setShowGroupBasic] = useState(false)
   const [showGroupSettings, setShowGroupSettings] = useState(false)
@@ -217,6 +219,16 @@ export default function ChatView() {
         {/* Avatar */}
         {!showSearch ? (
           <>
+          {/* Mobile back button */}
+          {isMobile && (
+            <button
+              onClick={() => { uiStore.toggleSidebar(); navigate('/chat') }}
+              className="p-1.5 -ml-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors md:hidden"
+              aria-label={t('common.back', '返回')}
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
           <div className="relative flex-shrink-0">
             {displayAvatar ? (
               <img src={avatarUrl(displayAvatar)} alt="" className="w-7 h-7 rounded-full object-cover" />
