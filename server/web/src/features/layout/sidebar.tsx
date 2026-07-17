@@ -41,11 +41,10 @@ export default function Sidebar() {
   return (
     <>
       {/* User header */}
-      <div className="flex items-center justify-between px-2 h-12 border-b border-[var(--color-hairline)]">
-        <div className="flex items-center gap-1 min-w-0">
-          <button
-            onClick={() => uiStore.openSheet('profile')}
-            className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink)] hover:opacity-80 min-w-0"
+      <div className="flex items-center justify-between px-3 h-12 border-b border-[var(--color-hairline)]">
+        <button
+          onClick={() => uiStore.openSheet('profile')}
+          className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink)] hover:opacity-80 min-w-0"
         >
           {user?.avatar ? (
             <img src={avatarUrl(user.avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
@@ -59,7 +58,6 @@ export default function Sidebar() {
           )}
           <span className="truncate max-w-[140px]">{user?.name || user?.account || 'User'}</span>
         </button>
-	      </div>
 
         <div className="flex items-center gap-0.5">
           <button
