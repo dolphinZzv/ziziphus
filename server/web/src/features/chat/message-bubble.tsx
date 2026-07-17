@@ -226,17 +226,14 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
   return (
     <div className={cn(
       'flex gap-2 group m-1',
-      isOwn ? 'flex-row-reverse' : 'flex-row',
+      isOwn ? 'justify-end' : 'justify-start',
       isCurrentSearchMatch && 'rounded-xl ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-[var(--color-surface-card)]'
     )}>
       {/* Avatar */}
-      {!isGrouped && isOwn && (
-        <AvatarDot name={myInitials} avatar={me?.avatar} userId={me?.user_id || ''} clickable={false} isAgent={me?.type === 1} />
-      )}
       {!isGrouped && !isOwn && (
         <AvatarDot name={senderInitials} userId={message.sender_id} clickable={message.content_type !== ContentType.System && !message.sender_id.startsWith('webhook:')} isAgent={_senderInfo.isAgent} />
       )}
-      {isGrouped && <div className="w-8 flex-shrink-0 self-start" />}
+      {isGrouped && !isOwn && <div className="w-8 flex-shrink-0 self-start" />}
 
       <div className={cn('max-w-[85%]', isOwn ? 'items-end' : 'items-start')}>
         {!isGrouped && !isOwn && message.sender_name && (
@@ -366,6 +363,11 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
 
         </div>
       </div>
+      {/* Own message avatar/spacer on the right */}
+      {isOwn && !isGrouped && (
+        <AvatarDot name={myInitials} avatar={me?.avatar} userId={me?.user_id || ''} clickable={false} isAgent={me?.type === 1} />
+      )}
+      {isOwn && isGrouped && <div className="w-8 flex-shrink-0 self-start" />}
     </div>
   )
 }
