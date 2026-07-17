@@ -10,7 +10,6 @@ import RegisterPage from '@/features/auth/register-page'
 import ForgotPasswordPage from '@/features/auth/forgot-password-page'
 import EmptyChat from '@/features/chat/empty-chat'
 import ErrorBoundary from '@/components/error-boundary'
-import ProfilePage from '@/features/profile/profile-page'
 
 const ChatView = lazy(() => import('@/features/chat/chat-view'))
 
@@ -54,7 +53,11 @@ export default function App() {
           <Route index element={<Navigate to="/chat" replace />} />
           <Route path="chat" element={<Suspense fallback={<PageFallback />}><EmptyChat /></Suspense>} />
           <Route path="chat/:convId" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
-          <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile" element={null} />
+          <Route path="profile/agents" element={null} />
+          <Route path="profile/privacy" element={null} />
+          <Route path="profile/sessions" element={null} />
+          <Route path="profile/settings" element={null} />
         </Route>
         <Route path="*" element={<Navigate to="/chat" replace />} />
         </Routes>

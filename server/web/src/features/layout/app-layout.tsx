@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '@/features/layout/sidebar'
+import SheetRouteSync from '@/features/layout/sheet-route'
 import { SheetWrapper } from '@/features/layout/lazy-sheets'
 import { authStore } from '@/stores/auth-store'
 import { uiStore } from '@/stores/ui-store'
@@ -141,6 +142,9 @@ export default function AppLayout() {
       {['newChat','addContact','createGroup','joinGroup','profile','settings','userSettings','agents','sessions','contacts','shortcuts'].map(name => (
         <SheetWrapper key={name} name={name} activeSheet={activeSheet} onClose={() => uiStore.closeSheet()} />
       ))}
+
+      {/* Syncs activeSheet ↔ URL for route-based modals */}
+      <SheetRouteSync />
     </div>
   )
 }
