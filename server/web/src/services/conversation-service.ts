@@ -27,7 +27,7 @@ export const conversationService = {
     })
   },
 
-  updateGroup(convId: string, data: { name?: string; avatar?: string; notice?: string; cover?: string; headline?: string }) {
+  updateGroup(convId: string, data: { name?: string; avatar?: string; notice?: string; cover?: string; headline?: string; primary_color?: string }) {
     return api.request<null>(`/api/v1/conversations/${convId}`, { method: 'PUT', body: data })
   },
 

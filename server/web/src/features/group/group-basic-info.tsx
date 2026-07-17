@@ -169,8 +169,9 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
         name={detail.name}
         headline={detail.headline || ''}
         notice={detail.notice || ''}
+        primaryColor={detail.primary_color}
         onClose={() => setShowEdit(false)}
-        onSaved={data => setDetail(prev => prev ? { ...prev, name: data.name, headline: data.headline, notice: data.notice } : null)}
+        onSaved={data => setDetail(prev => prev ? { ...prev, name: data.name, headline: data.headline, notice: data.notice, primary_color: data.primary_color || '' } : null)}
       />
     )}
     </>

@@ -4,19 +4,20 @@ import { conversationService } from '@/services/conversation-service'
 import { X, ArrowLeft } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-breakpoint'
 
-interface Props { convId: string; name: string; headline: string; notice: string; onClose: () => void; onSaved?: (data: { name: string; headline: string; notice: string }) => void }
+interface Props { convId: string; name: string; headline: string; notice: string; primaryColor?: string; onClose: () => void; onSaved?: (data: { name: string; headline: string; notice: string; primary_color?: string }) => void }
 
-export default function GroupEditView({ convId, name, headline, notice, onClose, onSaved }: Props) { const isMobile=useIsMobile()
+export default function GroupEditView({ convId, name, headline, notice, primaryColor, onClose, onSaved }: Props) { const isMobile=useIsMobile()
   const { t } = useTranslation()
   const [editName, setEditName] = useState(name)
   const [editHeadline, setEditHeadline] = useState(headline)
   const [editNotice, setEditNotice] = useState(notice)
+  const [editPrimaryColor, setEditPrimaryColor] = useState(primaryColor || '#0F172A')
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      const data = { name: editName.trim(), headline: editHeadline.trim(), notice: editNotice.trim() }
+      const data = { name: editName.trim(), headline: editHeadline.trim(), notice: editNotice.trim(), primary_color: editPrimaryColor }
       await conversationService.updateGroup(convId, data)
       onSaved?.(data)
       onClose()
@@ -49,6 +50,11 @@ export default function GroupEditView({ convId, name, headline, notice, onClose,
             <label className="text-[11px] text-[var(--color-muted)] mb-1 block">{t('group.notice')}</label>
             <textarea value={editNotice} onChange={e => setEditNotice(e.target.value)} rows={4} placeholder={t('group.noticePlaceholder')}
               className={`${iCls} py-2.5 resize-none`} />
+          </div>
+          <div>
+            <label className="text-[11px] text-[var(--color-muted)] mb-1 block">{t('group.themeColor', '主题色')}</label>
+            <input type="color" value={editPrimaryColor} onChange={e => setEditPrimaryColor(e.target.value)}
+              className="w-full h-10 rounded-xl cursor-pointer border border-[var(--color-hairline)] bg-[var(--color-surface-soft)]" />
           </div>
           <button onClick={handleSave} disabled={saving || !editName.trim()}
             className="w-full h-10 rounded-xl bg-[var(--color-primary)] text-white text-sm font-medium transition-colors disabled:opacity-40">
