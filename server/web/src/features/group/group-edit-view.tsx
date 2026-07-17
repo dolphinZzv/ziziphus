@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { conversationService } from '@/services/conversation-service'
-import { X } from 'lucide-react'
+import { X, ArrowLeft } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; name: string; headline: string; notice: string; onClose: () => void; onSaved?: (data: { name: string; headline: string; notice: string }) => void }
 
-export default function GroupEditView({ convId, name, headline, notice, onClose, onSaved }: Props) {
+export default function GroupEditView({ convId, name, headline, notice, onClose, onSaved }: Props) { const isMobile=useIsMobile()
   const { t } = useTranslation()
   const [editName, setEditName] = useState(name)
   const [editHeadline, setEditHeadline] = useState(headline)
@@ -32,7 +33,7 @@ export default function GroupEditView({ convId, name, headline, notice, onClose,
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">
           <h3 className="font-headline text-base font-semibold text-[var(--color-ink)]">{t('group.editTitle')}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">{isMobile ? <ArrowLeft size={18} /> : <X size={16} />}</button>
         </div>
 
         <div className="px-5 py-4 space-y-3">

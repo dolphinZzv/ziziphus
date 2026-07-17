@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { conversationService } from '@/services/conversation-service'
 import { getConvSettings, toggleConvSetting, subscribe as settingsSubscribe } from '@/stores/conversation-settings-store'
-import { X, EyeOff, FileUp, Search } from 'lucide-react'
+import { X, EyeOff, FileUp, Search, ArrowLeft } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void }
 
-export default function GroupSettings({ convId, onClose }: Props) {
+export default function GroupSettings({ convId, onClose }: Props) { const isMobile=useIsMobile()
   const { t } = useTranslation()
   const [showAgentResponseOnly, setShowAgentResponseOnly] = useState(
     () => getConvSettings(convId).showAgentResponseOnly
@@ -55,7 +56,7 @@ export default function GroupSettings({ convId, onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">
           <h3 className="font-headline text-base font-semibold text-[var(--color-ink)]">{t('group.settingsTitle')}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">{isMobile ? <ArrowLeft size={18} /> : <X size={16} />}</button>
         </div>
 
         <div className="px-5 py-4 space-y-4">

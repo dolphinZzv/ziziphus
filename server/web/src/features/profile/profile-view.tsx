@@ -6,7 +6,8 @@ import { uiStore } from '@/stores/ui-store'
 import { avatarUrl } from '@/lib/file'
 import { fileService } from '@/services/file-service'
 import { UserType } from '@/types/user'
-import { X, Edit, LogOut, Settings, Bot, Camera, Smartphone, Copy, Check, Shield } from 'lucide-react'
+import { X, ArrowLeft, Edit, LogOut, Settings, Bot, Camera, Smartphone, Copy, Check, Shield } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 import ProfileEditView from './profile-edit-view'
 
 interface Props { onClose?: () => void; variant?: 'modal' | 'page' }
@@ -40,6 +41,7 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
   const initials = user?.name?.charAt(0)?.toUpperCase() || '?'
   const isAgent = user?.type === UserType.Agent
   const isPage = variant === 'page'
+  const isMobile = useIsMobile()
 
   const content = (
     <>
@@ -49,16 +51,23 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
           ? `url(${user.cover}?w=720&h=224) center/cover`
           : `linear-gradient(135deg, ${user?.primary_color || 'var(--color-primary)'}, ${user?.secondary_color || user?.primary_color || 'var(--color-muted)'})` }}>
         {user?.cover && <div className="absolute inset-0 bg-black/20" />}
-        <button onClick={() => coverInputRef.current?.click()} disabled={uploadingCover}
-          className="absolute top-3 left-3 p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white/70 hover:text-white z-10 transition-colors">
-          <Camera size={15} />
-        </button>
         <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCover} className="hidden" />
+        <div className="absolute top-3 left-3 flex items-center gap-1 z-10">
+          {isMobile && onClose && (
+            <button onClick={onClose} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
+              <ArrowLeft size={18} />
+            </button>
+          )}
+          <button onClick={() => coverInputRef.current?.click()} disabled={uploadingCover}
+            className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white/70 hover:text-white transition-colors">
+            <Camera size={15} />
+          </button>
+        </div>
         <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
           <button onClick={() => setShowEdit(true)} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
             <Edit size={15} />
           </button>
-          {onClose && (
+          {onClose && !isMobile && (
             <button onClick={onClose} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
               <X size={15} />
             </button>

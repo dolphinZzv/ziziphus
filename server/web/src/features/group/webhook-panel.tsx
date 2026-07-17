@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { webhookService } from '@/services/webhook-service'
 import type { ConvWebhook } from '@/types/webhook'
-import { X, Globe, Plus, Trash2, Key, Shield, Copy, Check } from 'lucide-react'
+import { X, Globe, Plus, Trash2, Key, Shield, Copy, Check, ArrowLeft } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void }
 
-export default function WebhookPanel({ convId, onClose }: Props) {
+export default function WebhookPanel({ convId, onClose }: Props) { const isMobile=useIsMobile()
   const { t } = useTranslation()
   const [webhooks, setWebhooks] = useState<ConvWebhook[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -87,7 +88,7 @@ export default function WebhookPanel({ convId, onClose }: Props) {
           </div>
           <div className="flex items-center gap-1">
             <button onClick={openCreate} className="p-1.5 rounded-xl hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-accent)]"><Plus size={16} /></button>
-            <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
+            <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">{isMobile ? <ArrowLeft size={18} /> : <X size={16} />}</button>
           </div>
         </div>
 

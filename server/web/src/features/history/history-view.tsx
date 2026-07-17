@@ -2,12 +2,13 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { messageService } from '@/services/message-service'
 import type { Message } from '@/types/message'
 import { ContentType } from '@/types/message'
-import { X, Search, Loader2 } from 'lucide-react'
+import { X, Search, Loader2, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void }
 
-export default function HistoryView({ convId, onClose }: Props) {
+export default function HistoryView({ convId, onClose }: Props) { const isMobile=useIsMobile()
   const [messages, setMessages] = useState<Message[]>([])
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -63,7 +64,7 @@ export default function HistoryView({ convId, onClose }: Props) {
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-headline text-lg font-semibold text-[var(--color-ink)]">消息记录</h3>
-          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">{isMobile ? <ArrowLeft size={18} /> : <X size={16} />}</button>
         </div>
 
         <div className="flex gap-2 mb-4">

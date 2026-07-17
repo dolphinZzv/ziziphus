@@ -65,6 +65,7 @@ export default function App() {
           <Route path="profile/privacy" element={null} />
           <Route path="profile/sessions" element={null} />
           <Route path="profile/settings" element={null} />
+          <Route path="contacts" element={null} />
         </Route>
         <Route path="*" element={<Navigate to="/chat" replace />} />
         </Routes>

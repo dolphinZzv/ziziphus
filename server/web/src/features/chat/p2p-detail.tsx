@@ -8,17 +8,12 @@ import { fileService } from '@/services/file-service'
 import { contactRequestService } from '@/services/contact-request-service'
 import { authStore } from '@/stores/auth-store'
 import { contactStore } from '@/stores/contact-store'
-import type { ConversationDetail } from '@/types/conversation'
-import type { User } from '@/types/user'
-import { ConvType } from '@/types/conversation'
-import { UserType } from '@/types/user'
-import { avatarUrl } from '@/lib/file'
-import { getConvSettings, toggleConvSetting, subscribe as settingsSubscribe } from '@/stores/conversation-settings-store'
-import { X, Copy, Check, Camera, UserPlus, UserCheck, Cpu, LogOut, EyeOff } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void }
 
-export default function P2PDetail({ convId, onClose }: Props) {
+export default function P2PDetail({ convId, onClose }: Props) { const isMobile=useIsMobile()
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
@@ -98,7 +93,7 @@ export default function P2PDetail({ convId, onClose }: Props) {
             <Camera size={14} />
           </button>
           <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
-          <button onClick={onClose} className="absolute top-3 right-3 p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white z-10"><X size={15} /></button>
+          <button onClick={onClose} className="absolute top-3 right-3 p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white z-10">{isMobile ? <ArrowLeft size={18} /> : <X size={15} />}</button>
         </div>
 
         {/* Avatar — overlaps banner */}

@@ -9,12 +9,13 @@ import { authStore } from '@/stores/auth-store'
 import type { ConversationDetail, JoinRequest } from '@/types/conversation'
 import type { User } from '@/types/user'
 import { ConvRole } from '@/types/conversation'
-import { X, Check, X as XIcon, Camera, Bell, Edit2 } from 'lucide-react'
+import { X, Check, Camera, Bell, Edit2, ArrowLeft } from 'lucide-react'
 import GroupEditView from './group-edit-view'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void }
 
-export default function GroupBasicInfo({ convId, onClose }: Props) {
+export default function GroupBasicInfo({ convId, onClose }: Props) { const isMobile=useIsMobile()
   const { t } = useTranslation()
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([])
@@ -97,7 +98,7 @@ export default function GroupBasicInfo({ convId, onClose }: Props) {
               </button>
             )}
             <button onClick={onClose} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
-              <X size={15} />
+              {isMobile ? <ArrowLeft size={18} /> : <X size={15} />}
             </button>
           </div>
         </div>

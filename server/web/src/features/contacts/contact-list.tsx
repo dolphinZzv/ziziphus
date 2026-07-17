@@ -6,10 +6,11 @@ import { uiStore } from '@/stores/ui-store'
 import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
 import { X, MessageCircle, Trash2, Search, ArrowLeft } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { onClose: () => void; inline?: boolean }
 
-export default function ContactList({ onClose, inline }: Props) {
+export default function ContactList({ onClose, inline }: Props) { const isMobile=useIsMobile()
   const { t } = useTranslation()
   const contacts = useSyncExternalStore(contactStore.subscribe, () => contactStore.state.contacts)
   const onlineUsers = useSyncExternalStore(contactStore.subscribe, () => contactStore.state.onlineUsers)
@@ -37,7 +38,7 @@ export default function ContactList({ onClose, inline }: Props) {
           )}
           <h3 className="font-headline text-lg font-semibold text-[var(--color-ink)]">{t('contact.title')}</h3>
         </div>
-        {!inline && <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>}
+        {!inline && <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">{isMobile ? <ArrowLeft size={18} /> : <X size={16} />}</button>}
       </div>
 
       {/* Contact search filter */}

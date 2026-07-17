@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { userService } from '@/services/user-service'
 import { avatarUrl } from '@/lib/file'
 import type { User } from '@/types/user'
-import { X, Search, Plus } from 'lucide-react'
+import { X, Search, Plus, ArrowLeft } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void; onAdded: (user: User) => void; excludeIds: Set<string> }
 
-export default function AddMemberView({ convId: _convId, onClose, onAdded, excludeIds }: Props) {
+export default function AddMemberView({ convId: _convId, onClose, onAdded, excludeIds }: Props) { const isMobile=useIsMobile()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<User[]>([])
   const [searching, setSearching] = useState(false)
@@ -36,7 +37,7 @@ export default function AddMemberView({ convId: _convId, onClose, onAdded, exclu
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">
           <h3 className="font-headline text-base font-semibold text-[var(--color-ink)]">添加成员</h3>
-          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">{isMobile ? <ArrowLeft size={18} /> : <X size={16} />}</button>
         </div>
 
         <div className="p-4">

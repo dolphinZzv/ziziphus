@@ -7,11 +7,12 @@ import { authStore } from '@/stores/auth-store'
 import type { ConversationDetail } from '@/types/conversation'
 import type { User } from '@/types/user'
 import { ConvRole } from '@/types/conversation'
-import { X, Crown, Shield, Trash2, Cpu, Search } from 'lucide-react'
+import { X, Crown, Shield, Trash2, Cpu, Search, ArrowLeft } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void }
 
-export default function MemberListView({ convId, onClose }: Props) {
+export default function MemberListView({ convId, onClose }: Props) { const isMobile=useIsMobile()
   const { t } = useTranslation()
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
   const [userMap, setUserMap] = useState<Record<string, User>>({})
@@ -62,7 +63,7 @@ export default function MemberListView({ convId, onClose }: Props) {
           <h3 className="font-headline text-base font-semibold text-[var(--color-ink)]">
             {t('group.members')} ({detail.members.length})
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">{isMobile ? <ArrowLeft size={18} /> : <X size={16} />}</button>
         </div>
 
         <div className="px-4 pt-3 pb-2">

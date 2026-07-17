@@ -9,6 +9,7 @@ const routeToSheet: Record<string, string> = {
   '/profile/privacy': 'userSettings',
   '/profile/sessions': 'sessions',
   '/profile/settings': 'settings',
+  '/contacts': 'contacts',
 }
 
 /** Maps sheet names back to routes */
