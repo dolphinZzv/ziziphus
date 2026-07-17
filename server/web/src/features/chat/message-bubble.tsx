@@ -25,7 +25,6 @@ const senderCache = new Map<string, { avatar: string; type: number; ts: number }
 function useSenderInfo(userId: string, isOwn: boolean): { avatar?: string; isAgent: boolean } {
   // For own messages, use local user info directly — no API call needed
   const me = isOwn ? authStore.state.user : null
-  if (me) return { avatar: me.avatar || undefined, isAgent: me.type === 1 }
 
   const cached = senderCache.get(userId)
   const initial = cached && (Date.now() - cached.ts) < CACHE_TTL
@@ -46,6 +45,8 @@ function useSenderInfo(userId: string, isOwn: boolean): { avatar?: string; isAge
       setInfo({ avatar: entry.avatar, isAgent: entry.type === 1 })
     }).catch(() => {})
   }, [userId])
+
+  if (me) return { avatar: me.avatar || undefined, isAgent: me.type === 1 }
   return info
 }
 

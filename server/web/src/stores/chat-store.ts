@@ -1,4 +1,5 @@
 import { getItem, setItem, removeItem } from '@/lib/storage'
+import { getItem as getSecureItem } from '@/lib/secure-storage'
 import { messageService } from '@/services/message-service'
 import { wsClient } from '@/services/websocket-client'
 import { notifySound, notifyTitle } from '@/lib/notify'
@@ -184,7 +185,7 @@ export const chatStore = {
 
   async sendMessage(convId: string, body: string, contentType: ContentType = ContentType.Text, replyTo: number = 0, mention: string[] = []) {
     const clientSeq = nextClientSeq()
-    const me = getItem<any>('user', null)
+    const me = getSecureItem<any>('user', null)
 
     // Create local message
     const localMsg: Message = {
@@ -322,7 +323,7 @@ export const chatStore = {
   handlePush(payload: MsgPushPayload) {
     // If the push has no sender_id, use the current user (could be our own message)
     if (!payload.sender_id) {
-      const me = getItem<any>('user', null)
+      const me = getSecureItem<any>('user', null)
       if (me?.user_id) payload.sender_id = me.user_id
     }
 
