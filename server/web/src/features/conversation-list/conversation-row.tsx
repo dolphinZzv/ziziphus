@@ -4,9 +4,8 @@ import { avatarUrl } from '@/lib/file'
 import { ConvType, type ConvListItem } from '@/types/conversation'
 import { UserType } from '@/types/user'
 import { ContentType } from '@/types/message'
-import { conversationStore } from '@/stores/conversation-store'
 import { chatStore } from '@/stores/chat-store'
-import { BellOff, Cpu, Edit3, Pin, PinOff, Users } from 'lucide-react'
+import { BellOff, Cpu, Pin, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface Props { conversation: ConvListItem; isSelected: boolean; onClick: () => void }
@@ -14,11 +13,6 @@ interface Props { conversation: ConvListItem; isSelected: boolean; onClick: () =
 export default function ConversationRow({ conversation, isSelected, onClick }: Props) {
   const { t } = useTranslation()
   const { name, avatar, type, last_message, last_msg_at, unread_count, mention_me, mute, partner_type, pinned } = conversation
-
-  const handlePin = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    pinned ? conversationStore.unpin(conversation.conv_id) : conversationStore.pin(conversation.conv_id)
-  }
 
   const lm = last_message
   const getPreview = (): string => {
@@ -60,61 +54,54 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter') onClick() }}
       className={cn(
-        'w-full flex items-center gap-3 px-4 h-[52px] text-left transition-colors cursor-pointer group relative overflow-visible',
+        'w-full flex items-center gap-2.5 px-4 h-[48px] text-left transition-colors cursor-pointer group relative overflow-visible',
         isSelected ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-soft)]'
       )}
     >
       <div className="relative flex-shrink-0">
         {avatar ? (
-          <img src={avatarUrl(avatar)} alt="" className="w-10 h-10 rounded-full object-cover" />
+          <img src={avatarUrl(avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
         ) : (
-          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold"
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold"
             style={{ background: isAI ? 'linear-gradient(135deg, #8B5CF6, #A78BFA)' : `linear-gradient(135deg, var(--color-primary), var(--color-muted))` }}>
             {initials}
           </div>
         )}
         {isAI && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center">
-            <Cpu size={10} className="text-white" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-purple-500 flex items-center justify-center">
+            <Cpu size={8} className="text-white" />
           </div>
         )}
         {isGroup && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[var(--color-surface-card)] flex items-center justify-center">
-            <Users size={9} className="text-[var(--color-muted)]" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[var(--color-surface-card)] flex items-center justify-center">
+            <Users size={8} className="text-[var(--color-muted)]" />
           </div>
         )}
       </div>
 
       <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 min-w-0">
             {pinned && <Pin size={10} className="text-[var(--color-accent)] flex-shrink-0" />}
-            <span className="text-[15px] font-semibold text-[var(--color-ink)] truncate">{displayName}</span>
+            <span className="text-sm font-medium text-[var(--color-ink)] truncate">{displayName}</span>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0 ml-1">
-            <button onClick={handlePin}
-              className="p-0.5 rounded hover:bg-[var(--color-hairline)] opacity-0 group-hover:opacity-100 transition-opacity"
-              title={pinned ? t('common.unpin') : t('common.pin')}>
-              {pinned ? <PinOff size={11} className="text-[var(--color-muted)]" /> : <Pin size={11} className="text-[var(--color-muted)]" />}
-            </button>
-            <span className="text-[11px] text-[var(--color-muted)]">{formatMessageTime(last_msg_at)}</span>
-          </div>
+          <span className="text-[10px] text-[var(--color-muted-soft)] flex-shrink-0">{formatMessageTime(last_msg_at)}</span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <span className="text-[13px] text-[var(--color-muted)] truncate leading-snug">
+          <span className="text-[12px] text-[var(--color-muted)] truncate leading-snug">
             {mute && <BellOff size={10} className="inline mr-1" />}
             {hasDraft ? (
-              <><span className="text-[var(--color-accent)] text-[11px] font-medium mr-1">[{t('chat.draft')}]</span>{draft}</>
+              <><span className="text-[var(--color-accent)] text-[10px] font-medium mr-1">[{t('chat.draft')}]</span>{draft}</>
             ) : (
               <><span className="text-[var(--color-muted-soft)]">{senderLabel}</span>{rawPreview || ''}</>
             )}
           </span>
           {unread_count > 0 ? (
-            <span className="flex-shrink-0 min-w-[18px] h-[18px] rounded-sm bg-[var(--color-primary)] text-white text-[10px] font-semibold uppercase tracking-wider flex items-center justify-center px-1 ml-1">
+            <span className="flex-shrink-0 min-w-[16px] h-[16px] rounded-sm bg-[var(--color-primary)] text-white text-[9px] font-semibold flex items-center justify-center px-1 ml-1">
               {unread_count > 99 ? '99+' : unread_count}
             </span>
           ) : mention_me ? (
-            <span className="flex-shrink-0 h-[18px] rounded-sm bg-[var(--warning)]/15 text-[var(--warning)] text-[10px] font-semibold uppercase tracking-wider flex items-center justify-center px-1.5 ml-1">
+            <span className="flex-shrink-0 h-[16px] rounded-sm bg-[var(--warning)]/15 text-[var(--warning)] text-[9px] font-semibold flex items-center justify-center px-1 ml-1">
               @你
             </span>
           ) : null}

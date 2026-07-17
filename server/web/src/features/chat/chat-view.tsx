@@ -235,7 +235,7 @@ export default function ChatView() {
     >
       <div ref={containerRef} className="flex-1 flex flex-col min-w-0 relative">
       {/* Chat toolbar */}
-      <div className="h-12 flex items-center px-4 border-b border-[var(--color-hairline)] flex-shrink-0 bg-[var(--color-surface-card)] gap-3">
+      <div className="h-12 flex items-center px-4 flex-shrink-0 gap-3">
         {/* Avatar */}
         {!showSearch ? (
           <>

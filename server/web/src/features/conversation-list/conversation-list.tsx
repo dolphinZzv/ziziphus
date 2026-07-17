@@ -31,15 +31,15 @@ export default function ConversationList() {
   return (
     <div className="h-full flex flex-col">
       {conversations.length >= 10 && (
-        <div className="px-3 pt-3 pb-2">
+        <div className="px-3 pt-2 pb-1">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted-soft)]" />
             <input
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder={t('conversation.searchPlaceholder')}
-              className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--color-surface-soft)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-transparent focus:border-[var(--color-primary)]/30 focus:outline-none"
+              className="w-full h-8 pl-8 pr-3 rounded-lg text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] bg-transparent focus:outline-none"
             />
           </div>
         </div>

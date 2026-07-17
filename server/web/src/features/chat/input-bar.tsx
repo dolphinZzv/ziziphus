@@ -16,6 +16,7 @@ interface Props { convId: string; isP2p?: boolean }
 export default function InputBar({ convId, isP2p }: Props) {
   const { t } = useTranslation()
   const [text, setText] = useState('')
+  const [focused, setFocused] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [members, setMembers] = useState<Array<{ id: string; name: string; avatar?: string }>>([])
   const [showMention, setShowMention] = useState(false)
@@ -164,7 +165,7 @@ export default function InputBar({ convId, isP2p }: Props) {
     : members.slice(0, 5)
 
   return (
-    <div className="flex-shrink-0 border-t border-[var(--color-hairline)] bg-[var(--color-surface-card)] relative pb-[env(safe-area-inset-bottom,0px)]"
+    <div className="flex-shrink-0 relative pb-[env(safe-area-inset-bottom,0px)]"
       onPaste={handlePaste}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -205,69 +206,74 @@ export default function InputBar({ convId, isP2p }: Props) {
         </div>
       )}
 
-      {/* Input area — macOS style: buttons at bottom-right */}
-      <div className="pt-1 md:pt-2">
-        <div className="relative">
-          <MarkdownInput
-            value={text}
-            onChange={handleMentionChange}
-            onSend={handleSend}
-            placeholder={t('chat.inputPlaceholder') + (isP2p ? '' : ' @用户名 提及')}
-            disabled={uploading}
-          />
+      {/* Input area — floating card */}
+      <div className="px-3 pb-3 pt-1">
+        <div className="rounded-2xl bg-[var(--color-surface-card)] relative transition-shadow duration-200"
+          style={{ boxShadow: focused ? '0 2px 8px rgba(0,0,0,0.10)' : '0 1px 3px rgba(0,0,0,0.06)' }}>
+          <div className="relative">
+            <MarkdownInput
+              value={text}
+              onChange={handleMentionChange}
+              onSend={handleSend}
+              placeholder={t('chat.inputPlaceholder') + (isP2p ? '' : ' @用户名 提及')}
+              disabled={uploading}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+            />
 
-          {/* Bottom-right action buttons */}
-          <div className="flex items-center gap-1 absolute bottom-2 right-2">
-            {!isP2p && (
-            <button type="button"
-              onClick={() => { setMentionFilter(''); setShowMention(!showMention) }}
-              className="p-1.5 rounded-xl hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
-              title="@提及">
-              <AtSign size={17} />
-            </button>
-          )}
-
-            {/* Attachment button + popover */}
-            <div className="relative">
+            {/* Right-side action buttons — inline with textarea */}
+            <div className="flex items-center gap-0.5 absolute right-2 bottom-2">
+              {!isP2p && (
               <button type="button"
-                onClick={() => setShowAttachMenu(!showAttachMenu)}
-                className="p-1.5 rounded-xl hover:bg-[var(--color-hairline)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
-                title="附件">
-                <Paperclip size={17} />
+                onClick={() => { setMentionFilter(''); setShowMention(!showMention) }}
+                className="p-1.5 rounded-lg hover:bg-[var(--color-hairline)] text-[var(--color-muted-soft)] hover:text-[var(--color-ink)] transition-colors"
+                title="@提及">
+                <AtSign size={16} />
               </button>
-              {showAttachMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowAttachMenu(false)} />
-                  <div className="absolute bottom-full right-0 mb-1 w-36 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl z-20 py-1"
-                    style={{ boxShadow: 'var(--shadow-md)' }}>
-                    <button type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
-                      <Image size={15} /> 图片
-                    </button>
-                    <button type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
-                      <Paperclip size={15} /> 文件
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            )}
 
-            {/* Send button */}
-            <button
-              onClick={handleSend}
-              disabled={!text.trim() || uploading}
-              className={cn(
-                'p-1.5 rounded-xl transition-colors',
-                text.trim()
-                  ? 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'
-                  : 'text-[var(--color-muted-soft)] cursor-default'
-              )}
-              title="发送">
-              <Send size={17} />
-            </button>
+              {/* Attachment button + popover */}
+              <div className="relative">
+                <button type="button"
+                  onClick={() => setShowAttachMenu(!showAttachMenu)}
+                  className="p-1.5 rounded-lg hover:bg-[var(--color-hairline)] text-[var(--color-muted-soft)] hover:text-[var(--color-ink)] transition-colors"
+                  title="附件">
+                  <Paperclip size={16} />
+                </button>
+                {showAttachMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowAttachMenu(false)} />
+                    <div className="absolute bottom-full right-0 mb-1 w-36 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl z-20 py-1"
+                      style={{ boxShadow: 'var(--shadow-md)' }}>
+                      <button type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                        <Image size={15} /> 图片
+                      </button>
+                      <button type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
+                        <Paperclip size={15} /> 文件
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Send button */}
+              <button
+                onClick={handleSend}
+                disabled={!text.trim() || uploading}
+                className={cn(
+                  'p-1.5 rounded-lg transition-all',
+                  text.trim()
+                    ? 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'
+                    : 'text-[var(--color-muted-soft)]'
+                )}
+                title="发送">
+                <Send size={16} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -275,12 +281,12 @@ export default function InputBar({ convId, isP2p }: Props) {
         <input ref={fileInputRef} type="file" multiple onChange={e => handleFileSelect(e, 'file')} className="hidden" />
       </div>
 
-        {/* Drag overlay */}
-        {dragOver && (
-          <div className="absolute inset-0 z-50 bg-[var(--color-primary)]/10 border-2 border-dashed border-[var(--color-primary)] rounded-xl flex items-center justify-center pointer-events-none">
-            <span className="text-sm text-[var(--color-primary)] font-medium">释放以上传文件</span>
-          </div>
-        )}
+      {/* Drag overlay */}
+      {dragOver && (
+        <div className="absolute inset-0 z-50 bg-[var(--color-primary)]/10 border-2 border-dashed border-[var(--color-primary)] rounded-xl flex items-center justify-center pointer-events-none">
+          <span className="text-sm text-[var(--color-primary)] font-medium">释放以上传文件</span>
+        </div>
+      )}
     </div>
   )
 }
