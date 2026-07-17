@@ -1,5 +1,9 @@
 import { test, expect } from './fixtures/coverage'
 
+const ZH_INIT = `
+  localStorage.setItem('ziziphus_language', JSON.stringify('zh'));
+`
+
 const ts = Date.now()
 const ACCOUNT = `pr_${ts}`
 const PASSWORD = 'oldpassword123'
@@ -7,6 +11,10 @@ const NEW_PASSWORD = 'newpassword456'
 const EMAIL = `pr_${ts}@example.com`
 
 test.describe('Password Reset', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(ZH_INIT)
+  })
+
   test('register user then reset password via forgot-password flow', async ({ page }) => {
     // ===== Register a user first =====
     await page.goto('/register')
