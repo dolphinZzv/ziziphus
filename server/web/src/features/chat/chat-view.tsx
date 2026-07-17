@@ -132,6 +132,19 @@ export default function ChatView() {
   const conv = conversations.find(c => c.conv_id === convId)
   const isGroup = conv?.type === ConvType.Group
 
+  // Set browser chrome/tab color to user's primary color (mobile)
+  useEffect(() => {
+    const color = user?.primary_color || '#0F172A'
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null
+    if (meta) meta.content = color
+    else {
+      meta = document.createElement('meta')
+      meta.name = 'theme-color'
+      meta.content = color
+      document.head.appendChild(meta)
+    }
+  }, [user?.primary_color])
+
   const handleClone = async () => {
     if (!convId || !isGroup) return
     if (!confirm(t('group.cloneConfirm'))) return
