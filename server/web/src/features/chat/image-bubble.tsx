@@ -42,7 +42,7 @@ export default function ImageBubble({ body, _msgId }: Props) {
         <img
           src={thumbUrl(url)}
           alt=""
-          className={cn('rounded-xl max-w-full max-h-[360px] object-cover cursor-pointer hover:opacity-90 transition-opacity', !loaded && 'hidden')}
+          className={cn('rounded-xl max-w-full max-h-[360px] w-auto h-auto cursor-pointer hover:opacity-90 transition-opacity', !loaded && 'hidden')}
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
           onClick={() => setViewer(true)}
