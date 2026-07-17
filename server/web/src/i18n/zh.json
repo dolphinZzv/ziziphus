@@ -321,6 +321,7 @@
     "copyKey": "复制 Key",
     "keyCopied": "API Key 已复制！",
     "alert": "提醒：API Key 仅在生成时展示一次，请立即复制保存。",
+    "searchPlaceholder": "搜索 Agent...",
     "running": "运行中",
     "completed": "已完成",
     "error": "错误",

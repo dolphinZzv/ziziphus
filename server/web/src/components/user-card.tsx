@@ -90,7 +90,7 @@ export default function UserCard({ userId, onClose }: Props) {
 
           {/* ID */}
           <div className="flex items-center justify-center gap-1 text-[11px] text-[var(--color-muted-soft)] font-mono select-all mb-3">
-            {userId.slice(0, 16)}...
+            <span className="truncate max-w-[180px]">{userId}</span>
             <button onClick={copyId} className="hover:text-[var(--color-ink)]">
               {copied ? <Check size={12} className="text-[var(--success)]" /> : <Copy size={12} />}
             </button>

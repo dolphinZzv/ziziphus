@@ -54,7 +54,7 @@ export default function AgentList({ onClose, inline }: Props) {
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
             <input type="text" value={filterQuery} onChange={e => setFilterQuery(e.target.value)}
-              placeholder={t('conversation.searchPlaceholder')} className={`${inputClass} pl-8`} />
+              placeholder={t('agent.searchPlaceholder')} className={`${inputClass} pl-8`} />
             {filterQuery && (
               <button onClick={() => setFilterQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--color-muted)]"><X size={12} /></button>
             )}

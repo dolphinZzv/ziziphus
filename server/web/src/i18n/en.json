@@ -321,6 +321,7 @@
     "copyKey": "Copy Key",
     "keyCopied": "API Key copied!",
     "alert": "Note: The API Key is only shown once. Please copy it now.",
+    "searchPlaceholder": "Search agents...",
     "running": "Running",
     "completed": "Completed",
     "error": "Error",
