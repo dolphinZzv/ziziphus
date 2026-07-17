@@ -232,7 +232,7 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
     )}>
       {/* Avatar */}
       {!isGrouped && !isOwn && (
-        <AvatarDot name={senderInitials} userId={message.sender_id} clickable={message.content_type !== ContentType.System && !message.sender_id.startsWith('webhook:')} isAgent={_senderInfo.isAgent} />
+        <AvatarDot name={senderInitials} avatar={_senderInfo.avatar} userId={message.sender_id} clickable={message.content_type !== ContentType.System && !message.sender_id.startsWith('webhook:')} isAgent={_senderInfo.isAgent} />
       )}
       {isGrouped && !isOwn && <div className="w-8 flex-shrink-0 self-start" />}
 

@@ -1,0 +1,4 @@
+{"level":"ERROR","time":"2026-07-16T14:52:12.888+0800","caller":"ziziphus/main.go:77","msg":"migrations failed","error":"read migrations dir: open internal/storage/db/migrations: no such file or directory"}
+{"level":"ERROR","time":"2026-07-16T16:35:07.152+0800","caller":"ziziphus/main.go:81","msg":"migrations failed","error":"read migrations dir: open internal/storage/db/migrations: no such file or directory"}
+{"level":"ERROR","time":"2026-07-16T17:51:43.862+0800","caller":"ziziphus/main.go:81","msg":"migrations failed","error":"read migrations dir: open internal/storage/db/migrations: no such file or directory"}
+{"level":"ERROR","time":"2026-07-16T17:52:17.649+0800","caller":"ziziphus/main.go:81","msg":"migrations failed","error":"read migrations dir: open internal/storage/db/migrations: no such file or directory"}
