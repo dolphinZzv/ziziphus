@@ -64,13 +64,13 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
     },
     uploadAvatar: async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]; if (!file) return; setUploading(true)
-      try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { avatar: r.url }); setDetail({ ...detail!, avatar: r.url }) } catch {}
-      setUploading(false)
+      try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { avatar: r.url }); setDetail({ ...detail!, avatar: r.url }) } catch (e) { console.warn('upload avatar failed:', e) }
+      setUploading(false); e.target.value = ''
     },
     uploadCover: async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]; if (!file) return; setUploadingCover(true)
-      try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { cover: r.url }); setDetail({ ...detail!, cover: r.url }) } catch {}
-      setUploadingCover(false)
+      try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { cover: r.url }); setDetail({ ...detail!, cover: r.url }) } catch (e) { console.warn('upload cover failed:', e) }
+      setUploadingCover(false); e.target.value = ''
     },
   }
 
