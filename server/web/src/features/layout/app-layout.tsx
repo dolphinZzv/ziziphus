@@ -19,6 +19,7 @@ export default function AppLayout() {
   const isSidebarOpen = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.isSidebarOpen)
   const theme = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.theme)
   const [connStatus, setConnStatus] = useState<ConnectionStatus>('disconnected')
+  const [debouncedConnStatus, setDebouncedConnStatus] = useState<ConnectionStatus>('disconnected')
   const [sidebarWidth, setSidebarWidth] = useState(288)
   const isMobile = useIsMobile()
   const isTablet = useIsTablet()
@@ -28,6 +29,17 @@ export default function AppLayout() {
     setConnStatus(wsClient.connectionStatus)
     return wsClient.onStatusChange(setConnStatus)
   }, [])
+
+  // Debounce disconnection feedback: only show after 10s of continuous disconnect
+  // to avoid flashing the bar on brief network hiccups.
+  useEffect(() => {
+    if (connStatus === 'connected') {
+      setDebouncedConnStatus('connected')
+      return
+    }
+    const timer = setTimeout(() => setDebouncedConnStatus(connStatus), 10000)
+    return () => clearTimeout(timer)
+  }, [connStatus])
 
   // Desktop notifications
   useEffect(() => {
@@ -61,7 +73,7 @@ export default function AppLayout() {
     return () => document.removeEventListener('keydown', handler)
   }, [])
 
-  const connected = connStatus === 'connected'
+  const connected = debouncedConnStatus === 'connected'
   const isConvListPage = location.pathname === '/conversations'
 
   // Computed widths
@@ -69,7 +81,7 @@ export default function AppLayout() {
 
   return (
     <div className={cn('h-full w-full flex flex-col', theme === 'dark' ? 'dark' : '')}>
-      {/* Connection status bar */}
+      {/* Connection status bar (debounced — brief disconnects are hidden) */}
       {!connected && (
         <div className={cn(
           'h-6 flex items-center justify-center text-[11px] font-medium flex-shrink-0',
