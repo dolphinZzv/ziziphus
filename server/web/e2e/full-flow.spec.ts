@@ -41,9 +41,9 @@ test.describe('Full Browser Flow', () => {
     await page.waitForTimeout(300)
 
     // ===== Create agent =====
-    await page.locator(`text=${ALICE.name}`).first().click({ force: true })
-    await page.waitForTimeout(1000)
-
+    // Profile is already open (re-opened by route listener after Escape above).
+    // No need to click the user name again — doing so with force:true while the
+    // profile overlay covers the sidebar would hit the overlay's onClose instead.
     const agentBtn = page.getByText('Agent 管理').or(page.getByText('Agent Management'))
     await expect(agentBtn).toBeVisible({ timeout: 2000 })
     await agentBtn.click()
