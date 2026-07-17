@@ -47,11 +47,11 @@ export default function App() {
     <BrowserRouter>
       <AppShell>
         <Routes>
-        <Route path="/login" element={isLoggedIn ? <Navigate to="/chat" replace /> : <LoginPage />} />
-        <Route path="/register" element={isLoggedIn ? <Navigate to="/chat" replace /> : <RegisterPage />} />
-        <Route path="/forgot-password" element={isLoggedIn ? <Navigate to="/chat" replace /> : <ForgotPasswordPage />} />
+        <Route path="/login" element={isLoggedIn ? <Navigate to="/conversations" replace /> : <LoginPage />} />
+        <Route path="/register" element={isLoggedIn ? <Navigate to="/conversations" replace /> : <RegisterPage />} />
+        <Route path="/forgot-password" element={isLoggedIn ? <Navigate to="/conversations" replace /> : <ForgotPasswordPage />} />
         <Route path="/" element={<AuthGuard><ErrorBoundary><AppLayout /></ErrorBoundary></AuthGuard>}>
-          <Route index element={<Navigate to="/chat" replace />} />
+          <Route index element={<Navigate to="/conversations" replace />} />
           <Route path="conversations" element={<ConversationsPage />} />
           <Route path="conversations/:convId" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
           <Route path="conversations/:convId/info" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
@@ -70,7 +70,7 @@ export default function App() {
           <Route path="profile/settings" element={null} />
           <Route path="contacts" element={null} />
         </Route>
-        <Route path="*" element={<Navigate to="/chat" replace />} />
+        <Route path="*" element={<Navigate to="/conversations" replace />} />
         </Routes>
       </AppShell>
     </BrowserRouter>
