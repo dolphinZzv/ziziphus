@@ -504,7 +504,7 @@ func TestRequestPasswordReset_Success(t *testing.T) {
 	resetStore := newMockPasswordResetStore()
 	mailer := &mockPasswordResetMailer{}
 
-	userID, code, err := svc.RequestPasswordReset(ctx, "alice_reset", resetStore, mailer)
+	userID, code, err := svc.RequestPasswordReset(ctx, "alice_reset", resetStore, mailer, true)
 	if err != nil {
 		t.Fatalf("RequestPasswordReset: %v", err)
 	}
@@ -542,7 +542,7 @@ func TestRequestPasswordReset_ByEmail(t *testing.T) {
 	mailer := &mockPasswordResetMailer{}
 
 	// Look up by email instead of account
-	userID, code, err := svc.RequestPasswordReset(ctx, "bob@example.com", resetStore, mailer)
+	userID, code, err := svc.RequestPasswordReset(ctx, "bob@example.com", resetStore, mailer, true)
 	if err != nil {
 		t.Fatalf("RequestPasswordReset by email: %v", err)
 	}
@@ -567,7 +567,7 @@ func TestRequestPasswordReset_NoEmail(t *testing.T) {
 	resetStore := newMockPasswordResetStore()
 	mailer := &mockPasswordResetMailer{}
 
-	_, _, err = svc.RequestPasswordReset(ctx, "charlie_noemail", resetStore, mailer)
+	_, _, err = svc.RequestPasswordReset(ctx, "charlie_noemail", resetStore, mailer, false)
 	if err == nil {
 		t.Fatal("expected error for user without email, got nil")
 	}
@@ -587,7 +587,7 @@ func TestRequestPasswordReset_UserNotFound(t *testing.T) {
 	resetStore := newMockPasswordResetStore()
 	mailer := &mockPasswordResetMailer{}
 
-	_, _, err := svc.RequestPasswordReset(ctx, "nonexistent_user", resetStore, mailer)
+	_, _, err := svc.RequestPasswordReset(ctx, "nonexistent_user", resetStore, mailer, false)
 	if err == nil {
 		t.Fatal("expected error for non-existent user, got nil")
 	}
@@ -604,7 +604,7 @@ func TestRequestPasswordReset_NotFoundByEmail(t *testing.T) {
 	resetStore := newMockPasswordResetStore()
 	mailer := &mockPasswordResetMailer{}
 
-	_, _, err := svc.RequestPasswordReset(ctx, "nonexistent@example.com", resetStore, mailer)
+	_, _, err := svc.RequestPasswordReset(ctx, "nonexistent@example.com", resetStore, mailer, false)
 	if err == nil {
 		t.Fatal("expected error for non-existent email, got nil")
 	}
@@ -625,7 +625,7 @@ func TestResetPassword_Success(t *testing.T) {
 	newPassword := "newpassword456"
 
 	// Request reset
-	_, code, err := svc.RequestPasswordReset(ctx, "dave_reset", resetStore, mailer)
+	_, code, err := svc.RequestPasswordReset(ctx, "dave_reset", resetStore, mailer, true)
 	if err != nil {
 		t.Fatalf("RequestPasswordReset: %v", err)
 	}
@@ -656,7 +656,7 @@ func TestResetPassword_WrongCode(t *testing.T) {
 	mailer := &mockPasswordResetMailer{}
 
 	// Request reset
-	_, code, err := svc.RequestPasswordReset(ctx, "eve_wrong", resetStore, mailer)
+	_, code, err := svc.RequestPasswordReset(ctx, "eve_wrong", resetStore, mailer, true)
 	if err != nil {
 		t.Fatalf("RequestPasswordReset: %v", err)
 	}
@@ -690,7 +690,7 @@ func TestResetPassword_ExpiredCode(t *testing.T) {
 	mailer := &mockPasswordResetMailer{}
 
 	// Request reset and store the code
-	_, code, err := svc.RequestPasswordReset(ctx, "frank_exp", resetStore, mailer)
+	_, code, err := svc.RequestPasswordReset(ctx, "frank_exp", resetStore, mailer, true)
 	if err != nil {
 		t.Fatalf("RequestPasswordReset: %v", err)
 	}
