@@ -24,6 +24,11 @@ export default function UserCard({ userId, onClose }: Props) {
   const contacts = useSyncExternalStore(contactStore.subscribe, () => contactStore.state.contacts)
   const isSelf = currentUser?.user_id === userId
   const isContact = contacts.some(c => c.user_id === userId)
+
+  // Lazy-load contacts if not yet loaded
+  useEffect(() => {
+    if (contacts.length === 0) contactStore.load()
+  }, [])
   const isAgent = user?.type === UserType.Agent
 
   useEffect(() => {
