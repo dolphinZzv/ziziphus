@@ -29,6 +29,8 @@ function useSenderInfo(userId: string): { avatar?: string; isAgent: boolean } {
     : {}
   const [info, setInfo] = useState<{ avatar?: string; isAgent: boolean }>(initial)
   useEffect(() => {
+    // Skip sender lookup for webhook-triggered messages (no such user)
+    if (userId.startsWith('webhook:')) return
     const cached = senderCache.get(userId)
     if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
       if (!info.avatar && cached.avatar) setInfo({ avatar: cached.avatar, isAgent: cached.type === 1 })

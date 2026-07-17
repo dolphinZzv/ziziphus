@@ -34,14 +34,17 @@ export default function InputBar({ convId, isP2p }: Props) {
 
   // Load members + webhooks for @mention
   useEffect(() => {
+    if (!convId) return
+    let cancelled = false
     Promise.allSettled([
       conversationService.getDetail(convId).then(d => {
+        if (cancelled) return
         const ids = d.members.map(m => m.user_id)
         if (ids.length > 1) {
           userService.batchGet(ids).then(users => {
+            if (cancelled) return
             setMembers(prev => {
               const userItems = Object.entries(users).map(([id, u]) => ({ id, name: u.name || id, avatar: u.avatar || '' }))
-              // Merge: keep existing webhook items, replace user items
               const whItems = prev.filter(m => m.id.startsWith('wh:'))
               return [...userItems, ...whItems]
             })
@@ -49,6 +52,7 @@ export default function InputBar({ convId, isP2p }: Props) {
         }
       }),
       api.request<Array<{ id: number; name: string }>>(`/api/v1/conversations/${convId}/webhooks`).then(whs => {
+        if (cancelled) return
         setMembers(prev => {
           const whItems = whs.map(wh => ({ id: `wh:${wh.id}`, name: wh.name }))
           const userItems = prev.filter(m => !m.id.startsWith('wh:'))
@@ -56,6 +60,7 @@ export default function InputBar({ convId, isP2p }: Props) {
         })
       }).catch(() => {}),
     ])
+    return () => { cancelled = true }
   }, [convId])
 
   const handleSend = () => {
