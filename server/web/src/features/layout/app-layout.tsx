@@ -121,7 +121,6 @@ export default function AppLayout() {
         {/* Chat area */}
         <div className={cn(
           'flex-1 h-full flex flex-col min-w-0 bg-[var(--color-surface-soft)]',
-          isMobile && isSidebarOpen && 'hidden'
         )}>
           {/* Mobile: no header when sidebar is visible (conversation list is fullscreen) */}
           <Outlet />
