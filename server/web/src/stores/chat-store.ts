@@ -320,10 +320,23 @@ export const chatStore = {
   },
 
   handlePush(payload: MsgPushPayload) {
-    // Skip push if this message already exists locally (from sendMessage).
-    // The local message has the correct sender_id; the push may have a stale one.
     const existingMsgs = state.messagesByConvId.get(payload.conv_id)
-    if (existingMsgs?.some(m => m.msg_id === payload.msg_id || (m.client_seq === payload.client_seq && payload.client_seq > 0))) {
+
+    // If this msg_id already exists, skip — push may carry stale sender_id.
+    if (existingMsgs?.some(m => m.msg_id === payload.msg_id && m.msg_id > 0)) return
+
+    // If there is a pending local message (msg_id=0, not yet acked), the push
+    // is the server's confirmation — update the local copy but keep local sender_id.
+    const pending = existingMsgs?.find(m => m.sender_id && m.msg_id === 0)
+    if (pending) {
+      const msgs = existingMsgs!.map(m =>
+        m === pending
+          ? { ...m, msg_id: payload.msg_id, conv_seq: payload.conv_seq, timestamp: payload.timestamp, status: MsgStatus.Delivered }
+          : m
+      )
+      const messagesByConvId = new Map(state.messagesByConvId)
+      messagesByConvId.set(payload.conv_id, msgs)
+      state = { ...state, messagesByConvId }; emit()
       return
     }
 
