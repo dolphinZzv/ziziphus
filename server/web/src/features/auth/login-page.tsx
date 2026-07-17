@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { authStore } from '@/stores/auth-store'
 import { getSavedAccounts, saveAccount, removeSavedAccount } from '@/lib/storage'
 import { X, Eye, EyeOff } from 'lucide-react'
+import PageLayout from '@/components/page-layout'
 import AuthFooter from './auth-footer'
 
 export default function LoginPage() {
@@ -71,7 +72,7 @@ export default function LoginPage() {
       ? t('auth.mfaTOTPHint')
       : t('auth.mfaEmailHint') + (mfaChallenge.maskedEmail ? ` (${mfaChallenge.maskedEmail})` : '')
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
+      <PageLayout>
         <div className="text-center">
           <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
           {appHeadline && <p className="text-xs text-[var(--color-muted)] -mt-1 mb-1">{appHeadline}</p>}
@@ -113,12 +114,12 @@ export default function LoginPage() {
         >
           <X size={18} />
         </button>
-      </div>
+      </PageLayout>
     )
   }
 
   return (
-    <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
+    <PageLayout>
       {/* Logo */}
       <div className="text-center">
         <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
@@ -212,6 +213,6 @@ export default function LoginPage() {
       </form>
 
       <AuthFooter />
-    </div>
+    </PageLayout>
   )
 }

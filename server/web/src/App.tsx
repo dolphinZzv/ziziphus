@@ -4,7 +4,7 @@ import './i18n'
 import { authStore } from '@/stores/auth-store'
 import { uiStore } from '@/stores/ui-store'
 import AppLayout from '@/features/layout/app-layout'
-import AnnouncementBanner from '@/components/announcement-banner'
+import AppShell from '@/features/layout/app-shell'
 import LoginPage from '@/features/auth/login-page'
 import RegisterPage from '@/features/auth/register-page'
 import ForgotPasswordPage from '@/features/auth/forgot-password-page'
@@ -45,8 +45,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AnnouncementBanner />
-      <Routes>
+      <AppShell>
+        <Routes>
         <Route path="/login" element={isLoggedIn ? <Navigate to="/chat" replace /> : <LoginPage />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/chat" replace /> : <RegisterPage />} />
         <Route path="/forgot-password" element={isLoggedIn ? <Navigate to="/chat" replace /> : <ForgotPasswordPage />} />
@@ -57,7 +57,8 @@ export default function App() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/chat" replace />} />
-      </Routes>
+        </Routes>
+      </AppShell>
     </BrowserRouter>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { authStore } from '@/stores/auth-store'
+import PageLayout from '@/components/page-layout'
 import AuthFooter from './auth-footer'
 
 export default function RegisterPage() {
@@ -41,7 +42,7 @@ export default function RegisterPage() {
   }, [])
 
   return (
-    <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
+    <PageLayout>
       {/* Logo */}
       <div className="text-center">
         <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
@@ -74,6 +75,6 @@ export default function RegisterPage() {
       </Link>
 
       <AuthFooter />
-    </div>
+    </PageLayout>
   )
 }

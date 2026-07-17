@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '@/services/api-client'
+import PageLayout from '@/components/page-layout'
 import AuthFooter from './auth-footer'
 
 type Step = 'request' | 'reset' | 'done'
@@ -85,7 +86,7 @@ export default function ForgotPasswordPage() {
   // Step 1: Request code
   if (step === 'request') {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
+      <PageLayout>
         <div className="text-center">
           <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
           <p className="text-sm text-[var(--color-muted)] mt-3">{t('auth.forgotPasswordTitle', '找回密码')}</p>
@@ -119,14 +120,14 @@ export default function ForgotPasswordPage() {
         </Link>
 
         <AuthFooter />
-      </div>
+      </PageLayout>
     )
   }
 
   // Step 2: Reset password with code
   if (step === 'reset') {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
+      <PageLayout>
         <div className="text-center">
           <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
           <p className="text-sm text-[var(--color-muted)] mt-3">{t('auth.resetPasswordTitle', '重置密码')}</p>
@@ -181,13 +182,13 @@ export default function ForgotPasswordPage() {
         <button type="button" className="text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors" onClick={() => setStep('request')}>
           {t('auth.backToRequest', '重新发送验证码')}
         </button>
-      </div>
+      </PageLayout>
     )
   }
 
   // Step 3: Done
   return (
-    <div className="h-full flex flex-col items-center justify-center bg-[var(--color-canvas)] relative px-8 gap-8">
+    <PageLayout>
       <div className="text-center">
         <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
         <p className="text-sm text-[var(--color-muted)] mt-3">{t('auth.resetSuccess', '密码重置成功')}</p>
@@ -202,6 +203,6 @@ export default function ForgotPasswordPage() {
       </button>
 
       <AuthFooter />
-    </div>
+    </PageLayout>
   )
 }
