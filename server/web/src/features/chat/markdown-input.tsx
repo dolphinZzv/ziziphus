@@ -3,6 +3,7 @@ import { Bold, Italic, Code, Link, Eye, List, Strikethrough } from 'lucide-react
 import { cn } from '@/lib/cn'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props {
   value: string
@@ -16,12 +17,14 @@ export default function MarkdownInput({ value, onChange, onSend, placeholder = '
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isComposingRef = useRef(false)
   const [preview, setPreview] = useState(false)
+  const isMobile = useIsMobile()
 
-  // Auto-resize
+  // Auto-resize (desktop only)
   useEffect(() => {
+    if (isMobile) return
     const el = textareaRef.current
     if (el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 180) + 'px' }
-  }, [value])
+  }, [value, isMobile])
 
   const insertMarkup = useCallback((before: string, after = '', placeholder = '') => {
     const el = textareaRef.current
@@ -64,8 +67,8 @@ export default function MarkdownInput({ value, onChange, onSend, placeholder = '
 
   return (
     <div className="flex flex-col gap-1">
-      {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-1">
+      {/* Toolbar (hidden on mobile) */}
+      <div className={cn('flex items-center gap-0.5 px-1', isMobile && 'hidden')}>
         <button type="button" className={toolbarBtn} title="加粗 (Ctrl+B)"
           onClick={() => insertMarkup('**', '**', '加粗文字')}>
           <Bold size={15} />
@@ -102,7 +105,9 @@ export default function MarkdownInput({ value, onChange, onSend, placeholder = '
         <button
           type="button"
           onClick={() => setPreview(false)}
-          className="flex-1 min-h-[48px] max-h-[180px] overflow-y-auto px-4 py-2 rounded-xl bg-[var(--color-surface-soft)] text-sm text-left border border-[var(--color-hairline-soft)] cursor-text"
+          className={cn('flex-1 overflow-y-auto px-4 py-2 bg-[var(--color-surface-soft)] text-sm text-left cursor-text',
+            isMobile ? 'h-10' : 'min-h-[48px] max-h-[180px] rounded-xl border border-[var(--color-hairline-soft)]'
+          )}
         >
           {value ? (
             <MarkdownPreview text={value} />
@@ -121,7 +126,9 @@ export default function MarkdownInput({ value, onChange, onSend, placeholder = '
           placeholder={placeholder}
           rows={2}
           disabled={disabled}
-          className="flex-1 resize-none max-h-[180px] py-2.5 pl-4 pr-20 pb-10 bg-[var(--color-surface-soft)] text-[var(--color-ink)] text-sm placeholder:text-[var(--color-muted)] outline-none"
+          className={cn('flex-1 resize-none bg-[var(--color-surface-soft)] text-[var(--color-ink)] text-sm placeholder:text-[var(--color-muted)] outline-none',
+            isMobile ? 'py-2.5 pl-4 pr-20 h-10' : 'max-h-[180px] py-2.5 pl-4 pr-20 pb-10'
+          )}
         />
       )}
     </div>

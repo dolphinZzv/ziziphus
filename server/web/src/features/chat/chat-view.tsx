@@ -219,10 +219,10 @@ export default function ChatView() {
         {/* Avatar */}
         {!showSearch ? (
           <>
-          {/* Mobile back button */}
+          {/* Mobile back button — opens sidebar (conversation list) fullscreen */}
           {isMobile && (
             <button
-              onClick={() => { uiStore.toggleSidebar(); navigate('/chat') }}
+              onClick={() => uiStore.toggleSidebar()}
               className="p-1.5 -ml-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors md:hidden"
               aria-label={t('common.back', '返回')}
             >
