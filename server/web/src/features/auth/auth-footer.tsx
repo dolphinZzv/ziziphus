@@ -3,7 +3,7 @@ import { uiStore } from '@/stores/ui-store'
 import { Sun, Moon, Monitor } from 'lucide-react'
 
 type Theme = 'light' | 'dark' | 'auto'
-type Language = 'zh' | 'en' | 'auto'
+type Language = 'zh' | 'en' | 'ja' | 'fr' | 'de' | 'es' | 'ko' | 'auto'
 
 const themes: { key: Theme; icon: typeof Sun }[] = [
   { key: 'auto', icon: Monitor },
@@ -15,6 +15,11 @@ const languages: { key: Language; label: string }[] = [
   { key: 'auto', label: 'Auto' },
   { key: 'zh', label: '中文' },
   { key: 'en', label: 'EN' },
+  { key: 'ja', label: '日本語' },
+  { key: 'fr', label: 'Français' },
+  { key: 'de', label: 'Deutsch' },
+  { key: 'es', label: 'Español' },
+  { key: 'ko', label: '한국어' },
 ]
 
 export default function AuthFooter() {

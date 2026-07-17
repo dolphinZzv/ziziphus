@@ -13,3 +13,5 @@ CREATE TABLE IF NOT EXISTS conv_webhooks (
     UNIQUE(conv_id, name)
 );
 CREATE INDEX IF NOT EXISTS idx_conv_webhooks_conv_id ON conv_webhooks(conv_id);
+DROP INDEX IF EXISTS idx_conv_webhooks_token;
+ALTER TABLE conv_webhooks DROP COLUMN IF EXISTS token, ALTER COLUMN api_key_hash SET DEFAULT '';

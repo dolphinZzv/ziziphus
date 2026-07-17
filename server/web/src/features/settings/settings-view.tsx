@@ -65,7 +65,7 @@ export default function SettingsView({ onClose, inline }: Props) {
         <div>
           <label className="block text-xs font-medium text-[var(--color-body)] mb-2">{t('settings.language')}</label>
           <div className="flex gap-2">
-            {[{ v: 'auto' as const, l: t('settings.languageAuto') }, { v: 'zh' as const, l: t('settings.languageZH') }, { v: 'en' as const, l: t('settings.languageEN') }].map(item => (
+            {[{ v: 'auto' as const, l: t('settings.languageAuto') }, { v: 'zh' as const, l: t('settings.languageZH') }, { v: 'en' as const, l: t('settings.languageEN') }, { v: 'ja' as const, l: t('settings.languageJA') }, { v: 'fr' as const, l: t('settings.languageFR') }, { v: 'de' as const, l: t('settings.languageDE') }, { v: 'es' as const, l: t('settings.languageES') }, { v: 'ko' as const, l: t('settings.languageKO') }].map(item => (
               <button key={item.v} onClick={() => uiStore.setLanguage(item.v)} className={segBtn(language === item.v)}>{item.l}</button>
             ))}
           </div>

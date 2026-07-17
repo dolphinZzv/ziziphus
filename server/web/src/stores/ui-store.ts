@@ -2,12 +2,17 @@ import { getItem, setItem, getDeviceId } from '@/lib/storage'
 import i18n from '@/i18n'
 
 type Theme = 'light' | 'dark' | 'auto'
-type Language = 'zh' | 'en' | 'auto'
+type Language = 'zh' | 'en' | 'ja' | 'fr' | 'de' | 'es' | 'ko' | 'auto'
 
-function resolveAutoLang(): 'zh' | 'en' {
+function resolveAutoLang(): Language {
   if (typeof navigator === 'undefined') return 'en'
   const nav = (navigator.language || '').toLowerCase()
   if (nav.startsWith('zh')) return 'zh'
+  if (nav.startsWith('ja')) return 'ja'
+  if (nav.startsWith('ko')) return 'ko'
+  if (nav.startsWith('fr')) return 'fr'
+  if (nav.startsWith('de')) return 'de'
+  if (nav.startsWith('es')) return 'es'
   return 'en'
 }
 
