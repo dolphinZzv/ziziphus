@@ -5,6 +5,7 @@ import { authStore } from '@/stores/auth-store'
 import { uiStore } from '@/stores/ui-store'
 import AppLayout from '@/features/layout/app-layout'
 import AppShell from '@/features/layout/app-shell'
+import ConversationsPage from '@/features/conversation-list/conversations-page'
 import LoginPage from '@/features/auth/login-page'
 import RegisterPage from '@/features/auth/register-page'
 import ForgotPasswordPage from '@/features/auth/forgot-password-page'
@@ -51,15 +52,17 @@ export default function App() {
         <Route path="/forgot-password" element={isLoggedIn ? <Navigate to="/chat" replace /> : <ForgotPasswordPage />} />
         <Route path="/" element={<AuthGuard><ErrorBoundary><AppLayout /></ErrorBoundary></AuthGuard>}>
           <Route index element={<Navigate to="/chat" replace />} />
+          <Route path="conversations" element={<ConversationsPage />} />
+          <Route path="conversations/:convId" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="conversations/:convId/info" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="conversations/:convId/settings" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="conversations/:convId/webhooks" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="conversations/:convId/members" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="conversations/:convId/add-member" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="conversations/:convId/detail" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="conversations/:convId/history" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
           <Route path="chat" element={<Suspense fallback={<PageFallback />}><EmptyChat /></Suspense>} />
           <Route path="chat/:convId" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
-          <Route path="chat/:convId/info" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
-          <Route path="chat/:convId/settings" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
-          <Route path="chat/:convId/webhooks" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
-          <Route path="chat/:convId/members" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
-          <Route path="chat/:convId/add-member" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
-          <Route path="chat/:convId/detail" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
-          <Route path="chat/:convId/history" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
           <Route path="profile" element={null} />
           <Route path="profile/agents" element={null} />
           <Route path="profile/privacy" element={null} />

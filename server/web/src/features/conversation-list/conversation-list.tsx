@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 import { conversationStore } from '@/stores/conversation-store'
 import { uiStore } from '@/stores/ui-store'
 import ConversationRow from './conversation-row'
@@ -24,7 +25,7 @@ export default function ConversationList() {
 
   const handleSelect = (convId: string) => {
     uiStore.selectConversation(convId)
-    navigate(`/chat/${convId}`)
+    navigate(`/conversations/${convId}`)
   }
 
   return (

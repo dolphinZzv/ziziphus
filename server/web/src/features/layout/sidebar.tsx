@@ -44,7 +44,7 @@ export default function Sidebar() {
       <div className="flex items-center justify-between px-2 h-12 border-b border-[var(--color-hairline)]">
         <div className="flex items-center gap-1 min-w-0">
           <button
-            onClick={() => { if (isMobile) uiStore.toggleSidebar(); uiStore.openSheet('profile') }}
+            onClick={() => uiStore.openSheet('profile')}
             className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink)] hover:opacity-80 min-w-0"
         >
           {user?.avatar ? (

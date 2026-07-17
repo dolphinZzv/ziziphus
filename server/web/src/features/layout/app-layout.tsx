@@ -86,33 +86,21 @@ export default function AppLayout() {
 
       {/* Body */}
       <div className="flex-1 flex min-h-0 relative">
-        {/* Mobile sidebar backdrop */}
-        {isMobile && isSidebarOpen && (
+        {/* Desktop/tablet sidebar */}
+        {!isMobile && (
+          <>
           <div
-            className="fixed inset-0 z-40 bg-black/30"
-            onClick={() => uiStore.toggleSidebar()}
-          />
-        )}
+            className={cn(
+              'flex-shrink-0 h-full flex flex-col border-r border-[var(--color-hairline)] bg-[var(--color-canvas)] transition-transform duration-200',
+              !isSidebarOpen && '-translate-x-full hidden',
+            )}
+            style={{ width: sideW }}
+          >
+            <Sidebar />
+          </div>
 
-        {/* Sidebar */}
-        <div
-          className={cn(
-            // Desktop/tablet: inline
-            'flex-shrink-0 h-full flex flex-col border-r border-[var(--color-hairline)] bg-[var(--color-canvas)]',
-            // Mobile: fixed overlay with transition
-            isMobile && 'fixed inset-y-0 left-0 z-50 transition-transform duration-200',
-            isMobile && (isSidebarOpen ? 'translate-x-0' : '-translate-x-full'),
-            // Non-mobile: inline, hidden when toggled off
-            !isMobile && 'transition-transform duration-200',
-            !isMobile && !isSidebarOpen && '-translate-x-full hidden',
-          )}
-          style={{ width: sideW }}
-        >
-          <Sidebar />
-        </div>
-
-        {/* Drag handle (desktop only) */}
-        {!isMobile && !isTablet && isSidebarOpen && (
+        {/* Drag handle (desktop/tablet only) */}
+        {!isTablet && isSidebarOpen && (
           <div className="relative flex-shrink-0" style={{ width: 0 }}>
             <div
               className="absolute -left-1 top-0 bottom-0 w-2 cursor-col-resize group z-10"
@@ -126,6 +114,8 @@ export default function AppLayout() {
               }}
             />
           </div>
+        )}
+          </>
         )}
 
         {/* Chat area */}

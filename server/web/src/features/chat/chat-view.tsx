@@ -50,12 +50,12 @@ export default function ChatView() {
   const isMobile = useIsMobile()
   // Chat panel sub-route — derived from URL
   const activePanel = (() => {
-    const m = location.pathname.match(/^\/chat\/([^/]+)\/(info|settings|webhooks|add-member|members|detail|history)$/)
+    const m = location.pathname.match(/^\/(?:chat|conversations)\/([^/]+)\/(info|settings|webhooks|add-member|members|detail|history)$/)
     return m && m[1] === convId ? m[2] : null
   })()
 
   // Navigate to a chat panel sub-route
-  const openPanel = (panel: string) => navigate(`/chat/${convId}/${panel}`)
+  const openPanel = (panel: string) => navigate(`/conversations/${convId}/${panel}`)
   // Close panel and return to chat
   const closePanel = () => { navigate(-1) }
   const [copied, setCopied] = useState(false)
@@ -224,10 +224,10 @@ export default function ChatView() {
         {/* Avatar */}
         {!showSearch ? (
           <>
-          {/* Mobile back button — opens sidebar (conversation list) fullscreen */}
+          {/* Mobile back button — goes to conversation list */}
           {isMobile && (
             <button
-              onClick={() => uiStore.toggleSidebar()}
+              onClick={() => navigate('/conversations')}
               className="p-1.5 -ml-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors md:hidden"
               aria-label={t('common.back', '返回')}
             >
