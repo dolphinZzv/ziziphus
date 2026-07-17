@@ -22,7 +22,11 @@ import { useTranslation } from 'react-i18next'
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 const senderCache = new Map<string, { avatar: string; type: number; ts: number }>()
 
-function useSenderInfo(userId: string): { avatar?: string; isAgent: boolean } {
+function useSenderInfo(userId: string, isOwn: boolean): { avatar?: string; isAgent: boolean } {
+  // For own messages, use local user info directly — no API call needed
+  const me = isOwn ? authStore.state.user : null
+  if (me) return { avatar: me.avatar || undefined, isAgent: me.type === 1 }
+
   const cached = senderCache.get(userId)
   const initial = cached && (Date.now() - cached.ts) < CACHE_TTL
     ? { avatar: cached.avatar, isAgent: cached.type === 1 }
@@ -57,7 +61,7 @@ interface Props {
 export default function MessageBubble({ message, isOwn, isGrouped, highlight, isSearchMatch, isCurrentSearchMatch }: Props) {
   const { t } = useTranslation()
   // Always call hooks at top level, even for centered messages
-  const _senderInfo = useSenderInfo(message.sender_id)
+  const _senderInfo = useSenderInfo(message.sender_id, isOwn)
   const [showMenu, setShowMenu] = useState(false)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [hoverUser, setHoverUser] = useState(false)

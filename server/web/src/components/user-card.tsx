@@ -27,8 +27,10 @@ export default function UserCard({ userId, onClose }: Props) {
   const isAgent = user?.type === UserType.Agent
 
   useEffect(() => {
+    // For the current user, use local data directly — no API call needed
+    if (isSelf && currentUser) { setUser(currentUser); setLoading(false); return }
     userService.getUser(userId).then(u => { setUser(u); setLoading(false) }).catch(() => setLoading(false))
-  }, [userId])
+  }, [userId, isSelf, currentUser])
 
   const copyId = () => { navigator.clipboard.writeText(userId); setCopied(true); setTimeout(() => setCopied(false), 2000) }
   const handleStartChat = async () => {
