@@ -230,7 +230,7 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
         <AvatarDot name={myInitials} avatar={me?.avatar} userId={me?.user_id || ''} clickable={false} isAgent={me?.type === 1} />
       )}
       {!isGrouped && !isOwn && (
-        <AvatarDot name={senderInitials} userId={message.sender_id} clickable={message.content_type !== ContentType.System} isAgent={_senderInfo.isAgent} />
+        <AvatarDot name={senderInitials} userId={message.sender_id} clickable={message.content_type !== ContentType.System && !message.sender_id.startsWith('webhook:')} isAgent={_senderInfo.isAgent} />
       )}
       {isGrouped && <div className="w-8 flex-shrink-0 self-start" />}
 
@@ -348,7 +348,7 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
             </button>
           )}
 
-          {hoverUser && !isOwn && userCardPos && typeof document !== 'undefined' && createPortal(
+          {hoverUser && !isOwn && userCardPos && typeof document !== 'undefined' && !message.sender_id.startsWith('webhook:') && createPortal(
             <div
               className="fixed z-[999]"
               style={{ left: userCardPos.x, top: userCardPos.y }}
