@@ -4456,6 +4456,9 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "primary_color": {
+                    "type": "string"
                 }
             }
         },
@@ -4637,6 +4640,9 @@
                     "type": "string"
                 },
                 "notice": {
+                    "type": "string"
+                },
+                "primary_color": {
                     "type": "string"
                 }
             }

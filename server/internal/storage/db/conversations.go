@@ -386,8 +386,8 @@ func (r *ConvRepo) Clone(ctx context.Context, srcConvID, newConvID, ownerID stri
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx,
-		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, notice, headline, max_members, created_at)
-		 SELECT $1, type, $2, $3, avatar, notice, headline, max_members, NOW() FROM conversations WHERE conv_id = $4`,
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, notice, headline, max_members, created_at, primary_color)
+		 SELECT $1, type, $2, $3, avatar, notice, headline, max_members, NOW(), primary_color FROM conversations WHERE conv_id = $4`,
 		newConvID, name, ownerID, srcConvID)
 	if err != nil {
 		return err

@@ -4462,6 +4462,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "primary_color": {
+                    "type": "string"
                 }
             }
         },
@@ -4643,6 +4646,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "notice": {
+                    "type": "string"
+                },
+                "primary_color": {
                     "type": "string"
                 }
             }
