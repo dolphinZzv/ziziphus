@@ -94,6 +94,8 @@
 * { box-sizing: border-box; }
 
 html, body, #root { height: 100%; width: 100%; overflow: hidden; }
+/* iOS Safari virtual keyboard fix: use dvh so contents stay within visible area */
+html, body, #root { height: -webkit-fill-available; height: 100dvh; }
 
 body {
   font-family: "DM Sans", sans-serif;
