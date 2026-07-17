@@ -18,6 +18,7 @@ const MemoBubble = memo(MessageBubble)
 
 export default function MessageList({ convId, messages, currentUserId, searchKeyword, matchIndex, searchMatches }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const loadingMore = useRef(false)
   const prevLen = useRef(0)
   const shouldAutoScroll = useRef(false) // true = user is at bottom, auto-follow
@@ -52,10 +53,10 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
     setShowScrollBtn(distFromBottom > 300)
   }, [convId])
 
-  // ResizeObserver: keep scroll pinned to bottom when auto-follow is on.
-  // This handles images loading, agent timeline expanding, and initial render.
+  // ResizeObserver on inner content wrapper — fires when messages are added or
+  // images load, keeping scroll pinned to bottom when auto-follow is on.
   useEffect(() => {
-    const el = scrollRef.current
+    const el = contentRef.current
     if (!el) return
     const ro = new ResizeObserver(() => {
       if (shouldAutoScroll.current) scrollToEnd()
@@ -126,7 +127,9 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
   return (
     <div className="relative h-full">
     <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4 py-2">
-      {rows}
+      <div ref={contentRef}>
+        {rows}
+      </div>
       <div className="h-5" />
     </div>
     {showScrollBtn && (
