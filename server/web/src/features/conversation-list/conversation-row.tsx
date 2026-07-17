@@ -54,7 +54,7 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter') onClick() }}
       className={cn(
-        'w-full flex items-center gap-2.5 px-4 h-[48px] text-left transition-colors cursor-pointer group relative overflow-visible',
+        'w-full flex items-center gap-2.5 px-4 h-[48px] text-left transition-colors cursor-pointer group relative overflow-visible btn-press',
         isSelected ? 'bg-[var(--color-primary)]/5' : 'hover:bg-[var(--color-surface-soft)]'
       )}
     >

@@ -93,7 +93,7 @@ export default function SettingsView({ onClose, inline }: Props) {
         </div>
 
         {/* Device info */}
-        <div className="text-[11px] text-[var(--color-muted)] space-y-1 pt-2 border-t border-[var(--color-hairline)]">
+        <div className="text-[11px] text-[var(--color-muted)] space-y-1 pt-2">
           <div>{t('settings.deviceID')}: <span className="font-mono select-all text-[var(--color-muted-soft)]">{deviceId}</span></div>
         </div>
 

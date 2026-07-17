@@ -81,7 +81,7 @@ export default function WebhookPanel({ convId, onClose }: Props) { const isMobil
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">
+        <div className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2">
             <Globe size={16} className="text-[var(--color-muted)]" />
             <h3 className="font-headline text-base font-semibold text-[var(--color-ink)]">{t('conversation.webhookTitle')}</h3>
@@ -169,7 +169,7 @@ export default function WebhookPanel({ convId, onClose }: Props) { const isMobil
                     return (
                     <>
                     {/* API Key */}
-                    <div className="border-t border-[var(--color-hairline)] pt-2.5 space-y-1.5">
+                    <div className=" space-y-1.5">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] text-[var(--color-muted)]">API Key</label>
                         <button onClick={() => copyText('apikey', apiKey)} className="text-[var(--color-muted)] hover:text-[var(--color-ink)] p-0.5">

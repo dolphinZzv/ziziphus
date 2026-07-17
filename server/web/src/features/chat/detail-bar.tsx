@@ -50,7 +50,7 @@ export default function DetailBar
   }
 
   return (
-    <div className="border-b border-[var(--color-hairline)] bg-[var(--color-surface-card)] max-h-[240px] overflow-y-auto">
+    <div className="bg-[var(--color-surface-card)] max-h-[240px] overflow-y-auto">
       <div className="px-4 py-3">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wider">会话详情</span>

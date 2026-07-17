@@ -108,7 +108,7 @@ export default function FilePanel({ convId, onClose, width }: Props) {
     <div className="bg-[var(--color-surface-card)] border-l border-[var(--color-hairline)] flex flex-col h-full flex-shrink-0 text-sm relative" style={{ width: width || 260 }}
       onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
       {/* Header */}
-      <div className="h-12 flex items-center justify-between px-4 border-b border-[var(--color-hairline)] flex-shrink-0">
+      <div className="h-12 flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-2 text-[13px] font-medium text-[var(--color-ink)]">
           文件 <span className="text-[var(--color-muted)] font-normal">{entries.length + folders.length}</span>
         </div>
@@ -122,18 +122,18 @@ export default function FilePanel({ convId, onClose, width }: Props) {
 
       {/* New folder input */}
       {newFolderInput && (
-        <div className="px-3 py-2 border-b border-[var(--color-hairline)]">
+        <div className="px-3 py-2">
           <div className="flex gap-1.5">
             <input type="text" value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') createFolder(); if (e.key === 'Escape') setNewFolderInput(false) }}
-              placeholder="文件夹名称" className="flex-1 h-8 px-2.5 rounded-md text-xs bg-[var(--color-surface-soft)] border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)]" autoFocus />
+              placeholder="文件夹名称" className="flex-1 h-8 px-2.5 rounded-md text-xs bg-[var(--color-surface-soft)] border border-[var(--color-hairline)]/50 focus:outline-none focus:border-[var(--color-primary)]" autoFocus />
             <button onClick={createFolder} className="px-3 h-8 rounded-md text-xs font-medium bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] transition-colors">创建</button>
           </div>
         </div>
       )}
 
       {/* Breadcrumb path */}
-      <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--color-hairline)] text-[11px] text-[var(--color-muted)] overflow-x-auto">
+      <div className="flex items-center gap-1 px-3 py-2 text-[11px] text-[var(--color-muted)] overflow-x-auto">
         {breadcrumbs.map((b, i) => (
           <span key={b.path} className="flex items-center gap-1">
             {i > 0 && <ChevronRight size={10} />}
@@ -298,7 +298,7 @@ export default function FilePanel({ convId, onClose, width }: Props) {
       )}
 
       {/* Upload */}
-      <div className="px-3 pb-3 pt-2 border-t border-[var(--color-hairline)]">
+      <div className="px-3 pb-3 pt-2">
         <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
           className="w-full h-8 rounded-md bg-[var(--color-surface-soft)] hover:bg-[var(--color-hairline)] text-[13px] text-[var(--color-muted)] flex items-center justify-center gap-1.5 transition-colors">
           <Upload size={13} /> {uploading ? '上传中...' : '上传文件'}

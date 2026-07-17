@@ -172,7 +172,7 @@ export default function InputBar({ convId, isP2p }: Props) {
       onDrop={handleDrop}>
       {/* Reply preview */}
       {replyTo && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-soft)] border-b border-[var(--color-hairline)]">
+        <div className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-soft)]">
           <div className="flex-1 min-w-0">
             <div className="text-[11px] text-[var(--color-accent)] font-medium">回复 {replyTo.sender_name}</div>
             <div className="text-xs text-[var(--color-muted)] truncate">{replyTo.body?.slice(0, 80)}</div>
@@ -206,10 +206,10 @@ export default function InputBar({ convId, isP2p }: Props) {
         </div>
       )}
 
-      {/* Input area — floating card */}
+      {/* Input area — subtle elevation, deeper on focus */}
       <div className="px-3 pb-3 pt-1">
         <div className="rounded-2xl bg-[var(--color-surface-card)] relative transition-shadow duration-200"
-          style={{ boxShadow: focused ? '0 2px 8px rgba(0,0,0,0.10)' : '0 1px 3px rgba(0,0,0,0.06)' }}>
+          style={{ boxShadow: focused ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}>
           <div className="relative">
             <MarkdownInput
               value={text}
@@ -221,8 +221,8 @@ export default function InputBar({ convId, isP2p }: Props) {
               onBlur={() => setFocused(false)}
             />
 
-            {/* Right-side action buttons — inline with textarea */}
-            <div className="flex items-center gap-0.5 absolute right-2 bottom-2">
+          {/* Right-side action buttons — inline with textarea */}
+          <div className="flex items-center gap-0.5 absolute right-2 bottom-2">
               {!isP2p && (
               <button type="button"
                 onClick={() => { setMentionFilter(''); setShowMention(!showMention) }}

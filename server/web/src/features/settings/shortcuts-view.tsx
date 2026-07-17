@@ -43,7 +43,7 @@ export default function ShortcutsView({ onClose }: Props) {
             </div>
           ))}
         </div>
-        <div className="text-[11px] text-[var(--color-muted)] text-center mt-4 pt-3 border-t border-[var(--color-hairline)]">
+        <div className="text-[11px] text-[var(--color-muted)] text-center mt-4 pt-3">
           {t('shortcuts.tip')}
         </div>
       </div>

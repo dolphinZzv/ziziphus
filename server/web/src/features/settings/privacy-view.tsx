@@ -100,7 +100,7 @@ export default function PrivacyView({ onClose }: Props) {
               <div className="flex-1 min-w-0"><span className="text-sm text-[var(--color-body)]">允许通过搜索找到我</span></div>
               <button onClick={handleToggleDiscoverable} className={toggleClass(discoverable)}><span className={toggleDot(discoverable)} /></button>
             </label>
-            <div className="border-t border-[var(--color-hairline)]" />
+            <div className="mt-3" />
             <label className="flex items-center justify-between cursor-pointer">
               <div className="flex-1 min-w-0"><span className="text-sm text-[var(--color-body)]">允许直接发起会话</span></div>
               <button onClick={handleToggleDirectChat} className={toggleClass(allowDirectChat)}><span className={toggleDot(allowDirectChat)} /></button>

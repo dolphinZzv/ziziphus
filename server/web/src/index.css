@@ -66,20 +66,20 @@
   --color-accent: #34D399;
   --color-accent-hover: #6EE7B7;
   --color-canvas: #0B1120;
-  --color-surface-card: #111827;
-  --color-surface-soft: #1A2332;
+  --color-surface-card: #1A2336;
+  --color-surface-soft: #1F2A3E;
   --color-ink: #F8FAFC;
   --color-body-strong: #E2E8F0;
   --color-body: #CBD5E1;
   --color-muted: #94A3B8;
   --color-muted-soft: #64748B;
-  --color-hairline: #1E293B;
-  --color-hairline-soft: #1A2332;
+  --color-hairline: #243044;
+  --color-hairline-soft: #1E293B;
   --bubble-self: #3B82F6;
   --bubble-self-text: #FFFFFF;
-  --bubble-other: #1A2332;
+  --bubble-other: #1A2336;
   --bubble-other-text: #F8FAFC;
-  --bubble-other-border: #1E293B;
+  --bubble-other-border: #243044;
   --destructive: #F87171;
   --destructive-hover: #FCA5A5;
   --success: #34D399;
@@ -130,6 +130,19 @@ input:focus-visible, textarea:focus-visible, [contenteditable]:focus-visible { o
 /* Selection */
 ::selection { background: var(--color-primary); color: #FFFFFF; }
 .dark ::selection { background: #3B82F6; color: #FFFFFF; }
+
+/* Micro-interactions */
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-msg-in {
+  animation: msg-in 0.25s ease-out both;
+}
+.btn-press:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
 
 /* Code blocks in messages */
 pre { background: #F1F5F9 !important; border-radius: 8px; padding: 12px 16px; overflow-x: auto; }

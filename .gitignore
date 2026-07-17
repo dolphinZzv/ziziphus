@@ -35,4 +35,5 @@ coverage/
 *.tmp*.test
 bin/
 server/ziziphus
-logs
+logs*.png
+*.png

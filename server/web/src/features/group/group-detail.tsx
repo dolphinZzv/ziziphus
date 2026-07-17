@@ -159,9 +159,9 @@ export default function GroupDetail({ convId, onClose }: Props) {
           <button onClick={() => isAdmin ? avatarInputRef.current?.click() : undefined} disabled={uploading}
             className="relative group cursor-pointer">
             {detail.avatar ? (
-              <img src={avatarUrl(detail.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover border-[3px] border-[var(--color-surface-card)] shadow-sm" />
+              <img src={avatarUrl(detail.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
             ) : (
-              <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold border-[3px] border-[var(--color-surface-card)] shadow-sm"
+              <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold "
                 style={{ background: 'linear-gradient(135deg, var(--color-accent), #34D399)' }}>{detail.name?.charAt(0)?.toUpperCase() || 'G'}</div>
             )}
             {isAdmin && <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Camera size={16} className="text-white" /></div>}
@@ -188,7 +188,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
         {/* Content area */}
         <div className="flex-1 overflow-y-auto px-6 pb-4">
           {/* Notice */}
-          <div className="border-t border-[var(--color-hairline)] pt-3 mt-3">
+          <div className=" mt-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5">
                 <Bell size={12} /> {t('group.notice')}
@@ -219,7 +219,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
 
           {/* Join Requests */}
           {isAdmin && joinRequests.length > 0 && (
-            <div className="border-t border-[var(--color-hairline)] pt-3 mt-3">
+            <div className=" mt-3">
               <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wider">{t('group.requests')} ({joinRequests.length})</span>
               <div className="space-y-1 mt-2">
                 {joinRequests.map(req => (
@@ -237,7 +237,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
           )}
 
           {/* Agent display settings */}
-          <div className="border-t border-[var(--color-hairline)] pt-3 mt-3">
+          <div className=" mt-3">
             <label className="flex items-center justify-between cursor-pointer">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <EyeOff size={14} className="text-[var(--color-muted)] flex-shrink-0" />
@@ -254,7 +254,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
           </div>
 
           {/* File change notification settings */}
-          <div className="border-t border-[var(--color-hairline)] pt-3 mt-3">
+          <div className=" mt-3">
             <label className="flex items-center justify-between cursor-pointer">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <FileUp size={14} className="text-[var(--color-muted)] flex-shrink-0" />

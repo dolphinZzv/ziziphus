@@ -183,9 +183,9 @@ function AgentEditDialog({ agent, onClose, onSaved }: { agent: User | null; onCl
           <button onClick={() => avatarInputRef.current?.click()} disabled={uploading}
             className="relative group cursor-pointer">
             {avatar ? (
-              <img src={avatarUrl(avatar, 160)} alt="" className="w-[72px] h-[72px] rounded-full object-cover border-[3px] border-[var(--color-surface-card)] shadow-sm" />
+              <img src={avatarUrl(avatar, 160)} alt="" className="w-[72px] h-[72px] rounded-full object-cover " />
             ) : (
-              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white text-xl font-bold border-[3px] border-[var(--color-surface-card)] shadow-sm"
+              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white text-xl font-bold "
                 style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
                 {name?.charAt(0)?.toUpperCase() || 'A'}
               </div>

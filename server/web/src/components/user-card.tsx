@@ -61,9 +61,9 @@ export default function UserCard({ userId, onClose }: Props) {
           <div className="flex justify-center -mt-7 mb-2">
             <div className="relative z-10">
               {user.avatar ? (
-                <img src={avatarUrl(user.avatar, 128)} alt="" className="w-14 h-14 rounded-full object-cover border-[3px] border-[var(--color-surface-card)] shadow-sm" />
+                <img src={avatarUrl(user.avatar, 128)} alt="" className="w-14 h-14 rounded-full object-cover " />
               ) : (
-                <div className="w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-bold border-[3px] border-[var(--color-surface-card)] shadow-sm"
+                <div className="w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-bold "
                   style={{ background: user.primary_color
                     ? `linear-gradient(135deg, ${user.primary_color}, ${user.secondary_color || user.primary_color})`
                     : isAgent ? 'linear-gradient(135deg, #8B5CF6, #A78BFA)' : 'var(--color-primary)' }}>
@@ -93,7 +93,7 @@ export default function UserCard({ userId, onClose }: Props) {
 
           {/* Actions */}
           {!isSelf && (
-            <div className="flex gap-2 px-4 pb-4 pt-2 border-t border-[var(--color-hairline)]">
+            <div className="flex gap-2 px-4 pb-4 pt-2">
               <button onClick={handleStartChat}
                 className="flex-1 h-8 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-medium flex items-center justify-center gap-1 transition-colors">
                 <MessageCircle size={13} /> {t('contact.startChat')}

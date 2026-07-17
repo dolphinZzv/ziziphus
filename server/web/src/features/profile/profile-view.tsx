@@ -80,9 +80,9 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
         <button onClick={() => avatarInputRef.current?.click()} disabled={uploading}
           className="relative group cursor-pointer">
           {user?.avatar ? (
-            <img src={avatarUrl(user.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover border-[3px] border-[var(--color-surface-card)] shadow-sm" />
+            <img src={avatarUrl(user.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
           ) : (
-            <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold border-[3px] border-[var(--color-surface-card)] shadow-sm"
+            <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold "
               style={{ background: `linear-gradient(135deg, ${user?.primary_color || 'var(--color-primary)'}, ${user?.secondary_color || user?.primary_color || 'var(--color-muted)'})` }}>
               {initials}
             </div>
@@ -116,7 +116,7 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
 
       {/* Actions */}
       <div className="px-4 pb-4 flex-shrink-0">
-        <div className="border-t border-[var(--color-hairline)] pt-3 space-y-0.5">
+        <div className=" space-y-0.5">
           {[
             { icon: Bot, label: t('profile.agentMgmt'), sheet: 'agents' },
             { icon: Shield, label: t('profile.userSettings'), sheet: 'userSettings' },

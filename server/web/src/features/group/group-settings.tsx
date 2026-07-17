@@ -54,7 +54,7 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">
+        <div className="flex items-center justify-between px-5 py-4">
           <h3 className="font-headline text-base font-semibold text-[var(--color-ink)]">{t('group.settingsTitle')}</h3>
           <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">{isMobile ? <ArrowLeft size={18} /> : <X size={16} />}</button>
         </div>

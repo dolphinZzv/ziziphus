@@ -44,7 +44,7 @@ export default function Sidebar() {
       <div className="flex items-center justify-between px-3 h-12">
         <button
           onClick={() => uiStore.openSheet('profile')}
-          className="flex items-center gap-2 pl-2 text-sm font-medium text-[var(--color-ink)] hover:opacity-80 min-w-0"
+          className="flex items-center gap-2 pl-2 text-sm font-medium text-[var(--color-ink)] hover:opacity-80 min-w-0 btn-press"
         >
           {user?.avatar ? (
             <img src={avatarUrl(user.avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />

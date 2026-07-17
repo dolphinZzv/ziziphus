@@ -457,7 +457,7 @@ export default function ChatView() {
 
       {/* Group notice banner */}
       {isGroup && groupNotice && (
-        <div className="px-4 py-2 bg-[var(--color-warning)]/5 border-b border-[var(--color-hairline)] text-xs text-[var(--color-body)] leading-relaxed">
+        <div className="px-4 py-2 bg-[var(--color-warning)]/5 text-xs text-[var(--color-body)] leading-relaxed">
           <span className="text-[var(--color-muted)] mr-1">📢</span>
           {groupNotice}
         </div>

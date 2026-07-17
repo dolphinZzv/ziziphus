@@ -6,9 +6,7 @@ import { uiStore } from '@/stores/ui-store'
 import AppLayout from '@/features/layout/app-layout'
 import AppShell from '@/features/layout/app-shell'
 import ConversationsPage from '@/features/conversation-list/conversations-page'
-import LoginPage from '@/features/auth/login-page'
-import RegisterPage from '@/features/auth/register-page'
-import ForgotPasswordPage from '@/features/auth/forgot-password-page'
+import AuthPage from '@/features/auth/auth-page'
 import ErrorBoundary from '@/components/error-boundary'
 
 const ChatView = lazy(() => import('@/features/chat/chat-view'))
@@ -46,9 +44,9 @@ export default function App() {
     <BrowserRouter>
       <AppShell>
         <Routes>
-        <Route path="/login" element={isLoggedIn ? <Navigate to="/conversations" replace /> : <LoginPage />} />
-        <Route path="/register" element={isLoggedIn ? <Navigate to="/conversations" replace /> : <RegisterPage />} />
-        <Route path="/forgot-password" element={isLoggedIn ? <Navigate to="/conversations" replace /> : <ForgotPasswordPage />} />
+        <Route path="/login" element={isLoggedIn ? <Navigate to="/conversations" replace /> : <AuthPage />} />
+        <Route path="/register" element={isLoggedIn ? <Navigate to="/conversations" replace /> : <AuthPage />} />
+        <Route path="/forgot-password" element={isLoggedIn ? <Navigate to="/conversations" replace /> : <AuthPage />} />
         <Route path="/" element={<AuthGuard><ErrorBoundary><AppLayout /></ErrorBoundary></AuthGuard>}>
           <Route index element={<Navigate to="/conversations" replace />} />
           <Route path="conversations" element={<ConversationsPage />} />

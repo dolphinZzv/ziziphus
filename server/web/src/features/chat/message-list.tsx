@@ -109,6 +109,7 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
       <div key={msg.msg_id > 0 ? `msg-${msg.msg_id}` : `local-${msg.client_seq}`}
         id={`msg-${msg.msg_id}`}
         ref={el => { matchRefs.current[i] = el }}
+        className="animate-msg-in"
       >
         <MemoBubble
           message={msg}
@@ -134,7 +135,7 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
     </div>
     {showScrollBtn && (
       <button onClick={() => { shouldAutoScroll.current = true; scrollToEnd(true) }}
-        className="absolute bottom-3 right-6 w-8 h-8 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] shadow-md flex items-center justify-center hover:bg-[var(--color-surface-soft)] transition-all z-10"
+        className="absolute bottom-3 right-6 w-8 h-8 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center hover:bg-[var(--color-surface-soft)] transition-all z-10"
         style={{ boxShadow: 'var(--shadow-md)' }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
       </button>

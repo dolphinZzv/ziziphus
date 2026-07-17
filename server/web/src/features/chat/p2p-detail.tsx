@@ -99,9 +99,9 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
         {/* Avatar — overlaps banner */}
         <div className="flex justify-center -mt-10 mb-3">
           {peer?.avatar ? (
-            <img src={avatarUrl(peer.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover border-[3px] border-[var(--color-surface-card)] shadow-sm" />
+            <img src={avatarUrl(peer.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
           ) : (
-            <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold border-[3px] border-[var(--color-surface-card)] shadow-sm"
+            <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold "
               style={{ background: peer?.primary_color ? `linear-gradient(135deg, ${peer.primary_color}, ${peer.secondary_color || peer.primary_color})` : 'var(--color-primary)' }}>{initials}</div>
           )}
         </div>
@@ -123,7 +123,7 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
           </div>
 
           {/* Action */}
-          <div className="border-t border-[var(--color-hairline)] pt-3">
+          <div className="pt-3">
             {isContact ? (
               <button disabled className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--success)]/5 text-sm text-[var(--success)] font-medium">
                 <UserCheck size={16} /> {t('conversation.alreadyFriends')}
@@ -141,7 +141,7 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
 
           {/* Members */}
           {detail && detail.members.length > 0 && (
-            <div className="border-t border-[var(--color-hairline)] pt-3">
+            <div className="pt-3">
               <div className="text-xs font-medium text-[var(--color-muted)] mb-2">{t('conversation.members')}</div>
               <div className="space-y-1">
                 {detail.members.map(member => {
@@ -174,7 +174,7 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
           )}
 
           {/* Agent display settings */}
-          <div className="border-t border-[var(--color-hairline)] pt-3">
+          <div className="pt-3">
             <label className="flex items-center justify-between cursor-pointer">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <EyeOff size={14} className="text-[var(--color-muted)] flex-shrink-0" />
@@ -191,7 +191,7 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
           </div>
 
           {/* Leave */}
-          <div className="border-t border-[var(--color-hairline)] pt-3">
+          <div className="pt-3">
             <button onClick={handleLeave}
               className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-[var(--destructive)]/20 text-sm text-[var(--destructive)] hover:bg-[var(--destructive)]/5 transition-colors font-medium">
               <LogOut size={16} /> {t('group.leave')}

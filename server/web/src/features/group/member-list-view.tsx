@@ -59,7 +59,7 @@ export default function MemberListView({ convId, onClose }: Props) { const isMob
       <div className="w-full sm:w-[380px] h-full sm:h-auto max-h-[100dvh] sm:max-h-[calc(100vh-80px)] bg-[var(--color-surface-card)] rounded-none sm:rounded-xl overflow-hidden flex flex-col"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">
+        <div className="flex items-center justify-between px-5 py-4">
           <h3 className="font-headline text-base font-semibold text-[var(--color-ink)]">
             {t('group.members')} ({detail.members.length})
           </h3>

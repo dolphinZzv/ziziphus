@@ -35,7 +35,7 @@ export default function AddMemberView({ convId: _convId, onClose, onAdded, exclu
       <div className="w-full sm:w-[380px] h-full sm:h-auto max-h-[100dvh] sm:max-h-[calc(100vh-80px)] bg-[var(--color-surface-card)] rounded-none sm:rounded-xl overflow-hidden flex flex-col"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">
+        <div className="flex items-center justify-between px-5 py-4">
           <h3 className="font-headline text-base font-semibold text-[var(--color-ink)]">添加成员</h3>
           <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]">{isMobile ? <ArrowLeft size={18} /> : <X size={16} />}</button>
         </div>

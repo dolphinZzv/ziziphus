@@ -46,12 +46,17 @@ export default function RegisterPage() {
 
   return (
     <PageLayout>
-      {/* Logo */}
-      <div className="text-center">
-        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
-      </div>
+      <div className="w-full max-w-[340px] flex flex-col items-center gap-8">
+        {/* Z Logo */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-3xl font-extrabold font-headline tracking-tighter"
+            style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
+            Z
+          </div>
+          <h1 className="font-headline text-xl font-bold text-[var(--color-ink)] tracking-tight">{appName}</h1>
+        </div>
 
-      <form onSubmit={handleSubmit} className="w-full max-w-[320px] flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3">
         <input type="text" value={account} onChange={e => setAccount(e.target.value)}
           placeholder={t("auth.account")} className={inputClass} autoComplete="username" />
         <input type="text" value={name} onChange={e => setName(e.target.value)}
@@ -72,6 +77,7 @@ export default function RegisterPage() {
           {isLoading ? t('auth.registering') : t('auth.register')}
         </button>
       </form>
+      </div>
 
       <Link to="/login" className="text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors">
         {t('auth.switchToLogin')}

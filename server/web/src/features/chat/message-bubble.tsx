@@ -298,7 +298,6 @@ export default function MessageBubble({ message, isOwn, isGrouped, highlight, is
             isFailed && 'border-[var(--destructive)]',
             isSearchMatch && !isCurrentSearchMatch && 'ring-1 ring-[var(--color-primary)]/40'
           )}
-            style={{ boxShadow: 'var(--shadow-sm)' }}
             onClick={() => { if (isFailed) handleRetry() }}>
             {renderContent()}
             {message.content_type === 7 && <span className="text-[9px] opacity-40 ml-1">{t('chat.edited')}</span>}

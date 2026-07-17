@@ -27,7 +27,7 @@ export default function ProfileEditView({ onClose }: Props) {
       <div className="w-full sm:w-[340px] h-full sm:h-auto bg-[var(--color-surface-card)] rounded-none sm:rounded-xl overflow-hidden"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">
+        <div className="flex items-center justify-between px-5 py-4">
           <h3 className="font-headline text-base font-semibold text-[var(--color-ink)]">{t('profile.editTitle')}</h3>
           <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)]"><X size={16} /></button>
         </div>

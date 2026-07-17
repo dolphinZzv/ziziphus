@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [mfaCode, setMfaCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [remember, setRemember] = useState(true)
+  const [remember] = useState(true)
   const [localError, setLocalError] = useState('')
   const [savedAccounts, setSavedAccounts] = useState(getSavedAccounts)
   const [appName, setAppName] = useState('Ziziphus')
@@ -75,18 +75,24 @@ export default function LoginPage() {
       : t('auth.mfaEmailHint') + (mfaChallenge.maskedEmail ? ` (${mfaChallenge.maskedEmail})` : '')
     return (
       <PageLayout>
-        <div className="text-center">
-          <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
-          {appHeadline && <p className="text-xs text-[var(--color-muted)] -mt-1 mb-1">{appHeadline}</p>}
-          <p className="text-sm text-[var(--color-muted)] mt-2">{t('auth.mfaTitle')}</p>
-          <div className="inline-block mt-2 px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-medium">
+        <div className="w-full max-w-[340px] flex flex-col items-center gap-6">
+          {/* Z Logo */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-3xl font-extrabold font-headline tracking-tighter"
+              style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
+              Z
+            </div>
+            <h1 className="font-headline text-xl font-bold text-[var(--color-ink)] tracking-tight">{appName}</h1>
+          </div>
+
+          <p className="text-sm text-[var(--color-muted)] -mt-3">{t('auth.mfaTitle')}</p>
+          <div className="px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-medium">
             {mfaTypeLabel}
           </div>
-          <p className="text-xs text-[var(--color-muted)] mt-3">{mfaHint}</p>
-        </div>
+          <p className="text-xs text-[var(--color-muted)] -mt-2">{mfaHint}</p>
 
-        {/* MFA code input */}
-        <form onSubmit={handleMfaVerify} className="w-full max-w-[320px] flex flex-col gap-4">
+          {/* MFA code input */}
+          <form onSubmit={handleMfaVerify} className="w-full flex flex-col gap-3">
           <input
             className={inputClass}
             type="text"
@@ -106,29 +112,30 @@ export default function LoginPage() {
             {isLoading ? t('auth.verifying') : t('auth.verify') || '验证'}
           </button>
           {error && <p className="text-xs text-red-500 text-center">{error}</p>}
-        </form>
-
-        {/* Back button */}
-        <button
-          onClick={() => authStore.logout()}
-          className="absolute top-4 left-4 w-9 h-9 flex items-center justify-center rounded-xl text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-soft)] transition-colors"
-          aria-label={t('common.back')}
-        >
-          <X size={18} />
-        </button>
+          </form>
+        </div>
       </PageLayout>
     )
   }
 
   return (
     <PageLayout>
-      {/* Logo */}
-      <div className="text-center">
-        <h1 className="font-headline text-[28px] font-bold text-[var(--color-ink)]">{appName}</h1>
-        {appHeadline && <p className="text-xs text-[var(--color-muted)] mt-1">{appHeadline}</p>}
-      </div>
+      <div className="w-full max-w-[340px] flex flex-col items-center gap-8">
+        {/* Z Logo */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-3xl font-extrabold font-headline tracking-tighter"
+            style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
+            Z
+          </div>
+          <h1 className="font-headline text-xl font-bold text-[var(--color-ink)] tracking-tight">
+            {appName}
+          </h1>
+          {appHeadline && (
+            <p className="text-[13px] text-[var(--color-muted)] -mt-1">{appHeadline}</p>
+          )}
+        </div>
 
-      <form onSubmit={handleSubmit} className="w-full max-w-[320px] flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3">
         {/* Account */}
         <div className="relative">
           <input
@@ -213,6 +220,7 @@ export default function LoginPage() {
           </Link>
         </p>
       </form>
+      </div>
 
       <AuthFooter />
     </PageLayout>
