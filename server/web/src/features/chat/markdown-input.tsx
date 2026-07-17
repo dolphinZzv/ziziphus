@@ -128,7 +128,7 @@ export default function MarkdownInput({ value, onChange, onSend, placeholder = '
           disabled={disabled}
           className={cn('flex-1 resize-none bg-[var(--color-surface-soft)] text-[var(--color-ink)] text-sm placeholder:text-[var(--color-muted)] outline-none',
             isMobile ? 'py-2.5 pl-4 pr-20 h-10' : 'max-h-[180px] py-2.5 pl-4 pr-20 pb-10'
-          )}
+          ) + ' focus:outline-none'}
         />
       )}
     </div>
