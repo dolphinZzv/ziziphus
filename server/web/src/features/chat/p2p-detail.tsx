@@ -123,21 +123,19 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
           </div>
 
           {/* Action */}
-          <div className="pt-3">
-            {isContact ? (
-              <button disabled className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--success)]/5 text-sm text-[var(--success)] font-medium">
-                <UserCheck size={16} /> {t('conversation.alreadyFriends')}
-              </button>
-            ) : requestSent ? (
-              <button disabled className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--color-muted)]/5 text-sm text-[var(--color-muted)] font-medium">
-                <Check size={16} /> {t('conversation.requestSent')}
-              </button>
-            ) : (
-              <button onClick={handleAddContact} className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-[var(--color-hairline)] hover:bg-[var(--color-surface-soft)] text-sm text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors font-medium">
-                <UserPlus size={16} /> {t('conversation.addFriend')}
-              </button>
-            )}
-          </div>
+          {!isContact && (
+            <div className="pt-3">
+              {requestSent ? (
+                <button disabled className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-[var(--color-muted)]/5 text-sm text-[var(--color-muted)] font-medium">
+                  <Check size={16} /> {t('conversation.requestSent')}
+                </button>
+              ) : (
+                <button onClick={handleAddContact} className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-[var(--color-hairline)] hover:bg-[var(--color-surface-soft)] text-sm text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors font-medium">
+                  <UserPlus size={16} /> {t('conversation.addFriend', '添加好友')}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Members */}
           {detail && detail.members.length > 0 && (

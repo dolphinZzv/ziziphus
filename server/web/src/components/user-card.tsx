@@ -9,7 +9,7 @@ import { contactStore } from '@/stores/contact-store'
 import { avatarUrl } from '@/lib/file'
 import type { User } from '@/types/user'
 import { UserType } from '@/types/user'
-import { Copy, Check, Loader2, Bot, MessageCircle, UserPlus, UserCheck } from 'lucide-react'
+import { Copy, Check, Loader2, Bot, MessageCircle, UserPlus } from 'lucide-react'
 
 interface Props { userId: string; onClose: () => void }
 
@@ -98,15 +98,7 @@ export default function UserCard({ userId, onClose }: Props) {
                 className="flex-1 h-8 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-medium flex items-center justify-center gap-1 transition-colors">
                 <MessageCircle size={13} /> {t('contact.startChat')}
               </button>
-              {isContact ? (
-                <button disabled className="flex-1 h-8 rounded-xl bg-[var(--success)]/10 text-[var(--success)] text-xs font-medium flex items-center justify-center gap-1">
-                  <UserCheck size={13} /> {t('contact.alreadyFriends')}
-                </button>
-              ) : requestSent ? (
-                <button disabled className="flex-1 h-8 rounded-xl bg-[var(--color-muted)]/10 text-[var(--color-muted)] text-xs font-medium flex items-center justify-center gap-1">
-                  <Check size={13} /> {t('contact.requestSent')}
-                </button>
-              ) : (
+              {!isContact && !requestSent && (
                 <button onClick={handleAddContact}
                   className="flex-1 h-8 rounded-xl border border-[var(--color-hairline)] hover:bg-[var(--color-surface-soft)] text-[var(--color-body)] text-xs font-medium flex items-center justify-center gap-1 transition-colors">
                   <UserPlus size={13} /> {t('contact.addFriend')}

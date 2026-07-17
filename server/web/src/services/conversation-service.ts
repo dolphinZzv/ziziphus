@@ -69,7 +69,7 @@ export const conversationService = {
   },
 
   markRead(convId: string, msgId: number) {
-    return api.request<null>(`/api/v1/conversations/${convId}/read`, {
+    return api.request<{ conv_id: string; msg_id: number }>(`/api/v1/conversations/${convId}/read`, {
       method: 'POST',
       body: { msg_id: msgId },
     })
