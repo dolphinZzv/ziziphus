@@ -168,17 +168,18 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 	unread, _ := h.seqCache.GetUnreadCount(r.Context(), userID, convID)
 
 	JSON(w, map[string]interface{}{
-		"conv_id":      conv.ConvID,
-		"type":         conv.Type,
-		"name":         conv.Name,
-		"owner_id":     conv.OwnerID,
-		"avatar":       conv.Avatar,
-		"cover":        conv.Cover,
-		"notice":       conv.Notice,
-		"headline":     conv.Headline,
-		"members":      members,
-		"unread_count": unread,
-		"created_at":   conv.CreatedAt,
+		"conv_id":       conv.ConvID,
+		"type":          conv.Type,
+		"name":          conv.Name,
+		"owner_id":      conv.OwnerID,
+		"avatar":        conv.Avatar,
+		"cover":         conv.Cover,
+		"notice":        conv.Notice,
+		"headline":      conv.Headline,
+		"primary_color": conv.PrimaryColor,
+		"members":       members,
+		"unread_count":  unread,
+		"created_at":    conv.CreatedAt,
 	})
 }
 
