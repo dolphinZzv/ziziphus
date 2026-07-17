@@ -75,3 +75,4 @@ export default function App() {
     </BrowserRouter>
   )
 }
+const badLint = x => x

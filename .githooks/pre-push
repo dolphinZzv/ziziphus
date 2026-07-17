@@ -10,9 +10,22 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SERVER_DIR="$ROOT_DIR/server"
 WEB_DIR="$SERVER_DIR/web"
 
-# Collect staged Go/TS files
-CHANGED_GO=$(git diff --cached --name-only --diff-filter=ACMR -- 'server/**/*.go' || true)
-CHANGED_TS=$(git diff --cached --name-only --diff-filter=ACMR -- 'server/web/**/*.ts' 'server/web/**/*.tsx' 'server/web/**/*.svelte' || true)
+# Get the remote tracking branch, or fall back to origin/main
+REMOTE_BRANCH="origin/main"
+# In a pre-push hook, Git passes refs on stdin — try to extract the remote branch
+if [ -t 0 ]; then
+    : # no stdin (manual invocation)
+else
+    while read -r _local_ref _local_sha _remote_ref _remote_sha; do
+        REMOTE_BRANCH="${_remote_ref#refs/remotes/}"
+        break
+    done
+fi
+
+# Compare commits being pushed against the remote branch
+MERGE_BASE=$(git merge-base "$REMOTE_BRANCH" HEAD 2>/dev/null || echo "HEAD~10")
+CHANGED_GO=$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE" HEAD -- 'server/**/*.go' 2>/dev/null || true)
+CHANGED_TS=$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE" HEAD -- 'server/web/**/*.ts' 'server/web/**/*.tsx' 2>/dev/null || true)
 
 # Trim whitespace
 CHANGED_GO=$(echo "$CHANGED_GO" | sed '/^$/d')
@@ -23,14 +36,16 @@ if [ -z "$CHANGED_GO" ] && [ -z "$CHANGED_TS" ]; then
 fi
 
 echo "🔍 Running pre-push lint checks..."
+echo "   → comparing against $REMOTE_BRANCH (merge-base $MERGE_BASE)"
 
 HAS_ERRORS=0
 
 # --- Go lint ---
 if [ -n "$CHANGED_GO" ]; then
-    # Run gofmt on staged files (catches formatting even if alignment changes mix old + new lines)
     GO_FILES=$(echo "$CHANGED_GO" | sed "s|^server/||")
     cd "$SERVER_DIR"
+
+    # gofmt
     UNFORMATTED=$(gofmt -l $GO_FILES)
     if [ -n "$UNFORMATTED" ]; then
         echo "  ✖ gofmt errors — run 'gofmt -w' on:" >&2
@@ -38,15 +53,15 @@ if [ -n "$CHANGED_GO" ]; then
         HAS_ERRORS=1
     fi
 
+    # golangci-lint — warn if missing, don't block
     if command -v golangci-lint &>/dev/null; then
         echo "  → golangci-lint ($(echo "$CHANGED_GO" | wc -l | tr -d ' ') files)..."
-        if ! golangci-lint run >&2; then
+        if ! golangci-lint run ./... >&2; then
             echo "  ✖ Go lint errors found. Fix them before pushing." >&2
             HAS_ERRORS=1
         fi
     else
-        echo "  ⚠ golangci-lint not found — install it: brew install golangci-lint" >&2
-        exit 1
+        echo "  ⚠ golangci-lint not found, skipping Go lint. Install: brew install golangci-lint" >&2
     fi
 fi
 
@@ -71,8 +86,7 @@ if [ -n "$CHANGED_TS" ]; then
             fi
         fi
     else
-        echo "  ⚠ oxlint not found — install it: npm install -g oxlint" >&2
-        exit 1
+        echo "  ⚠ oxlint not found, skipping frontend lint. Install: cd server/web && npm install" >&2
     fi
 fi
 

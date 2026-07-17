@@ -116,6 +116,7 @@ export const authStore = {
       }
       this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '')
       wsClient.connect(result.token as string)
+      this.refreshUserProfile()
     } catch (e: unknown) {
       state = { ...state, isLoading: false, error: e instanceof Error ? e.message : 'Login failed' }; emit()
       throw e
@@ -151,6 +152,7 @@ export const authStore = {
       }
       this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '')
       wsClient.connect(result.token as string)
+      this.refreshUserProfile()
       state = { ...state, mfaChallenge: null }; emit()
     } catch (e: unknown) {
       state = { ...state, isLoading: false, error: e instanceof Error ? e.message : '验证失败' }; emit()
@@ -184,6 +186,7 @@ export const authStore = {
       }
       this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '')
       wsClient.connect(result.token as string)
+      this.refreshUserProfile()
     } catch (e: unknown) {
       state = { ...state, isLoading: false, error: e instanceof Error ? e.message : 'Registration failed' }; emit()
       throw e
@@ -197,6 +200,14 @@ export const authStore = {
     setItem('session_id', sessionId)
     state = { ...state, user, token, refreshToken, sessionId, isLoggedIn: true, isLoading: false, error: null, _initialized: true }
     emit()
+  },
+
+  async refreshUserProfile() {
+    try {
+      const me = await api.request<User>('/api/v1/users/me')
+      setItem('user', me)
+      state = { ...state, user: me }; emit()
+    } catch { /* keep cached user */ }
   },
 
   async checkExistingSession() {
