@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [mfaCode, setMfaCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
+  const [localError, setLocalError] = useState('')
   const [savedAccounts, setSavedAccounts] = useState(getSavedAccounts)
   const [appName, setAppName] = useState('Ziziphus')
   const [appHeadline, setAppHeadline] = useState('')
@@ -40,7 +41,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!account.trim() || !password.trim()) return
+    if (!account.trim()) { setLocalError(t('auth.accountRequired', '请填写账号')); return }
+    if (!password.trim()) { setLocalError(t('auth.passwordRequired', '请填写密码')); return }
     try {
       await authStore.login(account.trim(), password)
       if (remember) saveAccount(account.trim())
@@ -194,7 +196,7 @@ export default function LoginPage() {
         </button>
 
         {/* Error */}
-        {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+        {(localError || error) && <p className="text-xs text-red-500 text-center">{localError || error}</p>}
 
         {/* Forgot password link */}
         <div className="flex justify-end -mt-2">

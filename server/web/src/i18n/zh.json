@@ -45,7 +45,10 @@
     "backToRequest": "重新发送验证码",
     "requestResetFailed": "请求失败",
     "resetFailed": "重置失败",
-    "passwordTooShort": "密码至少8位"
+    "passwordTooShort": "密码至少8位",
+    "accountRequired": "请填写账号",
+    "nameRequired": "请填写昵称",
+    "passwordRequired": "请填写密码"
   },
   "chat": {
     "inputPlaceholder": "输入消息...",
