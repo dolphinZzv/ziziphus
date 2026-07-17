@@ -49,6 +49,18 @@ test.describe('Login Page', () => {
     await expect(page.getByText('中文')).toBeVisible()
     await expect(page.getByText('EN')).toBeVisible()
   })
+
+  test('validates empty account on login', async ({ page }) => {
+    await page.getByPlaceholder('密码').fill('some_password')
+    await page.getByRole('button', { name: '登录' }).click()
+    await expect(page.getByText('请填写账号')).toBeVisible()
+  })
+
+  test('validates empty password on login', async ({ page }) => {
+    await page.getByPlaceholder('账号').fill('testuser')
+    await page.getByRole('button', { name: '登录' }).click()
+    await expect(page.getByText('请填写密码')).toBeVisible()
+  })
 })
 
 test.describe('Register Page', () => {
@@ -76,9 +88,31 @@ test.describe('Register Page', () => {
     await expect(page.getByText('两次密码不一致')).toBeVisible()
   })
 
-  test('validates empty fields', async ({ page }) => {
+  test('validates empty account', async ({ page }) => {
     await page.getByRole('button', { name: '注册' }).click()
-    await expect(page.getByText('请填写所有字段')).toBeVisible()
+    await expect(page.getByText('请填写账号')).toBeVisible()
+  })
+
+  test('validates empty name', async ({ page }) => {
+    await page.getByPlaceholder('账号').fill('test')
+    await page.getByRole('button', { name: '注册' }).click()
+    await expect(page.getByText('请填写昵称')).toBeVisible()
+  })
+
+  test('validates empty password', async ({ page }) => {
+    await page.getByPlaceholder('账号').fill('test')
+    await page.getByPlaceholder('昵称').fill('Test')
+    await page.getByRole('button', { name: '注册' }).click()
+    await expect(page.getByText('请填写密码')).toBeVisible()
+  })
+
+  test('validates short password', async ({ page }) => {
+    await page.getByPlaceholder('账号').fill('testuser')
+    await page.getByPlaceholder('昵称').fill('Test')
+    await page.getByPlaceholder('密码').first().fill('short')
+    await page.getByPlaceholder('确认密码').fill('short')
+    await page.getByRole('button', { name: '注册' }).click()
+    await expect(page.getByText('密码至少8位')).toBeVisible()
   })
 
   test('navigates back to login', async ({ page }) => {
