@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"strings"
 	"time"
 
@@ -39,9 +41,9 @@ func (r *ConvRepo) Get(ctx context.Context, convID string) (*model.Conversation,
 	var lastMsgAt *time.Time
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT conv_id, type, name, owner_id, avatar, cover, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline, COALESCE(primary_color, '')
+		`SELECT conv_id, type, name, owner_id, avatar, cover, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline, COALESCE(primary_color, ''), COALESCE(share_token, '')
 		 FROM conversations WHERE conv_id = $1`, convID).
-		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Cover, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt, &c.Settings, &c.Headline, &c.PrimaryColor)
+		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Cover, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt, &c.Settings, &c.Headline, &c.PrimaryColor, &c.ShareToken)
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +52,49 @@ func (r *ConvRepo) Get(ctx context.Context, convID string) (*model.Conversation,
 		c.LastMsgAt = lastMsgAt.UnixMilli()
 	}
 	return c, nil
+}
+
+func (r *ConvRepo) GetByShareToken(ctx context.Context, shareToken string) (*model.Conversation, error) {
+	c := &model.Conversation{}
+	var createdAt time.Time
+	err := r.pool.QueryRow(ctx,
+		`SELECT conv_id, type, name, owner_id, avatar, cover, notice, headline, COALESCE(primary_color, ''), max_members, created_at
+		 FROM conversations WHERE share_token = $1`, shareToken).
+		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Cover, &c.Notice, &c.Headline, &c.PrimaryColor, &c.MaxMembers, &createdAt)
+	if err != nil {
+		return nil, err
+	}
+	c.CreatedAt = createdAt.UnixMilli()
+	return c, nil
+}
+
+func (r *ConvRepo) GetMemberCount(ctx context.Context, convID string) (int, error) {
+	var count int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM conv_members WHERE conv_id = $1`, convID).Scan(&count)
+	return count, err
+}
+
+// GenerateShareToken creates a new random share token for a conversation and returns it.
+func (r *ConvRepo) GenerateShareToken(ctx context.Context, convID string) (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	token := hex.EncodeToString(b)
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conversations SET share_token = $1 WHERE conv_id = $2`, token, convID)
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
+// RemoveShareToken clears the share token for a conversation.
+func (r *ConvRepo) RemoveShareToken(ctx context.Context, convID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conversations SET share_token = '' WHERE conv_id = $1`, convID)
+	return err
 }
 
 func (r *ConvRepo) UpdateLastMsg(ctx context.Context, convID string, msgID int64) error {
@@ -395,7 +440,7 @@ func (r *ConvRepo) Clone(ctx context.Context, srcConvID, newConvID, ownerID stri
 
 	_, err = tx.Exec(ctx,
 		`INSERT INTO conv_members (conv_id, user_id, role, nickname, mute, pinned, joined_at)
-		 SELECT $1, user_id, CASE WHEN user_id = $2 THEN 2 ELSE 0 END, nickname, mute, FALSE, NOW()
+		 SELECT $1, user_id, CASE WHEN user_id = $2 THEN 2 ELSE 0 END, nickname, FALSE, FALSE, NOW()
 		 FROM conv_members WHERE conv_id = $3`,
 		newConvID, ownerID, srcConvID)
 	if err != nil {

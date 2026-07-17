@@ -7,6 +7,7 @@ import AppLayout from '@/features/layout/app-layout'
 import AppShell from '@/features/layout/app-shell'
 import ConversationsPage from '@/features/conversation-list/conversations-page'
 import AuthPage from '@/features/auth/auth-page'
+import GroupCardPage from '@/features/group/group-card-page'
 import ErrorBoundary from '@/components/error-boundary'
 
 const ChatView = lazy(() => import('@/features/chat/chat-view'))
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="create-group" element={null} />
           <Route path="join-group" element={null} />
         </Route>
+        <Route path="/group-card/:shareToken" element={<GroupCardPage />} />
         <Route path="*" element={<Navigate to="/conversations" replace />} />
         </Routes>
       </AppShell>

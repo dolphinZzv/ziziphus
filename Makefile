@@ -27,7 +27,7 @@ server: server-stop swagger
 	cd server/web && npm run build
 	mkdir -p bin
 	cd server && go build -ldflags "-X ziziphus/pkg/version.GitCommit=$(GIT_HASH)" -o ../bin/ziziphus ./cmd/ziziphus/
-	cd server && ../bin/ziziphus -c config/config.yaml &
+	cd server && nohup ../bin/ziziphus -c config/config.yaml > /dev/null 2>&1 &
 	@echo "Server started"
 
 server-stop:

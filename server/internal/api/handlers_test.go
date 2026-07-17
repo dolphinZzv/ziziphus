@@ -483,6 +483,10 @@ func (m *mockConvDataRepo) GetSettings(ctx context.Context, convID string) (map[
 	return nil, nil
 }
 
+func (m *mockConvDataRepo) UpdateHeadline(ctx context.Context, convID, headline string) error {
+	return nil
+}
+
 func (m *mockConvDataRepo) UpdateSettings(ctx context.Context, convID string, settings map[string]any) error {
 	if m.updateSettingsFunc != nil {
 		return m.updateSettingsFunc(ctx, convID, settings)
@@ -495,6 +499,22 @@ func (m *mockConvDataRepo) SearchByName(ctx context.Context, q string, page, siz
 		return m.searchByNameFunc(ctx, q, page, size)
 	}
 	return nil, 0, nil
+}
+
+func (m *mockConvDataRepo) GetByShareToken(ctx context.Context, shareToken string) (*model.Conversation, error) {
+	return nil, fmt.Errorf("not found")
+}
+
+func (m *mockConvDataRepo) GetMemberCount(ctx context.Context, convID string) (int, error) {
+	return 0, nil
+}
+
+func (m *mockConvDataRepo) GenerateShareToken(ctx context.Context, convID string) (string, error) {
+	return "test-token", nil
+}
+
+func (m *mockConvDataRepo) RemoveShareToken(ctx context.Context, convID string) error {
+	return nil
 }
 
 // ---------------------------------------------------------------------------

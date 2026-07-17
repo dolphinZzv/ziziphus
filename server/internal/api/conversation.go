@@ -24,6 +24,7 @@ type convDataRepo interface {
 	UpdateNotice(ctx context.Context, convID, notice string) error
 	UpdateCover(ctx context.Context, convID, cover string) error
 	UpdatePrimaryColor(ctx context.Context, convID, color string) error
+	UpdateHeadline(ctx context.Context, convID, headline string) error
 	Pin(ctx context.Context, userID, convID string) error
 	Unpin(ctx context.Context, userID, convID string) error
 	Clone(ctx context.Context, srcConvID, newConvID, ownerID string, name string, idGen func() int64) error
@@ -31,6 +32,10 @@ type convDataRepo interface {
 	AreContacts(ctx context.Context, userA, userB string) (bool, error)
 	UpdateSettings(ctx context.Context, convID string, settings map[string]any) error
 	GetSettings(ctx context.Context, convID string) (map[string]any, error)
+	GetByShareToken(ctx context.Context, shareToken string) (*model.Conversation, error)
+	GetMemberCount(ctx context.Context, convID string) (int, error)
+	GenerateShareToken(ctx context.Context, convID string) (string, error)
+	RemoveShareToken(ctx context.Context, convID string) error
 }
 
 type ConvHandler struct {
@@ -180,6 +185,7 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 		"members":       members,
 		"unread_count":  unread,
 		"created_at":    conv.CreatedAt,
+			"share_token":  conv.ShareToken,
 	})
 }
 
@@ -189,6 +195,7 @@ type updateGroupReq struct {
 	Notice       *string `json:"notice"`
 	Cover        *string `json:"cover"`
 	PrimaryColor *string `json:"primary_color"`
+	Headline     *string `json:"headline"`
 }
 
 // @Summary Update group conversation
@@ -318,6 +325,15 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	if req.PrimaryColor != nil {
 		if err := h.convRepo.UpdatePrimaryColor(r.Context(), convID, *req.PrimaryColor); err != nil {
 			logger.Error("update primary_color failed", "conv_id", convID, "error", err)
+			Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+			return
+		}
+	}
+
+	// Apply headline update
+	if req.Headline != nil {
+		if err := h.convRepo.UpdateHeadline(r.Context(), convID, *req.Headline); err != nil {
+			logger.Error("update headline failed", "conv_id", convID, "error", err)
 			Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 			return
 		}
@@ -975,4 +991,124 @@ func (h *ConvHandler) Clone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	JSON(w, map[string]interface{}{"conv_id": newID, "name": name})
+}
+
+// @Summary Get group card by share token (public)
+// @Description Get public group information for shared group card. No authentication required.
+// @Tags groups
+// @Accept json
+// @Produce json
+// @Param share_token path string true "Share token"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} APIResponse
+// @Router /groups/card/{share_token} [get]
+func (h *ConvHandler) GetGroupCard(w http.ResponseWriter, r *http.Request) {
+	shareToken := chi.URLParam(r, "share_token")
+	if shareToken == "" {
+		NotFound(w, r)
+		return
+	}
+
+	conv, err := h.convRepo.GetByShareToken(r.Context(), shareToken)
+	if err != nil || conv.Type != model.ConvGroup {
+		logger.Warn("group card not found", "share_token", shareToken, "error", err)
+		NotFound(w, r)
+		return
+	}
+
+	memberCount, _ := h.convRepo.GetMemberCount(r.Context(), conv.ConvID)
+
+	// Resolve owner name
+	ownerName := conv.OwnerID
+	if owner, err := h.userGetter.GetByID(r.Context(), conv.OwnerID); err == nil && owner.Name != "" {
+		ownerName = owner.Name
+	}
+
+	JSON(w, map[string]interface{}{
+		"conv_id":       conv.ConvID,
+		"name":          conv.Name,
+		"avatar":        conv.Avatar,
+		"cover":         conv.Cover,
+		"headline":      conv.Headline,
+		"notice":        conv.Notice,
+		"primary_color": conv.PrimaryColor,
+		"owner_id":      conv.OwnerID,
+		"owner_name":    ownerName,
+		"member_count":  memberCount,
+		"created_at":    conv.CreatedAt,
+	})
+}
+
+// @Summary Generate share token for group
+// @Description Generate or regenerate a share token for a group conversation. Admin+ required.
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Router /conversations/{conv_id}/share-token [post]
+func (h *ConvHandler) GenerateShareToken(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	userID := auth.UserFromCtx(r.Context())
+
+	conv, err := h.convMgr.Get(r.Context(), convID)
+	if err != nil || conv.Type != model.ConvGroup {
+		NotFound(w, r)
+		return
+	}
+
+	role, err := h.convMgr.GetMemberRole(r.Context(), convID, userID)
+	if err != nil || role < model.ConvRoleAdmin {
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
+		return
+	}
+
+	token, err := h.convRepo.GenerateShareToken(r.Context(), convID)
+	if err != nil {
+		logger.Error("generate share token failed", "conv_id", convID, "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+
+	JSON(w, map[string]interface{}{
+		"conv_id":     convID,
+		"share_token": token,
+	})
+}
+
+// @Summary Remove share token for group
+// @Description Remove the share token from a group conversation. Admin+ required.
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param conv_id path string true "Conversation ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 403 {object} APIResponse
+// @Failure 404 {object} APIResponse
+// @Router /conversations/{conv_id}/share-token [delete]
+func (h *ConvHandler) RemoveShareToken(w http.ResponseWriter, r *http.Request) {
+	convID := chi.URLParam(r, "conv_id")
+	userID := auth.UserFromCtx(r.Context())
+
+	role, err := h.convMgr.GetMemberRole(r.Context(), convID, userID)
+	if err != nil {
+		NotFound(w, r)
+		return
+	}
+	if role < model.ConvRoleAdmin {
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied")})
+		return
+	}
+
+	if err := h.convRepo.RemoveShareToken(r.Context(), convID); err != nil {
+		logger.Error("remove share token failed", "conv_id", convID, "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+
+	JSON(w, map[string]interface{}{"conv_id": convID})
 }

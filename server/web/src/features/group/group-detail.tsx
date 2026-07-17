@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { conversationService } from '@/services/conversation-service'
+import { conversationService, type GroupCardInfo } from '@/services/conversation-service'
 import { conversationStore } from '@/stores/conversation-store'
 import { getConvSettings, toggleConvSetting, subscribe as settingsSubscribe } from '@/stores/conversation-settings-store'
 import { userService } from '@/services/user-service'
@@ -10,7 +10,7 @@ import { authStore } from '@/stores/auth-store'
 import type { ConversationDetail, JoinRequest } from '@/types/conversation'
 import type { User } from '@/types/user'
 import { ConvRole } from '@/types/conversation'
-import { X, Crown, Shield, Trash2, Check, X as XIcon, Camera, Search, Cpu, UserPlus, Bell, Edit2, EyeOff, FileUp } from 'lucide-react'
+import { X, Crown, Shield, Trash2, Check, X as XIcon, Camera, Search, Cpu, UserPlus, Bell, Edit2, EyeOff, FileUp, Share2, Link, Copy, CheckCheck } from 'lucide-react'
 import WebhookPanel from './webhook-panel'
 
 interface Props { convId: string; onClose: () => void }
@@ -32,7 +32,11 @@ export default function GroupDetail({ convId, onClose }: Props) {
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
   const [uploadingCover, setUploadingCover] = useState(false)
+  const [copied, setCopied] = useState(false)
   const currentUserId = authStore.state.user?.user_id || ''
+  const shareLink = detail?.share_token
+    ? `${window.location.origin}/group-card/${detail.share_token}`
+    : null
   const [showAgentResponseOnly, setShowAgentResponseOnly] = useState(
     () => getConvSettings(convId).showAgentResponseOnly
   )
@@ -131,6 +135,30 @@ export default function GroupDetail({ convId, onClose }: Props) {
         setAddResults(prev => prev.filter(x => x.user_id !== userId))
       } catch {}
     },
+  }
+
+  const handleGenerateShare = async () => {
+    try {
+      const result = await conversationService.generateShareToken(convId)
+      setDetail({ ...detail!, share_token: result.share_token })
+    } catch {}
+  }
+
+  const handleRemoveShare = async () => {
+    if (!confirm(t('group.removeShareConfirm') || '确定关闭分享链接？')) return
+    try {
+      await conversationService.removeShareToken(convId)
+      setDetail({ ...detail!, share_token: '' })
+    } catch {}
+  }
+
+  const handleCopyLink = async () => {
+    if (!shareLink) return
+    try {
+      await navigator.clipboard.writeText(shareLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
   }
 
   const inputSm = 'w-full h-9 px-3 rounded-xl bg-[var(--color-surface-card)] text-sm border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
@@ -268,6 +296,40 @@ export default function GroupDetail({ convId, onClose }: Props) {
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${fileChangeNotify ? 'left-[18px]' : 'left-0.5'}`} />
               </button>
             </label>
+          </div>
+
+          {/* Share group link */}
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                <Share2 size={12} /> {t('group.shareLink') || '分享群组'}
+              </span>
+            </div>
+            {shareLink ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[var(--color-surface-soft)] border border-[var(--color-hairline)]">
+                  <Link size={14} className="text-[var(--color-muted)] flex-shrink-0" />
+                  <span className="flex-1 text-xs text-[var(--color-muted-soft)] truncate select-all">{shareLink}</span>
+                  <button onClick={handleCopyLink}
+                    className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[var(--color-hairline)] text-[var(--color-muted)]">
+                    {copied ? <CheckCheck size={14} className="text-[var(--color-accent)]" /> : <Copy size={14} />}
+                  </button>
+                </div>
+                {isAdmin && (
+                  <button onClick={handleRemoveShare}
+                    className="text-[11px] text-[var(--color-muted)] hover:text-[var(--destructive)] transition-colors">
+                    {t('group.removeShareLink') || '关闭分享链接'}
+                  </button>
+                )}
+              </div>
+            ) : isAdmin ? (
+              <button onClick={handleGenerateShare}
+                className="w-full h-9 rounded-xl border border-dashed border-[var(--color-hairline)] text-xs text-[var(--color-muted)] hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-ink)] transition-colors flex items-center justify-center gap-1.5">
+                <Share2 size={13} /> {t('group.generateShareLink') || '生成分享链接'}
+              </button>
+            ) : (
+              <div className="text-[11px] text-[var(--color-muted-soft)] italic">{t('group.noShareLink') || '暂无分享链接'}</div>
+            )}
           </div>
 
           <WebhookPanel convId={convId} />

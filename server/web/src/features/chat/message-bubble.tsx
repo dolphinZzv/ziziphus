@@ -4,7 +4,6 @@ import type { Message } from '@/types/message'
 import { ContentType, MsgStatus } from '@/types/message'
 import { chatStore } from '@/stores/chat-store'
 import { authStore } from '@/stores/auth-store'
-import { userService } from '@/services/user-service'
 import { formatTime } from '@/lib/time'
 import { avatarUrl } from '@/lib/file'
 import { cn } from '@/lib/cn'
@@ -19,53 +18,24 @@ import ReplyPreview from './reply-preview'
 import UserCard from '@/components/user-card'
 import { useTranslation } from 'react-i18next'
 
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-const senderCache = new Map<string, { avatar: string; type: number; ts: number }>()
-
 // Global singleton: only one UserCard visible at a time
 let globalUserCardCloser: (() => void) | null = null
-
-function useSenderInfo(userId: string, isOwn: boolean): { avatar?: string; isAgent: boolean } {
-  // For own messages, use local user info directly — no API call needed
-  const me = isOwn ? authStore.state.user : null
-
-  const cached = senderCache.get(userId)
-  const initial = cached && (Date.now() - cached.ts) < CACHE_TTL
-    ? { avatar: cached.avatar, isAgent: cached.type === 1 }
-    : {}
-  const [info, setInfo] = useState<{ avatar?: string; isAgent: boolean }>(initial)
-  useEffect(() => {
-    // Skip sender lookup if no valid userId
-    if (!userId || userId.startsWith('webhook:') || userId === 'system') return
-    const cached = senderCache.get(userId)
-    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
-      if (!info.avatar && cached.avatar) setInfo({ avatar: cached.avatar, isAgent: cached.type === 1 })
-      return
-    }
-    userService.getUser(userId).then(u => {
-      const entry = { avatar: u?.avatar || '', type: u?.type || 0, ts: Date.now() }
-      senderCache.set(userId, entry)
-      setInfo({ avatar: entry.avatar, isAgent: entry.type === 1 })
-    }).catch(() => {})
-  }, [userId])
-
-  if (me) return { avatar: me.avatar || undefined, isAgent: me.type === 1 }
-  return info
-}
 
 interface Props {
   message: Message
   isOwn: boolean
   isGrouped: boolean
+  senderInfo?: { avatar?: string; isAgent: boolean }
   highlight?: string
   isSearchMatch?: boolean
   isCurrentSearchMatch?: boolean
 }
 
-export default function MessageBubble({ message, isOwn, isGrouped, highlight, isSearchMatch, isCurrentSearchMatch }: Props) {
+export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, highlight, isSearchMatch, isCurrentSearchMatch }: Props) {
   const { t } = useTranslation()
-  // Always call hooks at top level, even for centered messages
-  const _senderInfo = useSenderInfo(message.sender_id, isOwn)
+  // For own messages, use local user info directly — no API call needed
+  const myInfo = isOwn ? authStore.state.user : null
+  const _senderInfo = myInfo ? { avatar: myInfo.avatar || undefined, isAgent: myInfo.type === 1 } : (senderInfo || { avatar: undefined, isAgent: false })
   const [showMenu, setShowMenu] = useState(false)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [hoverUser, setHoverUser] = useState(false)

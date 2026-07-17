@@ -115,4 +115,35 @@ export const conversationService = {
       body: { settings },
     })
   },
+
+  // Group share card
+  generateShareToken(convId: string) {
+    return api.request<{ conv_id: string; share_token: string }>(`/api/v1/conversations/${convId}/share-token`, {
+      method: 'POST',
+    })
+  },
+
+  removeShareToken(convId: string) {
+    return api.request<{ conv_id: string }>(`/api/v1/conversations/${convId}/share-token`, {
+      method: 'DELETE',
+    })
+  },
+
+  getGroupCard(shareToken: string) {
+    return api.request<GroupCardInfo>(`/api/v1/groups/card/${shareToken}`)
+  },
+}
+
+export interface GroupCardInfo {
+  conv_id: string
+  name: string
+  avatar?: string
+  cover?: string
+  headline?: string
+  notice?: string
+  primary_color?: string
+  owner_id: string
+  owner_name: string
+  member_count: number
+  created_at: number
 }

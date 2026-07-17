@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { conversationService } from '@/services/conversation-service'
+import { fileService } from '@/services/file-service'
+import { avatarUrl } from '@/lib/file'
 import { getConvSettings, toggleConvSetting, subscribe as settingsSubscribe } from '@/stores/conversation-settings-store'
-import { X, EyeOff, FileUp, Search, ArrowLeft } from 'lucide-react'
+import { X, EyeOff, FileUp, Search, ArrowLeft, Image, Trash2 } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void }
@@ -20,11 +22,14 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
 
   const [fileChangeNotify, setFileChangeNotify] = useState(false)
   const [discoverable, setDiscoverable] = useState(true)
+  const [bgImage, setBgImage] = useState('')
+  const [uploadingBg, setUploadingBg] = useState(false)
+  const bgInputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
     conversationService.getSettings(convId).then(res => {
       if (res.settings?.fileChangeNotify) setFileChangeNotify(true)
-      // discoverable defaults to true when not set
       setDiscoverable(res.settings?.discoverable !== false)
+      if (res.settings?.background_image) setBgImage(res.settings.background_image as string)
     }).catch(() => {})
   }, [convId])
 
@@ -46,6 +51,32 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
     } catch {
       setDiscoverable(!newVal)
     }
+  }
+
+  const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingBg(true)
+    try {
+      const r = await fileService.upload(file, file.name, 0)
+      await conversationService.updateSettings(convId, { background_image: r.url })
+      setBgImage(r.url)
+    } catch (e) { console.warn('upload bg failed:', e) }
+    setUploadingBg(false)
+    e.target.value = ''
+  }
+
+  const updateSetting = async (key: string, value: any) => {
+    try {
+      const settings = await conversationService.getSettings(convId)
+      const merged = { ...settings.settings, [key]: value }
+      await conversationService.updateSettings(convId, merged as any)
+    } catch {}
+  }
+
+  const handleBgRemove = async () => {
+    setBgImage('')
+    await updateSetting('background_image', '')
   }
 
   return (
@@ -104,6 +135,32 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
               <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${discoverable ? 'left-[18px]' : 'left-0.5'}`} />
             </button>
           </label>
+
+          {/* Background image */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Image size={16} className="text-[var(--color-muted)] flex-shrink-0" />
+              <span className="text-xs font-medium text-[var(--color-muted)]">{t('conversation.bgImage') || '聊天背景'}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              {bgImage ? (
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-[var(--color-hairline)] flex-shrink-0">
+                  <img src={avatarUrl(bgImage, 128)} alt="" className="w-full h-full object-cover" />
+                  <button onClick={handleBgRemove}
+                    className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/40 text-white/80 hover:bg-black/60">
+                    <Trash2 size={10} />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => bgInputRef.current?.click()} disabled={uploadingBg}
+                  className="w-16 h-16 rounded-xl border border-dashed border-[var(--color-hairline)] flex items-center justify-center text-[var(--color-muted)] hover:bg-[var(--color-surface-soft)] transition-colors">
+                  {uploadingBg ? <span className="text-[10px]">...</span> : <Image size={18} />}
+                </button>
+              )}
+              <span className="text-[11px] text-[var(--color-muted-soft)]">{t('conversation.bgImageHint') || '建议尺寸 1080×1920'}</span>
+            </div>
+            <input ref={bgInputRef} type="file" accept="image/*" onChange={handleBgUpload} className="hidden" />
+          </div>
         </div>
       </div>
     </div>

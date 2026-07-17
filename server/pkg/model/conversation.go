@@ -31,6 +31,7 @@ type Conversation struct {
 	LastMsgAt    int64          `json:"last_msg_at,omitempty"`
 	CreatedAt    int64          `json:"created_at"`
 	Settings     map[string]any `json:"settings,omitempty"`
+	ShareToken   string         `json:"share_token,omitempty"`
 }
 
 type ConvMember struct {

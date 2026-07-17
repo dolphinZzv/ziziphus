@@ -43,13 +43,11 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Use(h.GlobalRL.Middleware)
 	}
 
-	// Public routes
+	// Public routes (login rate limited)
 	r.Group(func(r chi.Router) {
-		// Apply login rate limiting if configured
 		if h.LoginRL != nil {
 			r.Use(h.LoginRL.Middleware)
 		}
-		// Register has an additional stricter per-IP limiter
 		if h.RegisterRL != nil {
 			r.With(h.RegisterRL.Middleware).Post("/api/v1/users/register", h.User.Register)
 		} else {
@@ -65,12 +63,13 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/webhooks/receive", h.Webhook.ReceiveMessage)
 	})
 
-	// Public routes without login rate limiting (announcement, app info, password reset)
-		r.Get("/api/v1/i18n/detect", h.DetectLanguage)
-		r.Get("/api/v1/announcement", h.Announcement)
-		r.Get("/api/v1/app/info", h.AppInfo)
+	// Public routes without login rate limiting
+	r.Get("/api/v1/i18n/detect", h.DetectLanguage)
+	r.Get("/api/v1/announcement", h.Announcement)
+	r.Get("/api/v1/app/info", h.AppInfo)
 	r.Post("/api/v1/users/password-reset/send-code", h.User.SendPasswordResetCode)
 	r.Post("/api/v1/users/password-reset/reset", h.User.ResetPassword)
+	r.Get("/api/v1/groups/card/{share_token}", h.Conversation.GetGroupCard)
 
 	// Authenticated routes
 	r.Group(func(r chi.Router) {
@@ -113,6 +112,8 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Post("/api/v1/conversations/{conv_id}/clone", h.Conversation.Clone)
 		r.Get("/api/v1/conversations/{conv_id}/settings", h.Conversation.GetSettings)
 		r.Put("/api/v1/conversations/{conv_id}/settings", h.Conversation.UpdateSettings)
+		r.Post("/api/v1/conversations/{conv_id}/share-token", h.Conversation.GenerateShareToken)
+		r.Delete("/api/v1/conversations/{conv_id}/share-token", h.Conversation.RemoveShareToken)
 		// Webhook management
 		r.Get("/api/v1/conversations/{conv_id}/webhooks", h.Webhook.List)
 		r.Post("/api/v1/conversations/{conv_id}/webhooks", h.Webhook.Create)

@@ -29,6 +29,7 @@ import (
 	"ziziphus/pkg/logger"
 	"ziziphus/pkg/model"
 
+	_ "net/http/pprof" // pprof
 	_ "ziziphus/docs" // swagger docs
 )
 
@@ -253,6 +254,12 @@ func main() {
 
 	// SPA fallback for embedded web frontend
 	r.NotFound(webembed.Handler().ServeHTTP)
+
+	// pprof — enabled by default in development
+	if cfg.App.Env == "development" {
+		r.HandleFunc("/debug/pprof", http.DefaultServeMux.ServeHTTP)
+		r.HandleFunc("/debug/pprof/*", http.DefaultServeMux.ServeHTTP)
+	}
 
 	// Heartbeat
 	hbCfg := gateway.DefaultHeartbeatConfig()

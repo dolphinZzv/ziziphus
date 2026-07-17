@@ -80,4 +80,5 @@ export interface ConvListItem {
 export interface ConversationDetail extends Conversation {
   members: ConvMember[]
   notice?: string
+  share_token?: string
 }

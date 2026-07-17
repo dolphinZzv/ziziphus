@@ -207,7 +207,17 @@
     "name": "群名称",
     "headline": "群简介",
     "disband": "解散群组",
-    "disbandConfirm": "确定解散该群组？所有成员将被移除。"
+    "disbandConfirm": "确定解散该群组？所有成员将被移除。",
+    "shareLink": "分享群组",
+    "generateShareLink": "生成分享链接",
+    "removeShareLink": "关闭分享链接",
+    "noShareLink": "暂无分享链接",
+    "removeShareConfirm": "确定关闭分享链接？",
+    "cardNotFoundTitle": "群组未找到",
+    "cardNotFoundDesc": "该分享链接无效或群组已解散",
+    "goToLogin": "去登录",
+    "joinGroup": "登录后加入群组",
+    "register": "注册账号"
   },
   "contact": {
     "title": "联系人",

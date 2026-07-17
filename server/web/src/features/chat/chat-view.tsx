@@ -64,6 +64,7 @@ export default function ChatView() {
   const [showFiles, setShowFiles] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
+  const [bgImage, setBgImage] = useState('')
   const [filePanelWidth, setFilePanelWidth] = useState(260)
   const [dragging, setDragging] = useState(false)
   const [groupNotice, setGroupNotice] = useState('')
@@ -190,6 +191,10 @@ export default function ChatView() {
       const me = d.members?.find(m => m.user_id === user?.user_id)
       setIsOwner(me?.role === ConvRole.Owner)
     }).catch(() => { setGroupNotice(''); setConvColor(''); setIsOwner(false) })
+    // Fetch conversation background image
+    conversationService.getSettings(convId).then(res => {
+      setBgImage((res.settings as any)?.background_image || '')
+    }).catch(() => {})
     // Listen for push messages
     const u1 = wsClient.on(MessageType.MsgPush, (payload: unknown) => {
       const push = payload as MsgPushPayload
@@ -239,7 +244,8 @@ export default function ChatView() {
       onDragOver={handleDragOver}
       onDrop={handleDropOnChat}
     >
-      <div ref={containerRef} className="flex-1 flex flex-col min-w-0 relative">
+      <div ref={containerRef} className={'flex-1 flex flex-col min-w-0' + (bgImage ? ' relative' : '')}
+        style={bgImage ? { backgroundImage: 'url(' + bgImage + ')', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } as React.CSSProperties : undefined}>
       {/* Chat toolbar */}
       <div className="h-12 flex items-center px-4 flex-shrink-0 gap-3">
         {/* Avatar */}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useLayoutEffect, useCallback, useState, memo } from 'react'
 import type { Message } from '@/types/message'
 import { chatStore } from '@/stores/chat-store'
+import { userService } from '@/services/user-service'
 import MessageBubble from './message-bubble'
 import DateSeparator from '@/components/date-separator'
 import { isSameDay } from '@/lib/time'
@@ -23,6 +24,33 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
   const prevLen = useRef(0)
   const shouldAutoScroll = useRef(false) // true = user is at bottom, auto-follow
   const matchRefs = useRef<(HTMLDivElement | null)[]>([])
+
+  // Batch-fetch sender info: collect unique sender IDs and call batch API
+  const [senderMap, setSenderMap] = useState<Record<string, { avatar?: string; isAgent: boolean }>>({})
+  useEffect(() => {
+    const ids = new Set<string>()
+    for (const msg of messages) {
+      if (msg.sender_id && msg.sender_id !== currentUserId && !msg.sender_id.startsWith('webhook:') && msg.sender_id !== 'system') {
+        ids.add(msg.sender_id)
+      }
+    }
+    const idsArr = Array.from(ids)
+    if (idsArr.length === 0) return
+    // Check if we already have all of them
+    const missing = idsArr.filter(id => !senderMap[id])
+    if (missing.length === 0) return
+
+    userService.batchGet(missing).then(users => {
+      setSenderMap(prev => {
+        const next = { ...prev }
+        for (const id of missing) {
+          const u = users[id]
+          next[id] = { avatar: u?.avatar || '', isAgent: u?.type === 1 }
+        }
+        return next
+      })
+    }).catch(() => {})
+  }, [messages, currentUserId])
 
   const scrollToEnd = useCallback((smooth = false) => {
     const el = scrollRef.current
@@ -115,6 +143,7 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
           message={msg}
           isOwn={msg.sender_id === currentUserId}
           isGrouped={false}
+          senderInfo={senderMap[msg.sender_id]}
           highlight={lowerKeyword}
           isSearchMatch={isMatch}
           isCurrentSearchMatch={isCurrentMatch}

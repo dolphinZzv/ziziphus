@@ -207,7 +207,17 @@
     "name": "Name",
     "headline": "Headline",
     "disband": "Disband Group",
-    "disbandConfirm": "Disband this group? All members will be removed."
+    "disbandConfirm": "Disband this group? All members will be removed.",
+    "shareLink": "Share Group",
+    "generateShareLink": "Generate Share Link",
+    "removeShareLink": "Disable Share Link",
+    "noShareLink": "No share link yet",
+    "removeShareConfirm": "Disable the share link?",
+    "cardNotFoundTitle": "Group Not Found",
+    "cardNotFoundDesc": "This share link is invalid or the group has been disbanded",
+    "goToLogin": "Log In",
+    "joinGroup": "Log in to join this group",
+    "register": "Create Account"
   },
   "contact": {
     "title": "Contacts",

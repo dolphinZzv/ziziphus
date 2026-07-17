@@ -9,7 +9,7 @@ import { authStore } from '@/stores/auth-store'
 import type { ConversationDetail, JoinRequest } from '@/types/conversation'
 import type { User } from '@/types/user'
 import { ConvRole } from '@/types/conversation'
-import { X, Check, Camera, Bell, Edit2, ArrowLeft } from 'lucide-react'
+import { X, Check, Camera, Bell, Edit2, ArrowLeft, Share2, Link, Copy, CheckCheck } from 'lucide-react'
 import GroupEditView from './group-edit-view'
 import { useIsMobile } from '@/hooks/use-breakpoint'
 
@@ -25,7 +25,11 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
   const [uploadingCover, setUploadingCover] = useState(false)
+  const [copied, setCopied] = useState(false)
   const currentUserId = authStore.state.user?.user_id || ''
+  const shareLink = detail?.share_token
+    ? `${window.location.origin}/group-card/${detail.share_token}`
+    : null
 
   useEffect(() => {
     conversationService.getDetail(convId).then(async d => {
@@ -71,6 +75,17 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
       const file = e.target.files?.[0]; if (!file) return; setUploadingCover(true)
       try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { cover: r.url }); setDetail({ ...detail!, cover: r.url }) } catch (e) { console.warn('upload cover failed:', e) }
       setUploadingCover(false); e.target.value = ''
+    },
+    generateShare: async () => {
+      try { const r = await conversationService.generateShareToken(convId); setDetail({ ...detail!, share_token: r.share_token }) } catch {}
+    },
+    removeShare: async () => {
+      if (!confirm(t('group.removeShareConfirm') || '确定关闭分享链接？')) return
+      try { await conversationService.removeShareToken(convId); setDetail({ ...detail!, share_token: '' }) } catch {}
+    },
+    copyLink: async () => {
+      if (!shareLink) return
+      try { await navigator.clipboard.writeText(shareLink); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {}
     },
   }
 
@@ -160,6 +175,40 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
               </div>
             </div>
           )}
+
+          {/* Share group link */}
+          <div className=" mt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                <Share2 size={12} /> {t('group.shareLink') || '分享群组'}
+              </span>
+            </div>
+            {shareLink ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[var(--color-surface-soft)] border border-[var(--color-hairline)]">
+                  <Link size={14} className="text-[var(--color-muted)] flex-shrink-0" />
+                  <span className="flex-1 text-xs text-[var(--color-muted-soft)] truncate select-all">{shareLink}</span>
+                  <button onClick={actions.copyLink}
+                    className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[var(--color-hairline)] text-[var(--color-muted)]">
+                    {copied ? <CheckCheck size={14} className="text-[var(--color-accent)]" /> : <Copy size={14} />}
+                  </button>
+                </div>
+                {isAdmin && (
+                  <button onClick={actions.removeShare}
+                    className="text-[11px] text-[var(--color-muted)] hover:text-[var(--destructive)] transition-colors">
+                    {t('group.removeShareLink') || '关闭分享链接'}
+                  </button>
+                )}
+              </div>
+            ) : isAdmin ? (
+              <button onClick={actions.generateShare}
+                className="w-full h-9 rounded-xl border border-dashed border-[var(--color-hairline)] text-xs text-[var(--color-muted)] hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-ink)] transition-colors flex items-center justify-center gap-1.5">
+                <Share2 size={13} /> {t('group.generateShareLink') || '生成分享链接'}
+              </button>
+            ) : (
+              <div className="text-[11px] text-[var(--color-muted-soft)] italic">{t('group.noShareLink') || '暂无分享链接'}</div>
+            )}
+          </div>
         </div>
       </div>
     </div>
