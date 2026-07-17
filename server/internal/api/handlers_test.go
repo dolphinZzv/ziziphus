@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"ziziphus/internal/auth"
+	"ziziphus/pkg/i18n"
 	"ziziphus/internal/gateway"
 	"ziziphus/internal/storage/db"
 	"ziziphus/pkg/model"
@@ -964,6 +965,47 @@ func TestUnauthorized_returns401(t *testing.T) {
 	}
 	if body.Msg != "未授权" {
 		t.Errorf("msg = %q, want %q", body.Msg, "未授权")
+	}
+}
+
+func TestHandlers_DetectLanguage(t *testing.T) {
+	tests := []struct {
+		name    string
+		accept  string
+		want    string
+	}{
+		{name: "empty header returns zh", accept: "", want: "zh"},
+		{name: "accepts en", accept: "en-US,en;q=0.9", want: "en"},
+		{name: "accepts zh", accept: "zh-CN,zh;q=0.8", want: "zh"},
+		{name: "ja falls back to zh", accept: "ja-JP", want: "zh"},
+		{name: "fr falls back to zh", accept: "fr-FR", want: "zh"},
+		{name: "multiple with en first", accept: "en;q=0.1,zh;q=0.9", want: "en"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &Handlers{}
+			handler := i18n.Middleware(http.HandlerFunc(h.DetectLanguage))
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/i18n/detect", nil)
+			if tt.accept != "" {
+				req.Header.Set("Accept-Language", tt.accept)
+			}
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+
+			resp := decodeResponse(t, w)
+			if resp.Code != 0 {
+				t.Fatalf("code = %d, want 0: %s", resp.Code, resp.Msg)
+			}
+			data, ok := resp.Data.(map[string]interface{})
+			if !ok {
+				t.Fatal("Data is not a map")
+			}
+			got, _ := data["language"].(string)
+			if got != tt.want {
+				t.Errorf("language = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

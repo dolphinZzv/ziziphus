@@ -322,18 +322,23 @@ export const chatStore = {
   handlePush(payload: MsgPushPayload) {
     const existingMsgs = state.messagesByConvId.get(payload.conv_id)
 
-    // If this msg_id already exists, skip — push may carry stale sender_id.
-    if (existingMsgs?.some(m => m.msg_id === payload.msg_id && m.msg_id > 0)) return
+    // If this msg_id already exists, update it in-place but KEEP local sender_id.
+    const existingIdx = existingMsgs?.findIndex(m => m.msg_id === payload.msg_id && m.msg_id > 0)
+    if (existingIdx !== undefined && existingIdx >= 0 && existingMsgs) {
+      const msgs = [...existingMsgs]
+      msgs[existingIdx] = { ...msgs[existingIdx], conv_seq: payload.conv_seq, timestamp: payload.timestamp, status: MsgStatus.Delivered }
+      const messagesByConvId = new Map(state.messagesByConvId)
+      messagesByConvId.set(payload.conv_id, msgs)
+      state = { ...state, messagesByConvId }; emit()
+      return
+    }
 
-    // If there is a pending local message (msg_id=0, not yet acked), the push
-    // is the server's confirmation — update the local copy but keep local sender_id.
-    const pending = existingMsgs?.find(m => m.sender_id && m.msg_id === 0)
-    if (pending) {
-      const msgs = existingMsgs!.map(m =>
-        m === pending
-          ? { ...m, msg_id: payload.msg_id, conv_seq: payload.conv_seq, timestamp: payload.timestamp, status: MsgStatus.Delivered }
-          : m
-      )
+    // If there is a pending local message (msg_id=0, not yet acked), update it
+    // but KEEP the local sender_id.
+    const pendingIdx = existingMsgs?.findIndex(m => m.sender_id && m.msg_id === 0)
+    if (pendingIdx !== undefined && pendingIdx >= 0 && existingMsgs) {
+      const msgs = [...existingMsgs]
+      msgs[pendingIdx] = { ...msgs[pendingIdx], msg_id: payload.msg_id, conv_seq: payload.conv_seq, timestamp: payload.timestamp, status: MsgStatus.Delivered }
       const messagesByConvId = new Map(state.messagesByConvId)
       messagesByConvId.set(payload.conv_id, msgs)
       state = { ...state, messagesByConvId }; emit()

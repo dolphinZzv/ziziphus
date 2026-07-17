@@ -66,8 +66,9 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 	})
 
 	// Public routes without login rate limiting (announcement, app info, password reset)
-	r.Get("/api/v1/announcement", h.Announcement)
-	r.Get("/api/v1/app/info", h.AppInfo)
+		r.Get("/api/v1/i18n/detect", h.DetectLanguage)
+		r.Get("/api/v1/announcement", h.Announcement)
+		r.Get("/api/v1/app/info", h.AppInfo)
 	r.Post("/api/v1/users/password-reset/send-code", h.User.SendPasswordResetCode)
 	r.Post("/api/v1/users/password-reset/reset", h.User.ResetPassword)
 
