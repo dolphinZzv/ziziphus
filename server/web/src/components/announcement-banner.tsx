@@ -17,6 +17,8 @@ export default function AnnouncementBanner() {
       .then(r => r.json())
       .then(json => {
         if (json.code === 0 && json.data?.enabled) {
+          const key = `ziziphus_dismissed_announcement_${json.data.title}`
+          if (localStorage.getItem(key)) { setDismissed(true); return }
           setAnnouncement(json.data)
         }
       })
@@ -39,7 +41,7 @@ export default function AnnouncementBanner() {
           </a>
         )}
       </div>
-      <button onClick={() => setDismissed(true)} className="shrink-0 p-1 rounded hover:bg-white/20">
+      <button onClick={() => { setDismissed(true); if (announcement?.title) localStorage.setItem(`ziziphus_dismissed_announcement_${announcement.title}`, '1') }} className="shrink-0 p-1 rounded hover:bg-white/20">
         <X size={14} />
       </button>
     </div>
