@@ -35,6 +35,7 @@ type UserHandler struct {
 	passwordResetRepo passwordResetStore
 	allowRegistration bool
 	appName           string
+	appEnv            string
 }
 
 type userRepo interface {
@@ -72,8 +73,8 @@ type emailSender interface {
 	SendPasswordResetCode(to, code string) error
 }
 
-func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender, passwordResetRepo passwordResetStore, allowRegistration bool, appName string) *UserHandler {
-	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen, mfaRepo: mfaRepo, emailVerifyRepo: emailVerifyRepo, mailer: mailer, passwordResetRepo: passwordResetRepo, allowRegistration: allowRegistration}
+func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender, passwordResetRepo passwordResetStore, allowRegistration bool, appName string, appEnv string) *UserHandler {
+	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen, mfaRepo: mfaRepo, emailVerifyRepo: emailVerifyRepo, mailer: mailer, passwordResetRepo: passwordResetRepo, allowRegistration: allowRegistration, appName: appName, appEnv: appEnv}
 }
 
 type registerReq struct {
@@ -1124,7 +1125,9 @@ func (h *UserHandler) SendPasswordResetCode(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	userID, code, err := h.authSvc.RequestPasswordReset(r.Context(), req.AccountOrEmail, h.passwordResetRepo, h.mailer)
+	// dev mode only allowed in development env (E2E tests)
+	devMode := r.URL.Query().Get("dev") == "1" && h.appEnv == "development"
+	userID, code, err := h.authSvc.RequestPasswordReset(r.Context(), req.AccountOrEmail, h.passwordResetRepo, h.mailer, devMode)
 	if err != nil {
 		if appErr, ok := err.(*model.AppError); ok {
 			Error(w, r, http.StatusBadRequest, appErr)

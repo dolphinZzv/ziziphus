@@ -282,8 +282,8 @@ type mailerForPasswordReset interface {
 
 // RequestPasswordReset generates a 6-digit reset code, stores it, and sends it via email.
 // Returns the user ID (so the frontend can track the reset session) and the code for dev mode.
-// If mailer is nil or its Enabled() returns false, returns an error.
-func (s *Service) RequestPasswordReset(ctx context.Context, accountOrEmail string, resetStore passwordResetStore, mailer mailerForPasswordReset) (string, string, error) {
+// If devMode is true, skips the mailer check and returns the code (for E2E tests).
+func (s *Service) RequestPasswordReset(ctx context.Context, accountOrEmail string, resetStore passwordResetStore, mailer mailerForPasswordReset, devMode bool) (string, string, error) {
 	// Look up by account first, then by email
 	user, err := s.userRepo.GetByAccount(ctx, accountOrEmail)
 	if err != nil {
@@ -306,11 +306,13 @@ func (s *Service) RequestPasswordReset(ctx context.Context, accountOrEmail strin
 		return "", "", fmt.Errorf("store reset code: %w", err)
 	}
 
-	// Send email
-	if mailer == nil || !mailer.Enabled() {
-		return "", "", &model.AppError{Code: model.ErrNoPermission, Message: "mail service not available", Key: "err.mailer_disabled"}
+	// Send email (skip in dev mode for E2E tests)
+	if !devMode {
+		if mailer == nil || !mailer.Enabled() {
+			return "", "", &model.AppError{Code: model.ErrNoPermission, Message: "mail service not available", Key: "err.mailer_disabled"}
+		}
+		go func() { _ = mailer.SendPasswordResetCode(user.Email, code) }()
 	}
-	go func() { _ = mailer.SendPasswordResetCode(user.Email, code) }()
 
 	return user.ID, code, nil
 }
