@@ -403,7 +403,8 @@ type mockConvDataRepo struct {
 	getUserConvsFunc     func(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
 	updateNameAvatarFunc func(ctx context.Context, convID, name, avatar string) error
 	updateNoticeFunc     func(ctx context.Context, convID, notice string) error
-	updateCoverFunc      func(ctx context.Context, convID, cover string) error
+	updateCoverFunc          func(ctx context.Context, convID, cover string) error
+	updatePrimaryColorFunc   func(ctx context.Context, convID, color string) error
 	searchByNameFunc     func(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
 	pinFunc              func(ctx context.Context, userID, convID string) error
 	unpinFunc            func(ctx context.Context, userID, convID string) error
@@ -437,6 +438,13 @@ func (m *mockConvDataRepo) UpdateNotice(ctx context.Context, convID, notice stri
 func (m *mockConvDataRepo) UpdateCover(ctx context.Context, convID, cover string) error {
 	if m.updateCoverFunc != nil {
 		return m.updateCoverFunc(ctx, convID, cover)
+	}
+	return nil
+}
+
+func (m *mockConvDataRepo) UpdatePrimaryColor(ctx context.Context, convID, color string) error {
+	if m.updatePrimaryColorFunc != nil {
+		return m.updatePrimaryColorFunc(ctx, convID, color)
 	}
 	return nil
 }

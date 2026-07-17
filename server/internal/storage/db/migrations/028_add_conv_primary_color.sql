@@ -1,0 +1,1 @@
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS primary_color VARCHAR(32) NOT NULL DEFAULT '';

@@ -20,17 +20,17 @@ func NewConvRepo(pool DBPool) *ConvRepo {
 
 func (r *ConvRepo) Create(ctx context.Context, c *model.Conversation) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at, headline)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt), c.Headline)
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at, headline, primary_color)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt), c.Headline, c.PrimaryColor)
 	return err
 }
 
 func (r *ConvRepo) CreateTx(ctx context.Context, tx pgx.Tx, c *model.Conversation) error {
 	_, err := tx.Exec(ctx,
-		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at, headline)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt), c.Headline)
+		`INSERT INTO conversations (conv_id, type, name, owner_id, avatar, cover, max_members, created_at, headline, primary_color)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		c.ConvID, c.Type, c.Name, c.OwnerID, c.Avatar, c.Cover, c.MaxMembers, time.UnixMilli(c.CreatedAt), c.Headline, c.PrimaryColor)
 	return err
 }
 
@@ -39,9 +39,9 @@ func (r *ConvRepo) Get(ctx context.Context, convID string) (*model.Conversation,
 	var lastMsgAt *time.Time
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
-		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline
+		`SELECT conv_id, type, name, owner_id, avatar, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline, COALESCE(primary_color, '')
 		 FROM conversations WHERE conv_id = $1`, convID).
-		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt, &c.Settings, &c.Headline)
+		Scan(&c.ConvID, &c.Type, &c.Name, &c.OwnerID, &c.Avatar, &c.Notice, &c.MaxMembers, &c.LastMsgID, &lastMsgAt, &createdAt, &c.Settings, &c.Headline, &c.PrimaryColor)
 	if err != nil {
 		return nil, err
 	}
@@ -328,6 +328,12 @@ func (r *ConvRepo) UpdateCover(ctx context.Context, convID, cover string) error 
 func (r *ConvRepo) UpdateNotice(ctx context.Context, convID, notice string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE conversations SET notice = $1 WHERE conv_id = $2`, notice, convID)
+	return err
+}
+
+func (r *ConvRepo) UpdatePrimaryColor(ctx context.Context, convID, color string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE conversations SET primary_color = $1 WHERE conv_id = $2`, color, convID)
 	return err
 }
 

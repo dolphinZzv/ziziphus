@@ -23,6 +23,7 @@ type convDataRepo interface {
 	UpdateNameAvatar(ctx context.Context, convID, name, avatar string) error
 	UpdateNotice(ctx context.Context, convID, notice string) error
 	UpdateCover(ctx context.Context, convID, cover string) error
+	UpdatePrimaryColor(ctx context.Context, convID, color string) error
 	Pin(ctx context.Context, userID, convID string) error
 	Unpin(ctx context.Context, userID, convID string) error
 	Clone(ctx context.Context, srcConvID, newConvID, ownerID string, name string, idGen func() int64) error
@@ -181,10 +182,11 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateGroupReq struct {
-	Name   *string `json:"name"`
-	Avatar *string `json:"avatar"`
-	Notice *string `json:"notice"`
-	Cover  *string `json:"cover"`
+	Name         *string `json:"name"`
+	Avatar       *string `json:"avatar"`
+	Notice       *string `json:"notice"`
+	Cover        *string `json:"cover"`
+	PrimaryColor *string `json:"primary_color"`
 }
 
 // @Summary Update group conversation
