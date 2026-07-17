@@ -69,6 +69,10 @@ export default function App() {
           <Route path="profile/sessions" element={null} />
           <Route path="profile/settings" element={null} />
           <Route path="contacts" element={null} />
+          <Route path="new-chat" element={null} />
+          <Route path="add-contact" element={null} />
+          <Route path="create-group" element={null} />
+          <Route path="join-group" element={null} />
         </Route>
         <Route path="*" element={<Navigate to="/conversations" replace />} />
         </Routes>

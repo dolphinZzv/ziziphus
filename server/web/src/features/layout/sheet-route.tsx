@@ -10,6 +10,10 @@ const routeToSheet: Record<string, string> = {
   '/profile/sessions': 'sessions',
   '/profile/settings': 'settings',
   '/contacts': 'contacts',
+  '/new-chat': 'newChat',
+  '/add-contact': 'addContact',
+  '/create-group': 'createGroup',
+  '/join-group': 'joinGroup',
 }
 
 /** Maps sheet names back to routes */
@@ -48,7 +52,7 @@ export default function SheetRouteSync() {
 
       // Sheet closed → go back
       if (!sheet && prev && sheetToRoute[prev]) {
-        if (location.pathname.startsWith('/profile')) {
+        if (location.pathname.startsWith('/profile') || location.pathname === '/new-chat' || location.pathname === '/add-contact' || location.pathname === '/create-group' || location.pathname === '/join-group') {
           navigate(-1)
         }
       }
