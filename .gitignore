@@ -37,3 +37,4 @@ bin/
 server/ziziphus
 logs*.png
 *.png
+logs/

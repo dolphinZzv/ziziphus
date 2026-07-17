@@ -66,7 +66,7 @@ export default function ChatView() {
   const [dragging, setDragging] = useState(false)
   const [groupNotice, setGroupNotice] = useState('')
   const [convColor, setConvColor] = useState('')
-  const markedReadRef = useRef<Set<string>>(new Set())
+  const markedReadRef = useRef<Map<string, number>>(new Map())
 
   // --- Feature 1: In-chat search ---
   const [showSearch, setShowSearch] = useState(false)
@@ -208,16 +208,20 @@ export default function ChatView() {
     return () => { u1?.(); u2?.(); u3?.(); u4?.() }
   }, [convId])
 
-  // Mark as read once messages are loaded (use max msg_id from loaded messages)
+  // Mark as read whenever messages change (handles new push messages too)
   useEffect(() => {
-    if (!convId || markedReadRef.current.has(convId)) return
+    if (!convId) return
     const msgs = chatStore.getMessages(convId)
     if (msgs.length === 0) return
     const maxMsgId = Math.max(...msgs.map(m => m.msg_id))
     if (maxMsgId <= 0) return
-    markedReadRef.current.add(convId)
-    conversationService.markRead(convId, maxMsgId).catch(() => {})
-    conversationStore.markRead(convId)
+    // Only call server if this is a new maxId
+    const prev = markedReadRef.current.get(convId) || 0
+    if (maxMsgId > prev) {
+      markedReadRef.current.set(convId, maxMsgId)
+      conversationService.markRead(convId, maxMsgId).catch(() => {})
+      conversationStore.markRead(convId)
+    }
   }, [convId, messages])
 
   if (!convId) return null
