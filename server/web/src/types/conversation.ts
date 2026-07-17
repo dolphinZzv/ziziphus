@@ -25,6 +25,7 @@ export interface Conversation {
   owner_id: string
   avatar?: string
   cover?: string
+  primary_color?: string
   max_members?: number
   last_msg_id?: number
   last_msg_at?: number

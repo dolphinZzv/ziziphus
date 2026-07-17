@@ -91,9 +91,10 @@ func (h *ConvHandler) sendSysMsgWithName(ctx context.Context, convID, key, userI
 }
 
 type createGroupReq struct {
-	Name      string   `json:"name"`
-	MemberIDs []string `json:"member_ids"`
-	Headline  string   `json:"headline"`
+	Name         string   `json:"name"`
+	MemberIDs    []string `json:"member_ids"`
+	Headline     string   `json:"headline"`
+	PrimaryColor string   `json:"primary_color,omitempty"`
 }
 
 // @Summary List conversations
@@ -312,6 +313,15 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Apply primary_color update
+	if req.PrimaryColor != nil {
+		if err := h.convRepo.UpdatePrimaryColor(r.Context(), convID, *req.PrimaryColor); err != nil {
+			logger.Error("update primary_color failed", "conv_id", convID, "error", err)
+			Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+			return
+		}
+	}
+
 	resp := map[string]interface{}{
 		"conv_id": convID,
 		"name":    name,
@@ -321,6 +331,9 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		resp["cover"] = *req.Cover
 	} else {
 		resp["cover"] = conv.Cover
+	}
+	if req.PrimaryColor != nil {
+		resp["primary_color"] = *req.PrimaryColor
 	}
 	JSON(w, resp)
 }
@@ -367,6 +380,10 @@ func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.sysMsg != nil {
 		h.sendSysMsgWithName(r.Context(), conv.ConvID, "sys.group_created", userID, conv.Name)
+	}
+
+	if req.PrimaryColor != "" {
+		_ = h.convRepo.UpdatePrimaryColor(r.Context(), conv.ConvID, req.PrimaryColor)
 	}
 
 	JSON(w, map[string]interface{}{

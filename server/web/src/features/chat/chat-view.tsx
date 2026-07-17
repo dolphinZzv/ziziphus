@@ -65,6 +65,7 @@ export default function ChatView() {
   const [filePanelWidth, setFilePanelWidth] = useState(260)
   const [dragging, setDragging] = useState(false)
   const [groupNotice, setGroupNotice] = useState('')
+  const [convColor, setConvColor] = useState('')
   const markedReadRef = useRef<Set<string>>(new Set())
 
   // --- Feature 1: In-chat search ---
@@ -132,9 +133,9 @@ export default function ChatView() {
   const conv = conversations.find(c => c.conv_id === convId)
   const isGroup = conv?.type === ConvType.Group
 
-  // Set browser chrome/tab color to user's primary color (mobile)
+  // Set browser chrome/tab color to conversation's primary color, fallback to user's
   useEffect(() => {
-    const color = user?.primary_color || '#0F172A'
+    const color = convColor || user?.primary_color || '#0F172A'
     let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null
     if (meta) meta.content = color
     else {
@@ -143,7 +144,7 @@ export default function ChatView() {
       meta.content = color
       document.head.appendChild(meta)
     }
-  }, [user?.primary_color])
+  }, [convColor, user?.primary_color])
 
   const handleClone = async () => {
     if (!convId || !isGroup) return
@@ -183,9 +184,10 @@ export default function ChatView() {
     // Fetch notice for this specific group
     conversationService.getDetail(convId).then(d => {
       setGroupNotice(d.type === ConvType.Group && d.notice ? d.notice : '')
+      setConvColor(d.primary_color || '')
       const me = d.members?.find(m => m.user_id === user?.user_id)
       setIsOwner(me?.role === ConvRole.Owner)
-    }).catch(() => { setGroupNotice(''); setIsOwner(false) })
+    }).catch(() => { setGroupNotice(''); setConvColor(''); setIsOwner(false) })
     // Listen for push messages
     const u1 = wsClient.on(MessageType.MsgPush, (payload: unknown) => {
       const push = payload as MsgPushPayload
