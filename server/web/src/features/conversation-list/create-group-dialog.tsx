@@ -32,7 +32,12 @@ export default function CreateGroupDialog({ onClose }: Props) {
   const handleCreate = async () => {
     if (!groupName.trim() || selected.length === 0) return
     setCreating(true)
-    try { const r = await conversationService.createGroup(groupName.trim(), headline.trim(), selected.map(u => u.user_id)); uiStore.closeSheet(); navigate(`/chat/${r.conv_id}`) } catch {}
+    try {
+      const r = await conversationService.createGroup(groupName.trim(), headline.trim(), selected.map(u => u.user_id));
+      // Navigate first — SheetRouteSync's URL change handler will close the sheet
+      // with syncing.current=true, preventing navigate(-1) from firing
+      navigate(`/conversations/${r.conv_id}`);
+    } catch {}
     setCreating(false)
   }
 

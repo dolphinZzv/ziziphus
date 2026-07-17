@@ -48,7 +48,7 @@ test.describe('Read Receipt UI', () => {
   test('message status icons render correctly', async ({ page }) => {
     if (!convId) { test.skip(); return }
     await page.addInitScript(auth(aId, 'SenderA', aTok))
-    await page.goto(`/chat/${convId}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/conversations/${convId}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(2000)
 
     // Type and send a message
@@ -67,7 +67,7 @@ test.describe('Read Receipt UI', () => {
   test('send message appears in chat', async ({ page }) => {
     if (!convId) { test.skip(); return }
     await page.addInitScript(auth(aId, 'SenderA', aTok))
-    await page.goto(`/chat/${convId}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/conversations/${convId}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(2000)
 
     const bodyBefore = await page.locator('body').innerText()
@@ -87,7 +87,7 @@ test.describe('Read Receipt UI', () => {
   test('read receipt tooltip title renders when hovering status', async ({ page }) => {
     if (!convId) { test.skip(); return }
     await page.addInitScript(auth(aId, 'SenderA', aTok))
-    await page.goto(`/chat/${convId}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/conversations/${convId}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(2000)
 
     // Send a message
@@ -109,7 +109,7 @@ test.describe('Read Receipt UI', () => {
   test('status icons exist on own sent messages', async ({ page }) => {
     if (!convId) { test.skip(); return }
     await page.addInitScript(auth(aId, 'SenderA', aTok))
-    await page.goto(`/chat/${convId}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/conversations/${convId}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(2000)
 
     // Messages bubble renders with status icon in right-aligned bubbles

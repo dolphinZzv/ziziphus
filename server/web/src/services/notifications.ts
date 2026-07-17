@@ -26,7 +26,7 @@ export function showMessageNotification(title: string, body: string, convId: str
     n.onclick = () => {
       window.focus()
       // navigate handled by caller or direct location
-      const chatPath = `/chat/${convId}`
+      const chatPath = `/conversations/${convId}`
       if (window.location.hash?.includes(chatPath)) return
       window.location.hash = chatPath
       n.close()

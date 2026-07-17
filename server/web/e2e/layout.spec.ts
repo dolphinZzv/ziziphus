@@ -13,16 +13,12 @@ const AUTH_INIT = `
 test.describe('App Layout (authenticated)', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(AUTH_INIT)
-    await page.goto('/chat')
+    await page.goto('/conversations')
     await page.waitForTimeout(1500)
   })
 
   test('renders sidebar with user name', async ({ page }) => {
     await expect(page.getByText('测试用户').first()).toBeVisible({ timeout: 5000 })
-  })
-
-  test('empty chat state shown', async ({ page }) => {
-    await expect(page.getByText('选择一个会话开始聊天')).toBeVisible({ timeout: 5000 })
   })
 
   test('connection status shows', async ({ page }) => {

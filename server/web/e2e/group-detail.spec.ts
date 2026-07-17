@@ -52,7 +52,7 @@ async function createGroupWithMember(page: import('@playwright/test').Page, grou
   // Wait for navigation to group chat
   await page.waitForFunction(() => {
     const path = window.location.pathname
-    return path.startsWith('/chat/') && path.length > 6
+    return path.startsWith('/conversations/') && path.length > 6
   }, { timeout: 10000 })
   await page.waitForTimeout(1000)
 }
@@ -85,7 +85,7 @@ test.describe('Group Detail Features', () => {
     await createGroupWithMember(page, GROUP, 'GDSBob')
 
     // ✅ Verify: navigated to group chat
-    await expect(page).toHaveURL(/\/chat\//, { timeout: 10000 })
+    await expect(page).toHaveURL(/\/conversations\//, { timeout: 10000 })
     await page.waitForTimeout(1000)
 
     // Open more menu
@@ -166,7 +166,7 @@ test.describe('Group Detail Features', () => {
     await createBtn.click()
     await page.waitForFunction(() => {
       const path = window.location.pathname
-      return path.startsWith('/chat/') && path.length > 6
+      return path.startsWith('/conversations/') && path.length > 6
     }, { timeout: 10000 })
     await page.waitForTimeout(1000)
 
@@ -261,7 +261,7 @@ test.describe('Group Detail Features', () => {
     await createBtn.click()
     await page.waitForFunction(() => {
       const path = window.location.pathname
-      return path.startsWith('/chat/') && path.length > 6
+      return path.startsWith('/conversations/') && path.length > 6
     }, { timeout: 10000 })
     await page.waitForTimeout(1000)
 

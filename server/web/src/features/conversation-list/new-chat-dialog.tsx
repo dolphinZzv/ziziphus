@@ -20,7 +20,7 @@ export default function NewChatDialog({ onClose }: Props) {
   })
 
   const handleCreate = async (userId: string) => {
-    try { const r = await conversationService.createP2P(userId); uiStore.closeSheet(); navigate(`/chat/${r.conv_id}`) } catch {}
+    try { const r = await conversationService.createP2P(userId); uiStore.closeSheet(); navigate(`/conversations/${r.conv_id}`) } catch {}
   }
 
   const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'

@@ -14,7 +14,7 @@ const AUTH_INIT = `
 test.describe('New Chat Dialog', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(AUTH_INIT)
-    await page.goto('/chat')
+    await page.goto('/conversations')
     await page.waitForTimeout(1500)
   })
 
@@ -51,7 +51,7 @@ test.describe('New Chat Dialog', () => {
 test.describe('Create Group Dialog', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(AUTH_INIT)
-    await page.goto('/chat')
+    await page.goto('/conversations')
     await page.waitForTimeout(1500)
   })
 
@@ -80,7 +80,7 @@ test.describe('Create Group Dialog', () => {
 test.describe('Join Group Dialog', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(AUTH_INIT)
-    await page.goto('/chat')
+    await page.goto('/conversations')
     await page.waitForTimeout(1500)
   })
 

@@ -111,7 +111,7 @@ test.describe('Sender Display & UserCard', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 0, msg: 'ok', data: [] }) })
     })
 
-    await page.goto('/chat/conv_test_001')
+    await page.goto('/conversations/conv_test_001')
     await page.waitForTimeout(1000)
   })
 
@@ -165,9 +165,9 @@ test.describe('Sender Display & UserCard', () => {
     })
 
     // Navigate to another conversation and back to trigger re-fetch
-    await page.goto('/chat/conv_test_002')
+    await page.goto('/conversations/conv_test_002')
     await page.waitForTimeout(500)
-    await page.goto('/chat/conv_test_001')
+    await page.goto('/conversations/conv_test_001')
     await page.waitForTimeout(1000)
 
     // Verify messages still render with sender names

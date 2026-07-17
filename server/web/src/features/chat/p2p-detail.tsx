@@ -70,7 +70,7 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
 
   const handleLeave = async () => {
     if (!confirm(t('group.leaveConfirm'))) return
-    try { await conversationService.leave(convId); conversationStore.removeConversation(convId); onClose(); navigate('/chat') } catch {}
+    try { await conversationService.leave(convId); conversationStore.removeConversation(convId); onClose(); navigate('/conversations') } catch {}
   }
 
   const initials = peer?.name?.charAt(0)?.toUpperCase() || '?'

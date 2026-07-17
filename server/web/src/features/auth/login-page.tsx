@@ -36,7 +36,7 @@ export default function LoginPage() {
   }, [])
 
   // Redirect when logged in
-  useEffect(() => { if (isLoggedIn) navigate('/chat', { replace: true }) }, [isLoggedIn, navigate])
+  useEffect(() => { if (isLoggedIn) navigate('/conversations', { replace: true }) }, [isLoggedIn, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,7 +53,7 @@ export default function LoginPage() {
     if (!mfaCode.trim()) return
     try {
       await authStore.mfaVerify(mfaCode.trim())
-      if (isLoggedIn) navigate('/chat', { replace: true })
+      if (isLoggedIn) navigate('/conversations', { replace: true })
     } catch { /* error handled by store */ }
   }
 

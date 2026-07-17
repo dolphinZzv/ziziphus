@@ -14,7 +14,7 @@ const AUTH_INIT = `
 test.describe('Sheets & Dialogs (authenticated)', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(AUTH_INIT)
-    await page.goto('/chat')
+    await page.goto('/conversations')
     await page.waitForTimeout(1500)
   })
 

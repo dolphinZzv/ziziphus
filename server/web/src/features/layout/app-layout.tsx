@@ -62,6 +62,7 @@ export default function AppLayout() {
   }, [])
 
   const connected = connStatus === 'connected'
+  const isConvListPage = location.pathname === '/conversations'
 
   // Computed widths
   const sideW = isMobile ? '100%' : (isTablet ? 240 : sidebarWidth)
@@ -86,8 +87,8 @@ export default function AppLayout() {
 
       {/* Body */}
       <div className="flex-1 flex min-h-0 relative">
-        {/* Desktop/tablet sidebar */}
-        {!isMobile && (
+        {/* Desktop/tablet sidebar (hidden on /conversations since ConversationsPage renders its own) */}
+        {!isMobile && !isConvListPage && (
           <>
           <div
             className={cn(
@@ -99,8 +100,8 @@ export default function AppLayout() {
             <Sidebar />
           </div>
 
-        {/* Drag handle (desktop/tablet only) */}
-        {!isTablet && isSidebarOpen && (
+        {/* Drag handle (desktop/tablet only, not on /conversations) */}
+        {!isTablet && isSidebarOpen && !isConvListPage && (
           <div className="relative flex-shrink-0" style={{ width: 0 }}>
             <div
               className="absolute -left-1 top-0 bottom-0 w-2 cursor-col-resize group z-10"

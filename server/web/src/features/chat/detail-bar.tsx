@@ -44,7 +44,7 @@ export default function DetailBar
     try {
       const r = await conversationService.clone(convId)
       onClose()
-      navigate(`/chat/${r.conv_id}`)
+      navigate(`/conversations/${r.conv_id}`)
     } catch {}
     setCloning(false)
   }

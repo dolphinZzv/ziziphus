@@ -152,7 +152,7 @@ export default function ChatView() {
     try {
       const r = await conversationService.clone(convId)
       setShowMenu(false)
-      navigate(`/chat/${r.conv_id}`)
+      navigate(`/conversations/${r.conv_id}`)
     } catch {}
   }
 
@@ -163,7 +163,7 @@ export default function ChatView() {
       await conversationService.disband(convId)
       conversationStore.removeConversation(convId)
       setShowMenu(false)
-      navigate('/chat')
+      navigate('/conversations')
     } catch {}
   }
 
@@ -174,7 +174,7 @@ export default function ChatView() {
       await conversationService.leave(convId)
       conversationStore.removeConversation(convId)
       setShowMenu(false)
-      navigate('/chat')
+      navigate('/conversations')
     } catch {}
   }
 

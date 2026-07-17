@@ -22,7 +22,7 @@ export default function JoinGroupDialog({ onClose }: Props) {
   }
 
   const handleJoin = async (convId: string) => {
-    try { await conversationService.requestJoin(convId); uiStore.closeSheet(); navigate(`/chat/${convId}`) } catch {}
+    try { await conversationService.requestJoin(convId); uiStore.closeSheet(); navigate(`/conversations/${convId}`) } catch {}
   }
 
   const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'

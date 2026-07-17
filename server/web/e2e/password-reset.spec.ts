@@ -91,7 +91,7 @@ test.describe('Password Reset', () => {
     await confirmInput.fill(NEW_PASSWORD)
 
     // Submit reset
-    await page.getByText('重置密码').click()
+    await page.getByRole('button', { name: '重置密码' }).click()
     await page.waitForTimeout(1000)
 
     // ===== Verify success =====
@@ -107,6 +107,6 @@ test.describe('Password Reset', () => {
     await page.getByPlaceholder('密码').fill(NEW_PASSWORD)
     await page.getByText('登录').click()
     await expect(page.locator('text=PWResetUser').first()).toBeVisible({ timeout: 15000 })
-    await expect(page).toHaveURL(/\/chat/, { timeout: 5000 })
+    await expect(page).toHaveURL(/\/conversations/, { timeout: 5000 })
   })
 })
