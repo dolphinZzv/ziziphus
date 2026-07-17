@@ -53,6 +53,13 @@ export default function App() {
           <Route index element={<Navigate to="/chat" replace />} />
           <Route path="chat" element={<Suspense fallback={<PageFallback />}><EmptyChat /></Suspense>} />
           <Route path="chat/:convId" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="chat/:convId/info" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="chat/:convId/settings" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="chat/:convId/webhooks" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="chat/:convId/members" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="chat/:convId/add-member" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="chat/:convId/detail" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
+          <Route path="chat/:convId/history" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
           <Route path="profile" element={null} />
           <Route path="profile/agents" element={null} />
           <Route path="profile/privacy" element={null} />

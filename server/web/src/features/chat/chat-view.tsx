@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useLocation } from 'react-router-dom'
 import { chatStore } from '@/stores/chat-store'
 import { authStore } from '@/stores/auth-store'
 import { uiStore } from '@/stores/ui-store'
@@ -30,6 +30,7 @@ import FilePanel from './file-panel'
 export default function ChatView() {
   const { convId } = useParams<{ convId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useTranslation()
   const rawMessages = useSyncExternalStore(chatStore.subscribe, () => chatStore.getMessages(convId || ''))
   // Filter: remove agent timeline append-only messages that were merged into parents
@@ -47,13 +48,16 @@ export default function ChatView() {
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
   const conversations = useSyncExternalStore(conversationStore.subscribe, () => conversationStore.state.conversations)
   const isMobile = useIsMobile()
-  const [showDetail, setShowDetail] = useState(false)
-  const [showGroupBasic, setShowGroupBasic] = useState(false)
-  const [showGroupSettings, setShowGroupSettings] = useState(false)
-  const [showWebhook, setShowWebhook] = useState(false)
-  const [showMembers, setShowMembers] = useState(false)
-  const [showAddMember, setShowAddMember] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
+  // Chat panel sub-route — derived from URL
+  const activePanel = (() => {
+    const m = location.pathname.match(/^\/chat\/([^/]+)\/(info|settings|webhooks|add-member|members|detail|history)$/)
+    return m && m[1] === convId ? m[2] : null
+  })()
+
+  // Navigate to a chat panel sub-route
+  const openPanel = (panel: string) => navigate(`/chat/${convId}/${panel}`)
+  // Close panel and return to chat
+  const closePanel = () => { navigate(-1) }
   const [copied, setCopied] = useState(false)
   const [showFiles, setShowFiles] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -345,37 +349,37 @@ export default function ChatView() {
                   <>
                     {isGroup ? (
                       <>
-                        <button onClick={() => { setShowGroupBasic(true); setShowMenu(false) }}
+                        <button onClick={() => { openPanel('info'); setShowMenu(false) }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                           <Info size={14} /> {t('group.basicInfo')}
                         </button>
-                        <button onClick={() => { setShowGroupSettings(true); setShowMenu(false) }}
+                        <button onClick={() => { openPanel('settings'); setShowMenu(false) }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                           {t('group.settingsMenu')}
                         </button>
-                        <button onClick={() => { setShowWebhook(true); setShowMenu(false) }}
+                        <button onClick={() => { openPanel('webhooks'); setShowMenu(false) }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                           {t('group.webhookMenu')}
                         </button>
                         <div className="border-t border-[var(--color-hairline)] my-1" />
-                        <button onClick={() => { setShowAddMember(true); setShowMenu(false) }}
+                        <button onClick={() => { openPanel('add-member'); setShowMenu(false) }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                           <UserPlus size={14} /> {t('group.addMember')}
                         </button>
-                        <button onClick={() => { setShowMembers(true); setShowMenu(false) }}
+                        <button onClick={() => { openPanel('members'); setShowMenu(false) }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                           <Users size={14} /> {t('group.members')}
                         </button>
                       </>
                     ) : (
-                      <button onClick={() => { setShowDetail(true); setShowMenu(false) }}
+                      <button onClick={() => { openPanel('detail'); setShowMenu(false) }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                         <Info size={14} /> {t('chat.detail')}
                       </button>
                     )}
-                    <button onClick={() => { setShowHistory(true); setShowMenu(false) }}
+                    <button onClick={() => { openPanel('history'); setShowMenu(false) }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                       <Clock size={14} /> {t('chat.history')}
                     </button>
@@ -401,7 +405,7 @@ export default function ChatView() {
                   </>
                 )}
                 {isSystem && (
-                  <button onClick={() => { setShowHistory(true); setShowMenu(false) }}
+                  <button onClick={() => { openPanel('history'); setShowMenu(false) }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                     <Clock size={14} /> {t('chat.history')}
                   </button>
@@ -412,31 +416,28 @@ export default function ChatView() {
         </div>
       </div>
 
-      {showDetail && isGroup && (
-        <GroupBasicInfo convId={convId} onClose={() => setShowDetail(false)} />
+      {activePanel === 'info' && (
+        <GroupBasicInfo convId={convId} onClose={closePanel} />
       )}
-      {showGroupBasic && (
-        <GroupBasicInfo convId={convId} onClose={() => setShowGroupBasic(false)} />
+      {activePanel === 'settings' && (
+        <GroupSettings convId={convId} onClose={closePanel} />
       )}
-      {showGroupSettings && (
-        <GroupSettings convId={convId} onClose={() => setShowGroupSettings(false)} />
+      {activePanel === 'webhooks' && (
+        <WebhookPanel convId={convId} onClose={closePanel} />
       )}
-      {showWebhook && (
-        <WebhookPanel convId={convId} onClose={() => setShowWebhook(false)} />
+      {activePanel === 'members' && (
+        <MemberListView convId={convId} onClose={closePanel} />
       )}
-      {showMembers && (
-        <MemberListView convId={convId} onClose={() => setShowMembers(false)} />
-      )}
-      {showAddMember && (
+      {activePanel === 'add-member' && (
         <AddMemberView
           convId={convId}
-          onClose={() => setShowAddMember(false)}
+          onClose={closePanel}
           onAdded={() => {}}
           excludeIds={new Set()}
         />
       )}
-      {showDetail && !isGroup && (
-        <P2PDetail convId={convId} onClose={() => setShowDetail(false)} />
+      {activePanel === 'detail' && (
+        <P2PDetail convId={convId} onClose={closePanel} />
       )}
 
       {/* Group notice banner */}
@@ -462,7 +463,7 @@ export default function ChatView() {
       {!isSystem && <InputBar convId={convId} isP2p={conv?.type === ConvType.P2P} />}
 
       {/* History modal */}
-      {showHistory && <HistoryView convId={convId} onClose={() => setShowHistory(false)} />}
+      {activePanel === 'history' && <HistoryView convId={convId} onClose={closePanel} />}
       </div>
       {/* Zero-width drag handle wrapper — sits between chat area and file panel */}
       <div className="relative flex-shrink-0" style={{ width: 0 }}>
