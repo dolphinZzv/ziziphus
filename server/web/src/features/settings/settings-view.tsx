@@ -36,7 +36,7 @@ export default function SettingsView({ onClose, inline }: Props) {
     active ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-soft)] text-[var(--color-body)] hover:bg-[var(--color-hairline)]')
 
   const inner = (
-    <div className={`${inline ? 'h-full' : 'w-full sm:w-[380px] max-h-[580px]'} overflow-y-auto bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6`}
+    <div className={`${inline ? 'h-full' : 'w-full sm:w-[380px] h-full sm:h-auto max-h-[100dvh] sm:max-h-[calc(100vh-80px)]'} overflow-y-auto bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-none sm:rounded-xl p-6`}
       style={inline ? {} : { boxShadow: 'var(--shadow-lg)' }} onClick={inline ? undefined : e => e.stopPropagation()}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
@@ -111,7 +111,7 @@ export default function SettingsView({ onClose, inline }: Props) {
 
   if (inline) return inner
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex sm:items-center sm:justify-center bg-black/30" onClick={onClose}>
       {inner}
     </div>
   )

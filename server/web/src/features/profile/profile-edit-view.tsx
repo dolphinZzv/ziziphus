@@ -23,8 +23,8 @@ export default function ProfileEditView({ onClose }: Props) {
   const inputCls = 'w-full h-10 px-3.5 rounded-xl bg-[var(--color-surface-soft)] text-sm text-[var(--color-ink)] outline-none border border-[var(--color-hairline)] focus:border-[var(--color-primary)]'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-      <div className="w-full sm:w-[340px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden"
+    <div className="fixed inset-0 z-50 flex sm:items-center sm:justify-center bg-black/30" onClick={onClose}>
+      <div className="w-full sm:w-[340px] h-full sm:h-auto bg-[var(--color-surface-card)] rounded-none sm:rounded-xl overflow-hidden"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-hairline)]">

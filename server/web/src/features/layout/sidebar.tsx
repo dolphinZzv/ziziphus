@@ -6,16 +6,16 @@ import { uiStore } from '@/stores/ui-store'
 import { wsClient } from '@/services/websocket-client'
 import { MessageType } from '@/types/ws'
 import ConversationList from '@/features/conversation-list/conversation-list'
-import { SheetWrapper } from './lazy-sheets'
 import { avatarUrl } from '@/lib/file'
-import { Plus, User, Users, UserPlus, MessageCircle, Search, Menu } from 'lucide-react'
+import { Plus, User, Users, UserPlus, MessageCircle, Search } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-breakpoint'
 import { useTranslation } from 'react-i18next'
 
 export default function Sidebar() {
   const navigate = useNavigate()
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
   const { t } = useTranslation()
-  const activeSheet = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.activeSheet)
+  const isMobile = useIsMobile()
   const [showMenu, setShowMenu] = useState(false)
 
   useEffect(() => {
@@ -44,14 +44,7 @@ export default function Sidebar() {
       <div className="flex items-center justify-between px-2 h-12 border-b border-[var(--color-hairline)]">
         <div className="flex items-center gap-1 min-w-0">
           <button
-            onClick={() => uiStore.toggleSidebar()}
-            className="p-2 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors md:hidden flex-shrink-0"
-            aria-label={t('sidebar.toggle', '切换侧栏')}
-          >
-            <Menu size={18} />
-          </button>
-          <button
-            onClick={() => uiStore.openSheet('profile')}
+            onClick={() => { if (isMobile) { uiStore.toggleSidebar(); navigate('/profile') } else { uiStore.openSheet('profile') } }}
             className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink)] hover:opacity-80 min-w-0"
         >
           {user?.avatar ? (
@@ -108,10 +101,7 @@ export default function Sidebar() {
         <ConversationList />
       </div>
 
-      {/* Lazy-loaded sheets */}
-      {['newChat','addContact','createGroup','joinGroup','profile','settings','userSettings','agents','sessions','contacts','shortcuts'].map(name => (
-        <SheetWrapper key={name} name={name} activeSheet={activeSheet} onClose={() => uiStore.closeSheet()} />
-      ))}
+      {/* Lazy-loaded sheets rendered in app-layout instead */}
     </>
   )
 }

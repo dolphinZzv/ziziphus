@@ -1,7 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '@/features/layout/sidebar'
+import { SheetWrapper } from '@/features/layout/lazy-sheets'
 import { authStore } from '@/stores/auth-store'
 import { uiStore } from '@/stores/ui-store'
 import { wsClient } from '@/services/websocket-client'
@@ -10,16 +11,17 @@ import type { ConnectionStatus } from '@/services/websocket-client'
 import type { MsgPushPayload } from '@/types/ws'
 import { cn } from '@/lib/cn'
 import { useIsMobile, useIsTablet } from '@/hooks/use-breakpoint'
-import { Menu } from 'lucide-react'
 
 export default function AppLayout() {
   const { t } = useTranslation()
+  const location = useLocation()
   const isSidebarOpen = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.isSidebarOpen)
   const theme = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.theme)
   const [connStatus, setConnStatus] = useState<ConnectionStatus>('disconnected')
   const [sidebarWidth, setSidebarWidth] = useState(288)
   const isMobile = useIsMobile()
   const isTablet = useIsTablet()
+  const activeSheet = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.activeSheet)
 
   useEffect(() => {
     setConnStatus(wsClient.connectionStatus)
@@ -61,7 +63,7 @@ export default function AppLayout() {
   const connected = connStatus === 'connected'
 
   // Computed widths
-  const sideW = isMobile ? 280 : (isTablet ? 240 : sidebarWidth)
+  const sideW = isMobile ? '100%' : (isTablet ? 240 : sidebarWidth)
 
   return (
     <div className={cn('h-full w-full flex flex-col', theme === 'dark' ? 'dark' : '')}>
@@ -130,21 +132,15 @@ export default function AppLayout() {
           'flex-1 h-full flex flex-col min-w-0 bg-[var(--color-surface-soft)]',
           isMobile && isSidebarOpen && 'hidden'
         )}>
-          {/* Mobile chat header with sidebar toggle */}
-          {isMobile && (
-            <div className="flex items-center h-12 px-3 border-b border-[var(--color-hairline)] bg-[var(--color-canvas)] flex-shrink-0">
-              <button
-                onClick={() => uiStore.toggleSidebar()}
-                className="p-2 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
-                aria-label={t('sidebar.toggle', '切换侧栏')}
-              >
-                <Menu size={18} />
-              </button>
-            </div>
-          )}
+          {/* Mobile: no header when sidebar is visible (conversation list is fullscreen) */}
           <Outlet />
         </div>
       </div>
+
+      {/* Lazy-loaded sheets (rendered at root level, outside sidebar) */}
+      {['newChat','addContact','createGroup','joinGroup','profile','settings','userSettings','agents','sessions','contacts','shortcuts'].map(name => (
+        <SheetWrapper key={name} name={name} activeSheet={activeSheet} onClose={() => uiStore.closeSheet()} />
+      ))}
     </div>
   )
 }

@@ -26,7 +26,7 @@ export default function ContactList({ onClose, inline }: Props) {
   const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'
 
   const inner = (
-    <div className={`${inline ? 'h-full' : 'w-full sm:w-[380px] max-h-[500px]'} bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-xl p-6 flex flex-col overflow-hidden`}
+    <div className={`${inline ? 'h-full' : 'w-full sm:w-[380px] h-full sm:h-auto max-h-[100dvh] sm:max-h-[calc(100vh-80px)]'} bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-none sm:rounded-xl p-6 flex flex-col overflow-hidden`}
       style={inline ? {} : { boxShadow: 'var(--shadow-lg)' }} onClick={inline ? undefined : e => e.stopPropagation()}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export default function ContactList({ onClose, inline }: Props) {
 
   if (inline) return inner
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex sm:items-center sm:justify-center bg-black/30" onClick={onClose}>
       {inner}
     </div>
   )

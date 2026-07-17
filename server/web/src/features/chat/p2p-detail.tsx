@@ -81,8 +81,8 @@ export default function P2PDetail({ convId, onClose }: Props) {
   const initials = peer?.name?.charAt(0)?.toUpperCase() || '?'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-      <div className="w-full sm:w-[360px] bg-[var(--color-surface-card)] rounded-xl overflow-hidden"
+    <div className="fixed inset-0 z-50 flex sm:items-center sm:justify-center bg-black/30" onClick={onClose}>
+      <div className="w-full sm:w-[360px] h-full sm:h-auto bg-[var(--color-surface-card)] rounded-none sm:rounded-xl overflow-hidden"
         style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
 
         {/* Banner */}
