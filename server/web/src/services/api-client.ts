@@ -2,6 +2,11 @@ import { getItem as getSecureItem } from '@/lib/secure-storage'
 import { getServerUrl, getItem } from '@/lib/storage'
 import type { APIResponse } from '@/types/api'
 
+let _logout: (() => void) | null = null
+
+/** Internal: called by auth-store to wire up auto-logout on 401. */
+export function __setLogoutHandler(fn: () => void) { _logout = fn }
+
 function getBaseURL(): string {
   const custom = getServerUrl()
   return custom || window.location.origin
@@ -54,6 +59,8 @@ async function request<T>(
   if (!resp!) throw lastErr || new APIError(-1, 'Request failed')
 
   if (resp.status === 401) {
+    // Auto-logout so the user sees the login screen instead of "连接已断开"
+    _logout?.()
     throw new APIError(401, 'Unauthorized, please login again')
   }
 

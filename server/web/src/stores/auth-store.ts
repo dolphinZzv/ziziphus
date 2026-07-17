@@ -1,5 +1,5 @@
 import { getItem, setItem, removeItem } from '@/lib/secure-storage'
-import { api } from '@/services/api-client'
+import { api, __setLogoutHandler } from '@/services/api-client'
 import { wsClient } from '@/services/websocket-client'
 import type { User } from '@/types/user'
 
@@ -60,6 +60,9 @@ function getInitialState(): AuthState {
 
 let state = getInitialState()
 const listeners = new Set<() => void>()
+
+// Wire up auto-logout when API returns 401
+__setLogoutHandler(() => authStore.logout())
 
 function emit() {
   listeners.forEach(l => l())
