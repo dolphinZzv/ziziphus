@@ -3274,7 +3274,7 @@ func TestFileHandler_resizeImage(t *testing.T) {
 	png.Encode(&buf, img)
 
 	// Resize to 2x2
-	result, ct, err := resizeImage(buf.Bytes(), 2, 2, ".png")
+	result, ct, err := resizeImage(buf.Bytes(), 2, 2, ".png", false)
 	if err != nil {
 		t.Fatalf("resizeImage error: %v", err)
 	}
@@ -3292,7 +3292,7 @@ func TestFileHandler_resizeImage_JPG(t *testing.T) {
 	png.Encode(&buf, img)
 
 	// Resize with only width
-	result, ct, err := resizeImage(buf.Bytes(), 2, 0, ".jpg")
+	result, ct, err := resizeImage(buf.Bytes(), 2, 0, ".jpg", false)
 	if err != nil {
 		t.Fatalf("resizeImage error: %v", err)
 	}

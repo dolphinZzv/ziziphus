@@ -323,11 +323,12 @@ func (h *FileHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 
 	wStr := r.URL.Query().Get("w")
 	hStr := r.URL.Query().Get("h")
+	noUpscale := r.URL.Query().Get("no_upscale") == "1"
 	if (wStr != "" || hStr != "") && isImageExt(ext) {
 		tw, _ := strconv.Atoi(wStr)
 		th, _ := strconv.Atoi(hStr)
 		if tw > 0 || th > 0 {
-			if resized, ct, err := resizeImage(data, tw, th, ext); err == nil {
+			if resized, ct, err := resizeImage(data, tw, th, ext, noUpscale); err == nil {
 				w.Header().Set("Content-Type", ct)
 				w.Header().Set("Cache-Control", "public, max-age=2592000")
 				_, _ = w.Write(resized)
@@ -378,7 +379,7 @@ func decodeImageDimensions(data []byte) (int, int, error) {
 	return cfg.Width, cfg.Height, nil
 }
 
-func resizeImage(data []byte, tw, th int, ext string) ([]byte, string, error) {
+func resizeImage(data []byte, tw, th int, ext string, noUpscale ...bool) ([]byte, string, error) {
 	src, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return nil, "", err
@@ -387,6 +388,11 @@ func resizeImage(data []byte, tw, th int, ext string) ([]byte, string, error) {
 	sb := src.Bounds()
 	sw, sh := sb.Dx(), sb.Dy()
 	if sw == 0 || sh == 0 {
+		return data, contentTypeByExt(ext), nil
+	}
+
+	// If noUpscale is set and the image is smaller than requested, return original
+	if len(noUpscale) > 0 && noUpscale[0] && tw > 0 && sw <= tw && (th == 0 || sh <= th) {
 		return data, contentTypeByExt(ext), nil
 	}
 

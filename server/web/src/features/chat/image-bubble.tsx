@@ -9,7 +9,7 @@ interface Props { body: string; msgId: number }
 function thumbUrl(original: string, size = 200): string {
   if (!original || original.includes('?') || original.startsWith('data:') || original.startsWith('blob:')) return original
   if (original.endsWith('.svg')) return original
-  return `${original}?w=${size}`
+  return `${original}?w=${size}&no_upscale=1`
 }
 
 export default function ImageBubble({ body, _msgId }: Props) {

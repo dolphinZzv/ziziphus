@@ -206,7 +206,7 @@ export default function InputBar({ convId, isP2p }: Props) {
       )}
 
       {/* Input area — macOS style: buttons at bottom-right */}
-      <div className="pt-3">
+      <div className="pt-1 md:pt-2">
         <div className="relative">
           <MarkdownInput
             value={text}
