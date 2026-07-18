@@ -171,7 +171,9 @@
     "webhookUsageExamples": "Exemples d'utilisation",
     "webhookHeadersHint": "Un par ligne, format : Clé: Valeur",
     "bgImage": "Arrière-plan du chat",
-    "bgImageHint": "Taille recommandée 1080×1920"
+    "bgImageHint": "Taille recommandée 1080×1920",
+    "allowDirectJoin": "Permettre à tous",
+    "allowDirectJoinHint": "Les utilisateurs peuvent rejoindre sans approbation"
   },
   "group": {
     "detail": "Infos du groupe",

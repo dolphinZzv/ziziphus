@@ -171,7 +171,9 @@
     "webhookUsageExamples": "使用例",
     "webhookHeadersHint": "1行につき1つ、形式: Key: Value",
     "bgImage": "チャット背景",
-    "bgImageHint": "推奨サイズ 1080×1920"
+    "bgImageHint": "推奨サイズ 1080×1920",
+    "allowDirectJoin": "誰でも参加を許可",
+    "allowDirectJoinHint": "承認なしで直接グループに参加できます"
   },
   "group": {
     "detail": "グループ情報",

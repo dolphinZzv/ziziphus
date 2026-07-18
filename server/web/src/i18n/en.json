@@ -171,7 +171,9 @@
     "webhookUsageExamples": "Usage Examples",
     "webhookHeadersHint": "One per line, format: Key: Value",
     "bgImage": "Chat Background",
-    "bgImageHint": "Recommended size 1080×1920"
+    "bgImageHint": "Recommended size 1080×1920",
+    "allowDirectJoin": "Allow Anyone to Join",
+    "allowDirectJoinHint": "Users can join directly without approval"
   },
   "group": {
     "detail": "Group Info",

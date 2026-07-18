@@ -171,7 +171,9 @@
     "webhookUsageExamples": "사용 예시",
     "webhookHeadersHint": "줄당 하나, 형식: Key: Value",
     "bgImage": "채팅 배경",
-    "bgImageHint": "권장 크기 1080×1920"
+    "bgImageHint": "권장 크기 1080×1920",
+    "allowDirectJoin": "모든 사람의 가입 허용",
+    "allowDirectJoinHint": "승인 없이 바로 그룹에 가입할 수 있습니다"
   },
   "group": {
     "detail": "그룹 정보",

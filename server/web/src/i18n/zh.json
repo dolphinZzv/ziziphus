@@ -171,7 +171,9 @@
     "webhookUsageExamples": "使用示例",
     "webhookHeadersHint": "每行一个，格式：Key: Value",
     "bgImage": "聊天背景",
-    "bgImageHint": "建议尺寸 1080×1920"
+    "bgImageHint": "建议尺寸 1080×1920",
+    "allowDirectJoin": "允许任何人加入",
+    "allowDirectJoinHint": "开启后用户可直接加入群组，无需审核"
   },
   "group": {
     "detail": "群组信息",
