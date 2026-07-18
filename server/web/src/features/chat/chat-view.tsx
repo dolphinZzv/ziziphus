@@ -21,7 +21,7 @@ import WebhookPanel from '@/features/group/webhook-panel'
 import MemberListView from '@/features/group/member-list-view'
 import AddMemberView from '@/features/group/add-member-view'
 import HistoryView from '@/features/history/history-view'
-import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X, Trash2, UserPlus, ArrowLeft, Pin, PinOff } from 'lucide-react'
+import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X, Trash2, UserPlus, ArrowLeft, Pin, PinOff, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useIsMobile } from '@/hooks/use-breakpoint'
@@ -71,6 +71,8 @@ export default function ChatView() {
   const [dragging, setDragging] = useState(false)
   const [groupNotice, setGroupNotice] = useState('')
   const [convColor, setConvColor] = useState('')
+  const [detailName, setDetailName] = useState('')
+  const [detailAvatar, setDetailAvatar] = useState('')
   const lastMarkedRef = useRef<Map<string, number>>(new Map())
 
   // --- Feature 1: In-chat search ---
@@ -169,9 +171,11 @@ export default function ChatView() {
     conversationService.getDetail(convId).then(d => {
       setGroupNotice(d.type === ConvType.Group && d.notice ? d.notice : '')
       setConvColor(d.primary_color || '')
+      setDetailName(d.name || '')
+      setDetailAvatar(d.avatar || '')
       const me = d.members?.find(m => m.user_id === user?.user_id)
       setIsOwner(me?.role === ConvRole.Owner)
-    }).catch(() => { setGroupNotice(''); setConvColor(''); setIsOwner(false) })
+    }).catch(() => { setGroupNotice(''); setConvColor(''); setDetailName(''); setDetailAvatar(''); setIsOwner(false) })
     // Fetch conversation background image
     conversationService.getSettings(convId).then(res => {
       setBgImage((res.settings as any)?.background_image || '')
@@ -214,8 +218,8 @@ export default function ChatView() {
   if (!convId) return null
 
   const isSystem = conv?.type === ConvType.System
-  const displayName = isSystem ? t('conversation.systemMessage') : (conv?.name || convId)
-  const displayAvatar = conv?.avatar || ''
+  const displayName = isSystem ? t('conversation.systemMessage') : (conv?.name || detailName || convId)
+  const displayAvatar = conv?.avatar || detailAvatar || ''
   const initials = displayName.charAt(0).toUpperCase()
 
   return (
@@ -242,6 +246,11 @@ export default function ChatView() {
           <div className="relative flex-shrink-0">
             {displayAvatar ? (
               <img src={avatarUrl(displayAvatar)} alt="" className="w-7 h-7 rounded-full object-cover" />
+            ) : isSystem ? (
+              <div className="w-7 h-7 rounded-full flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
+                <MessageCircle size={15} className="text-white" />
+              </div>
             ) : (
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold"
                 style={{ background: isGroup
