@@ -7,8 +7,15 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source and embedded frontend dist
+# Copy source
 COPY . .
+
+# Generate swagger docs and placeholder webembed dist (no Node.js in builder)
+RUN go install github.com/swaggo/swag/v2/cmd/swag@latest && \
+    swag init -g cmd/ziziphus/main.go -o docs/ && \
+    mkdir -p internal/webembed/dist && \
+    printf '<!doctype html>\n<html lang="en">\n<head><meta charset="UTF-8"><title>Ziziphus</title></head>\n<body></body>\n</html>\n' > internal/webembed/dist/index.html && \
+    printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%23000"/></svg>\n' > internal/webembed/dist/favicon.svg
 
 # Build static binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
