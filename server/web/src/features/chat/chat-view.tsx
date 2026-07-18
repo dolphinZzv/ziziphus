@@ -223,7 +223,7 @@ export default function ChatView() {
 
   if (!convId) return null
 
-  const isSystem = conv?.type === ConvType.System
+  const isSystem = conv?.type === ConvType.System || convId.startsWith('sys:')
   const displayName = isSystem ? t('conversation.systemMessage') : (conv?.name || detailName || convId)
   const displayAvatar = conv?.avatar || detailAvatar || ''
   const initials = displayName.charAt(0).toUpperCase()
