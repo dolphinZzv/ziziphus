@@ -50,7 +50,10 @@ export default function SessionList({ onClose, inline }: Props) {
                 {deviceLabel(s.device)} {s.device_name || ''}
                 {s.session_id === currentSessionId && <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-green-500/10 text-green-600 font-medium uppercase tracking-wider">{t('session.current')}</span>}
               </div>
-              <div className="text-[11px] text-[var(--color-muted)]">{s.last_active ? new Date(s.last_active).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}</div>
+              <div className="text-[11px] text-[var(--color-muted)]">
+                {s.client_ip && <span className="mr-2 font-mono">{s.client_ip}</span>}
+                {s.last_active ? new Date(s.last_active).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+              </div>
             </div>
             {s.session_id !== currentSessionId && (
               <button onClick={() => handleEndSession(s.session_id)} className="p-1.5 rounded-xl hover:bg-[var(--destructive)]/10 opacity-0 group-hover:opacity-100 text-[var(--destructive)] transition-all"><LogOut size={14} /></button>
