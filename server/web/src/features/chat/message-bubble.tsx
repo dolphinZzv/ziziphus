@@ -7,7 +7,7 @@ import { authStore } from '@/stores/auth-store'
 import { formatTime } from '@/lib/time'
 import { avatarUrl } from '@/lib/file'
 import { cn } from '@/lib/cn'
-import { Check, CheckCheck, Clock, AlertCircle, Copy, Reply, Cpu, PenLine, Trash2, MoreHorizontal } from 'lucide-react'
+import { Check, CheckCheck, Clock, AlertCircle, Copy, Reply, Cpu, PenLine, Trash2, MoreHorizontal, Bot } from 'lucide-react'
 import TextBubble from './text-bubble'
 import ImageBubble from './image-bubble'
 import FileBubble from './file-bubble'
@@ -222,7 +222,7 @@ export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, h
         message.sender_id.startsWith('webhook:') ? (
           <div className="flex-shrink-0 self-start mt-1">
             <div className="w-8 h-8 rounded-full bg-white dark:bg-[var(--color-surface-card)] flex items-center justify-center shadow-sm">
-              <Cpu size={16} className="text-[var(--color-muted)]" />
+              <Bot size={16} className="text-[var(--color-muted)]" />
             </div>
           </div>
         ) : (
