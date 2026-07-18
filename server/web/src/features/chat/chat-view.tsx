@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore, useCallback } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, useCallback, useMemo } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { chatStore } from '@/stores/chat-store'
 import { authStore } from '@/stores/auth-store'
@@ -36,17 +36,19 @@ export default function ChatView() {
   const { t } = useTranslation()
   const rawMessages = useSyncExternalStore(chatStore.subscribe, () => chatStore.getMessages(convId || ''))
   // Filter: remove agent timeline append-only messages that were merged into parents
-  const parentMsgIds = new Set<number>()
-  const messages = rawMessages.filter(m => {
-    if (m.msg_id > 0) parentMsgIds.add(m.msg_id)
-    if (m.content_type === ContentType.AgentTimeline) {
-      try {
-        const tm = JSON.parse(m.body)
-        if (tm.parentMsgID > 0 && parentMsgIds.has(tm.parentMsgID)) return false
-      } catch {}
-    }
-    return true
-  })
+  const messages = useMemo(() => {
+    const parentMsgIds = new Set<number>()
+    return rawMessages.filter(m => {
+      if (m.msg_id > 0) parentMsgIds.add(m.msg_id)
+      if (m.content_type === ContentType.AgentTimeline) {
+        try {
+          const tm = JSON.parse(m.body)
+          if (tm.parentMsgID > 0 && parentMsgIds.has(tm.parentMsgID)) return false
+        } catch {}
+      }
+      return true
+    })
+  }, [rawMessages])
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
   const conversations = useSyncExternalStore(conversationStore.subscribe, () => conversationStore.state.conversations)
   const isMobile = useIsMobile()
@@ -69,7 +71,7 @@ export default function ChatView() {
   const [dragging, setDragging] = useState(false)
   const [groupNotice, setGroupNotice] = useState('')
   const [convColor, setConvColor] = useState('')
-  const markedReadRef = useRef<Map<string, number>>(new Map())
+  const lastMarkedRef = useRef<Map<string, number>>(new Map())
 
   // --- Feature 1: In-chat search ---
   const [showSearch, setShowSearch] = useState(false)
@@ -117,7 +119,7 @@ export default function ChatView() {
 
   // Set browser chrome/tab color to conversation's primary color, fallback to user's
   useEffect(() => {
-    const color = convColor || user?.primary_color || '#0F172A'
+    const color = convColor || conv?.primary_color || user?.primary_color || '#0F172A'
     let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null
     if (meta) meta.content = color
     else {
@@ -201,13 +203,12 @@ export default function ChatView() {
     if (msgs.length === 0) return
     const maxMsgId = Math.max(...msgs.map(m => m.msg_id))
     if (maxMsgId <= 0) return
-    // Only call server if this is a new maxId
-    const prev = markedReadRef.current.get(convId) || 0
-    if (maxMsgId > prev) {
-      markedReadRef.current.set(convId, maxMsgId)
-      conversationService.markRead(convId, maxMsgId).catch(() => {})
-      conversationStore.markRead(convId)
-    }
+    const prev = lastMarkedRef.current.get(convId) || 0
+    if (maxMsgId <= prev) return
+    lastMarkedRef.current.set(convId, maxMsgId)
+    conversationService.markRead(convId, maxMsgId)
+      .then(() => conversationStore.markRead(convId))
+      .catch((e) => { console.error('[markRead] failed:', e) })
   }, [convId, messages])
 
   if (!convId) return null

@@ -104,18 +104,20 @@ func (r *ConvRepo) UpdateLastMsg(ctx context.Context, convID string, msgID int64
 }
 
 type ConvListItem struct {
-	ConvID      string           `json:"conv_id"`
-	Type        model.ConvType   `json:"type"`
-	Name        string           `json:"name"`
-	Avatar      string           `json:"avatar"`
-	UnreadCount int64            `json:"unread_count"`
-	LastMessage *LastMessageInfo `json:"last_message,omitempty"`
-	LastMsgAt   int64            `json:"last_msg_at"`
-	Role        model.ConvRole   `json:"role"`
-	Mute        bool             `json:"mute"`
-	MentionMe   bool             `json:"mention_me"`
-	PartnerType int              `json:"partner_type"`
-	Pinned      bool             `json:"pinned"`
+	ConvID        string           `json:"conv_id"`
+	Type          model.ConvType   `json:"type"`
+	Name          string           `json:"name"`
+	Avatar        string           `json:"avatar"`
+	PrimaryColor  string           `json:"primary_color"`
+	SecondaryColor string          `json:"secondary_color"`
+	UnreadCount   int64            `json:"unread_count"`
+	LastMessage   *LastMessageInfo `json:"last_message,omitempty"`
+	LastMsgAt     int64            `json:"last_msg_at"`
+	Role          model.ConvRole   `json:"role"`
+	Mute          bool             `json:"mute"`
+	MentionMe     bool             `json:"mention_me"`
+	PartnerType   int              `json:"partner_type"`
+	Pinned        bool             `json:"pinned"`
 }
 
 type LastMessageInfo struct {
@@ -205,12 +207,12 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 	}
 	if len(partnerIDs) > 0 {
 		type partnerInfo struct {
-			id, name, nickname string
-			userType           int
+			id, name, nickname, avatar, primaryColor, secondaryColor string
+			userType                                                  int
 		}
 		partnerMap := make(map[string]*partnerInfo, len(partnerIDs))
 		rows, err := r.pool.Query(ctx,
-			`SELECT u.id, u.name, u.type, COALESCE(c.nickname, '')
+			`SELECT u.id, u.name, u.type, COALESCE(u.avatar, ''), COALESCE(u.primary_color, ''), COALESCE(u.secondary_color, ''), COALESCE(c.nickname, '')
 			 FROM users u
 			 LEFT JOIN contacts c ON c.user_id = $1 AND c.contact_id = u.id
 			 WHERE u.id = ANY($2)`, userID, partnerIDs)
@@ -220,7 +222,7 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 			defer rows.Close()
 			for rows.Next() {
 				var info partnerInfo
-				if err := rows.Scan(&info.id, &info.name, &info.userType, &info.nickname); err != nil {
+				if err := rows.Scan(&info.id, &info.name, &info.userType, &info.avatar, &info.primaryColor, &info.secondaryColor, &info.nickname); err != nil {
 					continue
 				}
 				partnerMap[info.id] = &info
@@ -233,6 +235,9 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 					}
 					for _, idx := range indices {
 						items[idx].Name = displayName
+						items[idx].Avatar = info.avatar
+						items[idx].PrimaryColor = info.primaryColor
+						items[idx].SecondaryColor = info.secondaryColor
 						items[idx].PartnerType = info.userType
 					}
 				}
@@ -268,7 +273,7 @@ func (r *ConvRepo) RemoveMember(ctx context.Context, convID, userID string) erro
 func (r *ConvRepo) GetMembers(ctx context.Context, convID string) ([]*model.ConvMember, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT cm.conv_id, cm.user_id, cm.role, cm.nickname, cm.mute, cm.joined_at,
-		        COALESCE(u.type, 0), COALESCE(u.wake_mode, 0)
+		        COALESCE(u.type, 0), COALESCE(u.wake_mode, 0), COALESCE(u.name, ''), COALESCE(u.avatar, ''), COALESCE(u.primary_color, ''), COALESCE(u.secondary_color, '')
 		 FROM conv_members cm
 		 LEFT JOIN users u ON u.id = cm.user_id
 		 WHERE cm.conv_id = $1 ORDER BY cm.joined_at`, convID)
@@ -281,7 +286,7 @@ func (r *ConvRepo) GetMembers(ctx context.Context, convID string) ([]*model.Conv
 		m := &model.ConvMember{}
 		var joinedAt time.Time
 		if err := rows.Scan(&m.ConvID, &m.UserID, &m.Role, &m.Nickname, &m.Mute, &joinedAt,
-			&m.UserType, &m.WakeMode); err != nil {
+			&m.UserType, &m.WakeMode, &m.Name, &m.Avatar, &m.PrimaryColor, &m.SecondaryColor); err != nil {
 			return nil, err
 		}
 		m.JoinedAt = joinedAt.UnixMilli()

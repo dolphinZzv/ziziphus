@@ -101,7 +101,7 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
         </div>
 
         {/* Avatar — overlaps banner */}
-        <div className="flex justify-center -mt-10 mb-3">
+        <div className="flex justify-center -mt-10 mb-3 relative z-10">
           {peer?.avatar ? (
             <img src={avatarUrl(peer.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
           ) : (

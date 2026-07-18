@@ -41,6 +41,10 @@ export interface ConvMember {
   joined_at: number
   user_type: UserType
   wake_mode: WakeMode
+  avatar?: string
+  name?: string
+  primary_color?: string
+  secondary_color?: string
 }
 
 export interface JoinRequest {
@@ -67,6 +71,8 @@ export interface ConvListItem {
   type: ConvType
   name: string
   avatar: string
+  primary_color?: string
+  secondary_color?: string
   unread_count: number
   last_message?: LastMessageInfo
   last_msg_at: number
