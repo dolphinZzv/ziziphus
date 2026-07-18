@@ -16,9 +16,9 @@ func NewUserRepo(pool DBPool) *UserRepo {
 	return &UserRepo{pool: pool}
 }
 
-var userAllCols = "id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language"
+var userAllCols = "id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100)"
 
-var userPublicCols = "id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language"
+var userPublicCols = "id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100)"
 
 func (r *UserRepo) Create(ctx context.Context, u *model.User) error {
 	_, err := r.pool.Exec(ctx,
@@ -33,7 +33,7 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*model.User, error) 
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
 		`SELECT `+userAllCols+` FROM users WHERE id = $1`, id).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language)
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit)
 	if err != nil {
 		logger.Error("GetByID query failed",
 			"id", id,
@@ -55,7 +55,7 @@ func (r *UserRepo) GetByIDs(ctx context.Context, ids []string) (map[string]*mode
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit); err != nil {
 			return nil, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -82,7 +82,7 @@ func (r *UserRepo) Search(ctx context.Context, q string, page, size int) ([]*mod
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit); err != nil {
 			return nil, 0, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -96,7 +96,7 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*model.User, e
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
 		`SELECT `+userAllCols+` FROM users WHERE email = $1`, email).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language)
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (r *UserRepo) GetByAccount(ctx context.Context, account string) (*model.Use
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
 		`SELECT `+userAllCols+` FROM users WHERE account = $1`, account).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language)
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (r *UserRepo) ListAgents(ctx context.Context, uid string) ([]*model.User, e
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit); err != nil {
 			return nil, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -168,7 +168,7 @@ func (r *UserRepo) GetByAPIKey(ctx context.Context, apiKey string) (*model.User,
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
 		`SELECT `+userPublicCols+` FROM users WHERE api_key = $1`, apiKey).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language)
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit)
 	if err != nil {
 		return nil, err
 	}

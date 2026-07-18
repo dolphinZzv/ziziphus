@@ -43,6 +43,7 @@ type User struct {
 	Language        string         `json:"language,omitempty"`
 	Discoverable    bool           `json:"discoverable"`
 	AllowDirectChat bool           `json:"allow_direct_chat"`
+	ConvLimit       int            `json:"conv_limit"`
 	CreatedAt       int64          `json:"created_at"`
 }
 

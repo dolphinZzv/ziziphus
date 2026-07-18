@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     name        VARCHAR(256) NOT NULL DEFAULT '',
     owner_id    VARCHAR(32) NOT NULL DEFAULT '',
     avatar      VARCHAR(256) NOT NULL DEFAULT '',
-    max_members INT NOT NULL DEFAULT 200,
+    max_members INT NOT NULL DEFAULT 100,
     last_msg_id BIGINT NOT NULL DEFAULT 0,
     last_msg_at TIMESTAMP,
     created_at  TIMESTAMP NOT NULL DEFAULT NOW()
