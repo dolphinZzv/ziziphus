@@ -229,7 +229,7 @@ test.describe('Group Sharecard', () => {
     await page.waitForTimeout(2000)
 
     // ✅ Verify: either navigated to chat (direct join) or shows "sent" message
-    const isInChat = await page.evaluate(() => window.location.pathname.startsWith('/chat/'))
+    const isInChat = await page.evaluate(() => window.location.pathname.startsWith('/conversations/'))
       .catch(() => false)
     const sentVisible = await page.getByText('Join request sent').or(page.getByText('已发送加入请求'))
       .isVisible({ timeout: 3000 }).catch(() => false)
@@ -322,8 +322,26 @@ test.describe('Group Sharecard', () => {
     await page.goto(`/group-card/${shareToken}`)
     await page.waitForTimeout(2000)
 
-    // ✅ Verify: Carol is redirected to the chat page since she's already a member
-    await expect(page).toHaveURL(/\/chat\//, { timeout: 10000 })
+    // ✅ Verify: "Join Group" button is shown (Carol is logged in)
+    await expect(
+      page.getByText('Join Group', { exact: true }).or(page.getByText('加入群组', { exact: true }))
+    ).toBeVisible({ timeout: 10000 })
+
+    // Click "Join Group" → confirmation dialog
+    await page.getByText('Join Group', { exact: true }).or(page.getByText('加入群组', { exact: true })).click()
+    await page.waitForTimeout(500)
+
+    // ✅ Verify: confirmation dialog shows
+    await expect(
+      page.getByText('Join this group?').or(page.getByText('确认加入该群组？'))
+    ).toBeVisible({ timeout: 3000 })
+
+    // Confirm join
+    await page.getByText('Confirm', { exact: true }).or(page.getByText('确定', { exact: true })).click()
+    await page.waitForTimeout(3000)
+
+    // ✅ Verify: Carol is redirected to the conversations page since she's already a member
+    await expect(page).toHaveURL(/\/conversations\//, { timeout: 10000 })
 
     await ctx.close()
   })

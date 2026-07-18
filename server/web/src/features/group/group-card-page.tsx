@@ -44,13 +44,13 @@ export default function GroupCardPage() {
     try {
       const result = await conversationService.requestJoin(card.conv_id)
       if (result.joined) {
-        navigate(`/chat/${card.conv_id}`)
+        navigate(`/conversations/${card.conv_id}`)
       } else {
         setJoinState('sent')
       }
     } catch (e: any) {
       if ((e as any)?.key === 'err.already_member') {
-        navigate(`/chat/${card.conv_id}`)
+        navigate(`/conversations/${card.conv_id}`)
       } else {
         setJoinState('idle')
       }
