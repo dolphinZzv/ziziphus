@@ -22,6 +22,10 @@ COPY server/ ./
 # Inject web dist from the webbuilder stage into the embed directory
 COPY --from=webbuilder /web/dist/ ./internal/webembed/dist/
 
+# Generate swagger docs
+RUN go install github.com/swaggo/swag/v2/cmd/swag@latest && \
+    swag init -g cmd/ziziphus/main.go -o docs/
+
 # Static binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -o ziziphus ./cmd/ziziphus/
