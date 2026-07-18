@@ -5,7 +5,7 @@ import { wsClient } from '@/services/websocket-client'
 import { notifySound, notifyTitle } from '@/lib/notify'
 import { nextClientSeq } from '@/lib/storage'
 import { MessageType } from '@/types/ws'
-import type { WSFrame, MsgSendPayload, MsgPushPayload, MsgReadNotifyPayload, TypingPayload } from '@/types/ws'
+import type { MsgPushPayload } from '@/types/ws'
 import { ContentType, MsgStatus, type Message } from '@/types/message'
 import type { MsgEditPushPayload, MsgRecallPushPayload } from '@/types/ws'
 import { conversationStore } from '@/stores/conversation-store'
@@ -263,7 +263,7 @@ export const chatStore = {
     state = { ...state, messagesByConvId }; emit()
   },
 
-  updateMessageStatus(convId: string, key: number, status: MsgStatus, isError = false) {
+  updateMessageStatus(convId: string, key: number, status: MsgStatus) {
     const messagesByConvId = new Map(state.messagesByConvId)
     const messages = (messagesByConvId.get(convId) || []).map(m => {
       if (m.msg_id === key || m.client_seq === key) {

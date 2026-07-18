@@ -15,7 +15,6 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [appName, setAppName] = useState('Ziziphus')
-  const [appHeadline, setAppHeadline] = useState('')
   const [email, setEmail] = useState('')
   const [localError, setLocalError] = useState('')
 

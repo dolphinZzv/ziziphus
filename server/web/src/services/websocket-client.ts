@@ -1,11 +1,7 @@
 import { getItem as getSecureItem } from '@/lib/secure-storage'
 import { getItem, getDeviceId, safeUUID } from '@/lib/storage'
-import { MessageType, type WSFrame, type MsgPushPayload } from '@/types/ws'
-import type {
-  SyncResPayload,
-  MsgReadNotifyPayload, SessionEventPayload, SessionRecoverPayload,
-  SessionRecoverAckPayload, TypingPayload, ErrorPayload,
-} from '@/types/ws'
+import { MessageType, type WSFrame } from '@/types/ws'
+import type { ErrorPayload, SessionRecoverAckPayload } from '@/types/ws'
 
 type MessageHandler = (payload: unknown, frame: WSFrame) => void
 

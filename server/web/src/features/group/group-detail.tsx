@@ -25,9 +25,8 @@ export default function GroupDetail({ convId, onClose }: Props) {
   const [editName, setEditName] = useState('')
   const [editingNotice, setEditingNotice] = useState(false)
   const [editNotice, setEditNotice] = useState('')
-  const [addQuery, setAddQuery] = useState('')
+  const [addQuery] = useState('')
   const [addResults, setAddResults] = useState<User[]>([])
-  const [showNotice, setShowNotice] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
   const [uploadingCover, setUploadingCover] = useState(false)
@@ -159,8 +158,6 @@ export default function GroupDetail({ convId, onClose }: Props) {
     } catch (e) { console.error(e) }
   }
 
-  const inputSm = 'w-full h-9 px-3 rounded-xl bg-[var(--color-surface-card)] text-sm border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
-
   return (
     <div className="fixed inset-0 z-50 flex sm:items-center sm:justify-center bg-black/30" onClick={onClose}>
       <div className="w-full sm:w-[420px] h-full sm:h-auto max-h-[100dvh] sm:max-h-[calc(100vh-80px)] bg-[var(--color-surface-card)] rounded-none sm:rounded-xl overflow-hidden flex flex-col"
@@ -220,7 +217,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
                 <Bell size={12} /> {t('group.notice')}
               </span>
               {isOwner && (
-                <button onClick={() => { setEditNotice(detail.notice || ''); setEditingNotice(true); setShowNotice(true) }}
+                <button onClick={() => { setEditNotice(detail.notice || ''); setEditingNotice(true) }}
                   className="text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)] flex items-center gap-1">
                   <Edit2 size={11} />{detail.notice ? t('group.noticeEdit') : t('group.noticeAdd')}
                 </button>

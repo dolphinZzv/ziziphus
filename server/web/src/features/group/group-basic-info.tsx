@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { conversationService } from '@/services/conversation-service'
-import { conversationStore } from '@/stores/conversation-store'
 import { userService } from '@/services/user-service'
 import { fileService } from '@/services/file-service'
 import { avatarUrl } from '@/lib/file'
@@ -52,7 +51,6 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
 
   const me = detail.members.find(m => m.user_id === currentUserId)
   const isAdmin = me?.role === ConvRole.Admin || me?.role === ConvRole.Owner
-  const isOwner = me?.role === ConvRole.Owner
   const uname = (id: string) => userMap[id]?.name || id
 
   const actions = {
