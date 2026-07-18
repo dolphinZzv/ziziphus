@@ -87,7 +87,7 @@ func (h *ConvHandler) sendSysMsgWithName(ctx context.Context, convID, key, userI
 	if u, err := h.userGetter.GetByID(ctx, userID); err == nil && u.Name != "" {
 		name = u.Name
 	}
-	args := []interface{}{name}
+	args := []any{name}
 	for _, e := range extra {
 		args = append(args, e)
 	}
@@ -172,7 +172,7 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 
 	unread, _ := h.seqCache.GetUnreadCount(r.Context(), userID, convID)
 
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"conv_id":       conv.ConvID,
 		"type":          conv.Type,
 		"name":          conv.Name,
@@ -206,7 +206,7 @@ type updateGroupReq struct {
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
 // @Param body body updateGroupReq true "Update group request"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 403 {object} APIResponse
 // @Failure 404 {object} APIResponse
@@ -339,7 +339,7 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := map[string]interface{}{
+	resp := map[string]any{
 		"conv_id": convID,
 		"name":    name,
 		"avatar":  avatar,
@@ -362,7 +362,7 @@ func (h *ConvHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security Bearer
 // @Param body body createGroupReq true "Create group request"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /conversations/group [post]
@@ -403,7 +403,7 @@ func (h *ConvHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 		_ = h.convRepo.UpdatePrimaryColor(r.Context(), conv.ConvID, req.PrimaryColor)
 	}
 
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"conv_id": conv.ConvID,
 		"name":    conv.Name,
 	})
@@ -420,7 +420,7 @@ type createP2PReq struct {
 // @Produce json
 // @Security Bearer
 // @Param body body createP2PReq true "Create P2P request"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 403 {object} APIResponse
 // @Failure 500 {object} APIResponse
@@ -465,7 +465,7 @@ func (h *ConvHandler) CreateP2P(w http.ResponseWriter, r *http.Request) {
 		partnerName = partner.Name
 	}
 
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"conv_id": conv.ConvID,
 		"type":    conv.Type,
 		"name":    partnerName,
@@ -484,7 +484,7 @@ type addMembersReq struct {
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
 // @Param body body addMembersReq true "Add members request"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 403 {object} APIResponse
 // @Failure 500 {object} APIResponse
@@ -538,7 +538,7 @@ func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"conv_id": convID})
+	JSON(w, map[string]any{"conv_id": convID})
 }
 
 // @Summary Request to join a conversation
@@ -548,7 +548,7 @@ func (h *ConvHandler) AddMembers(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 403 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /conversations/{conv_id}/join-requests [post]
@@ -565,7 +565,7 @@ func (h *ConvHandler) RequestJoin(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"conv_id": convID, "joined": joined})
+	JSON(w, map[string]any{"conv_id": convID, "joined": joined})
 }
 
 // @Summary List join requests
@@ -606,7 +606,7 @@ func (h *ConvHandler) ListJoinRequests(w http.ResponseWriter, r *http.Request) {
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
 // @Param user_id path string true "User ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 403 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /conversations/{conv_id}/join-requests/{user_id}/approve [post]
@@ -623,7 +623,7 @@ func (h *ConvHandler) ApproveJoinRequest(w http.ResponseWriter, r *http.Request)
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"conv_id": convID, "user_id": userID})
+	JSON(w, map[string]any{"conv_id": convID, "user_id": userID})
 }
 
 // @Summary Reject a join request
@@ -634,7 +634,7 @@ func (h *ConvHandler) ApproveJoinRequest(w http.ResponseWriter, r *http.Request)
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
 // @Param user_id path string true "User ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 403 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /conversations/{conv_id}/join-requests/{user_id}/reject [post]
@@ -651,7 +651,7 @@ func (h *ConvHandler) RejectJoinRequest(w http.ResponseWriter, r *http.Request) 
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"conv_id": convID, "user_id": userID})
+	JSON(w, map[string]any{"conv_id": convID, "user_id": userID})
 }
 
 // @Summary Remove a member from a conversation
@@ -662,7 +662,7 @@ func (h *ConvHandler) RejectJoinRequest(w http.ResponseWriter, r *http.Request) 
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
 // @Param user_id path string true "User ID of the member to remove"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 403 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /conversations/{conv_id}/members/{user_id} [delete]
@@ -682,7 +682,7 @@ func (h *ConvHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	if h.sysMsg != nil {
 		h.sendSysMsgWithName(r.Context(), convID, "sys.member_removed", targetID)
 	}
-	JSON(w, map[string]interface{}{"conv_id": convID})
+	JSON(w, map[string]any{"conv_id": convID})
 }
 
 // @Summary Leave a conversation
@@ -692,7 +692,7 @@ func (h *ConvHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 500 {object} APIResponse
 // @Router /conversations/{conv_id}/leave [post]
 func (h *ConvHandler) Leave(w http.ResponseWriter, r *http.Request) {
@@ -706,7 +706,7 @@ func (h *ConvHandler) Leave(w http.ResponseWriter, r *http.Request) {
 	if h.sysMsg != nil {
 		h.sendSysMsgWithName(r.Context(), convID, "sys.member_left", userID)
 	}
-	JSON(w, map[string]interface{}{"conv_id": convID})
+	JSON(w, map[string]any{"conv_id": convID})
 }
 
 type markReadReq struct {
@@ -721,7 +721,7 @@ type markReadReq struct {
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
 // @Param body body markReadReq true "Mark read request"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 403 {object} APIResponse
 // @Failure 500 {object} APIResponse
@@ -753,7 +753,7 @@ func (h *ConvHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		logger.Error("readMarker is nil, mark read skipped", "conv_id", convID, "user_id", userID, "msg_id", req.MsgID)
 	}
 
-	JSON(w, map[string]interface{}{"conv_id": convID, "msg_id": req.MsgID})
+	JSON(w, map[string]any{"conv_id": convID, "msg_id": req.MsgID})
 }
 
 // @Summary Search groups
@@ -796,7 +796,7 @@ func (h *ConvHandler) SearchGroups(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Security Bearer
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 500 {object} APIResponse
 // @Router /conversations/unread/total [get]
 func (h *ConvHandler) UnreadTotal(w http.ResponseWriter, r *http.Request) {
@@ -812,7 +812,7 @@ func (h *ConvHandler) UnreadTotal(w http.ResponseWriter, r *http.Request) {
 	for _, item := range items {
 		totalUnread += item.UnreadCount
 	}
-	JSON(w, map[string]interface{}{"total": totalUnread})
+	JSON(w, map[string]any{"total": totalUnread})
 }
 
 // @Summary Pin a conversation
@@ -822,7 +822,7 @@ func (h *ConvHandler) UnreadTotal(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 500 {object} APIResponse
 // @Router /conversations/{conv_id}/pin [post]
 func (h *ConvHandler) Pin(w http.ResponseWriter, r *http.Request) {
@@ -832,7 +832,7 @@ func (h *ConvHandler) Pin(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"conv_id": convID, "pinned": true})
+	JSON(w, map[string]any{"conv_id": convID, "pinned": true})
 }
 
 // @Summary Unpin a conversation
@@ -842,7 +842,7 @@ func (h *ConvHandler) Pin(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 500 {object} APIResponse
 // @Router /conversations/{conv_id}/unpin [post]
 func (h *ConvHandler) Unpin(w http.ResponseWriter, r *http.Request) {
@@ -852,7 +852,7 @@ func (h *ConvHandler) Unpin(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"conv_id": convID, "pinned": false})
+	JSON(w, map[string]any{"conv_id": convID, "pinned": false})
 }
 
 type cloneGroupReq struct {
@@ -957,7 +957,7 @@ func (h *ConvHandler) Disband(w http.ResponseWriter, r *http.Request) {
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
 // @Param body body cloneGroupReq false "Clone group request"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 403 {object} APIResponse
 // @Failure 404 {object} APIResponse
@@ -995,7 +995,7 @@ func (h *ConvHandler) Clone(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"conv_id": newID, "name": name})
+	JSON(w, map[string]any{"conv_id": newID, "name": name})
 }
 
 // @Summary Get group card by share token (public)
@@ -1004,7 +1004,7 @@ func (h *ConvHandler) Clone(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param share_token path string true "Share token"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 404 {object} APIResponse
 // @Router /groups/card/{share_token} [get]
 func (h *ConvHandler) GetGroupCard(w http.ResponseWriter, r *http.Request) {
@@ -1029,7 +1029,7 @@ func (h *ConvHandler) GetGroupCard(w http.ResponseWriter, r *http.Request) {
 		ownerName = owner.Name
 	}
 
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"conv_id":       conv.ConvID,
 		"name":          conv.Name,
 		"avatar":        conv.Avatar,
@@ -1051,7 +1051,7 @@ func (h *ConvHandler) GetGroupCard(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 403 {object} APIResponse
 // @Failure 404 {object} APIResponse
 // @Router /conversations/{conv_id}/share-token [post]
@@ -1078,7 +1078,7 @@ func (h *ConvHandler) GenerateShareToken(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"conv_id":     convID,
 		"share_token": token,
 	})
@@ -1091,7 +1091,7 @@ func (h *ConvHandler) GenerateShareToken(w http.ResponseWriter, r *http.Request)
 // @Produce json
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 403 {object} APIResponse
 // @Failure 404 {object} APIResponse
 // @Router /conversations/{conv_id}/share-token [delete]
@@ -1115,5 +1115,5 @@ func (h *ConvHandler) RemoveShareToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	JSON(w, map[string]interface{}{"conv_id": convID})
+	JSON(w, map[string]any{"conv_id": convID})
 }

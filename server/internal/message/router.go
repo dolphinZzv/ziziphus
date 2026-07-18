@@ -29,7 +29,7 @@ type convProvider interface {
 }
 
 type connBySessionID interface {
-	GetBySessionID(ctx context.Context, sessionID string) interface{}
+	GetBySessionID(ctx context.Context, sessionID string) any
 }
 
 func NewRouter(sessManager sessionGetter, convManager convProvider, gateway connBySessionID) *Router {

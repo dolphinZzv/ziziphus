@@ -12,17 +12,17 @@ type APIResponse struct {
 	Code int         `json:"code"`
 	Msg  string      `json:"msg"`
 	Key  string      `json:"key,omitempty"`
-	Data interface{} `json:"data"`
+	Data any `json:"data"`
 }
 
 type PaginatedData struct {
-	Items interface{} `json:"items"`
+	Items any `json:"items"`
 	Total int         `json:"total"`
 	Page  int         `json:"page"`
 	Size  int         `json:"size"`
 }
 
-func JSON(w http.ResponseWriter, data interface{}) {
+func JSON(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	resp := APIResponse{Code: 0, Msg: "ok", Data: data}
 	json.NewEncoder(w).Encode(resp)
@@ -39,7 +39,7 @@ func Error(w http.ResponseWriter, r *http.Request, httpStatus int, appErr *model
 	json.NewEncoder(w).Encode(resp)
 }
 
-func Paginated(w http.ResponseWriter, items interface{}, total, page, size int) {
+func Paginated(w http.ResponseWriter, items any, total, page, size int) {
 	JSON(w, PaginatedData{
 		Items: items,
 		Total: total,

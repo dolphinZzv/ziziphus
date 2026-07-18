@@ -121,7 +121,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fileToken, _ := h.authSvc.GenerateFileToken(r.Context(), user.ID)
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"user_id":       user.ID,
 		"account":       user.Account,
 		"name":          user.Name,
@@ -191,7 +191,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 					maskedEmail = e[:1] + "***" + e[at-1:]
 				}
 			}
-			resp := map[string]interface{}{
+			resp := map[string]any{
 				"mfa_required": true,
 				"mfa_type":     int(mfa.MFAType),
 				"mfa_token":    mfaToken,
@@ -219,7 +219,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fileToken, _ := h.authSvc.GenerateFileToken(r.Context(), userID)
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"user_id":       userID,
 		"account":       req.Account,
 		"name":          user.Name,
@@ -291,7 +291,7 @@ func (h *UserHandler) MFAVerifyLogin(w http.ResponseWriter, r *http.Request) {
 	if mfaUser != nil {
 		mfaUser.Password = ""
 	}
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"user_id":       req.MFAUserID,
 		"account":       mfaUser.Account,
 		"name":          mfaUser.Name,
@@ -336,7 +336,7 @@ func (h *UserHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"token":      accessToken,
 		"expires_at": expiresAt,
 	})
@@ -435,7 +435,7 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	result := make(map[string]interface{}, len(users))
+	result := make(map[string]any, len(users))
 	for id, u := range users {
 		u.Password = ""
 		if h.sessMgr.IsOnline(r.Context(), u.ID) {
@@ -443,7 +443,7 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 		} else {
 			u.Status = model.UserOffline
 		}
-		result[id] = map[string]interface{}{
+		result[id] = map[string]any{
 			"user_id":         u.ID,
 			"account":         u.Account,
 			"name":            u.Name,
@@ -456,7 +456,7 @@ func (h *UserHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
 			"secondary_color": u.SecondaryColor,
 		}
 	}
-	JSON(w, map[string]interface{}{"users": result})
+	JSON(w, map[string]any{"users": result})
 }
 
 type updateMeReq struct {
@@ -502,7 +502,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"user_id":         userID,
 		"name":            req.Name,
 		"avatar":          req.Avatar,
@@ -531,7 +531,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	if len(q) < 2 {
-		Paginated(w, []map[string]interface{}{}, 0, 1, 20)
+		Paginated(w, []map[string]any{}, 0, 1, 20)
 		return
 	}
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -547,13 +547,13 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	items := make([]map[string]interface{}, 0, len(users))
+	items := make([]map[string]any, 0, len(users))
 	for _, u := range users {
 		// Skip users that disabled discoverability
 		if !u.Discoverable {
 			continue
 		}
-		items = append(items, map[string]interface{}{
+		items = append(items, map[string]any{
 			"user_id":         u.ID,
 			"account":         u.Account,
 			"name":            u.Name,
@@ -594,13 +594,13 @@ func (h *UserHandler) GetMFA(w http.ResponseWriter, r *http.Request) {
 	mfa, err := h.mfaRepo.Get(r.Context(), userID)
 	if err != nil {
 		// No MFA record — return default
-		JSON(w, map[string]interface{}{
+		JSON(w, map[string]any{
 			"enabled":  false,
 			"mfa_type": 0,
 		})
 		return
 	}
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"enabled":  mfa.Enabled,
 		"mfa_type": int(mfa.MFAType),
 	})
@@ -666,7 +666,7 @@ func (h *UserHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := map[string]interface{}{
+	resp := map[string]any{
 		"mfa_type": req.MFAType,
 	}
 	user, _ := h.userRepo.GetByID(r.Context(), userID)
@@ -728,7 +728,7 @@ func (h *UserHandler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"enabled": true})
+	JSON(w, map[string]any{"enabled": true})
 }
 
 // DisableMFA godoc
@@ -746,7 +746,7 @@ func (h *UserHandler) DisableMFA(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"enabled": false})
+	JSON(w, map[string]any{"enabled": false})
 }
 
 type emailVerifyHandler interface {
@@ -802,7 +802,7 @@ func (h *UserHandler) SendEmailCode(w http.ResponseWriter, r *http.Request) {
 	if h.mailer != nil && h.mailer.Enabled() {
 		go func() { _ = h.mailer.SendVerificationCode(req.Email, code) }()
 	}
-	JSON(w, map[string]interface{}{"code": code, "expires_in": 600})
+	JSON(w, map[string]any{"code": code, "expires_in": 600})
 }
 
 // ConfirmEmail godoc
@@ -845,7 +845,7 @@ func (h *UserHandler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = h.emailVerifyRepo.Delete(r.Context(), userID)
-	JSON(w, map[string]interface{}{"email": ev.PendingEmail, "verified": true})
+	JSON(w, map[string]any{"email": ev.PendingEmail, "verified": true})
 }
 
 // Agent requests
@@ -1087,7 +1087,7 @@ func (h *UserHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"user_id": userID})
+	JSON(w, map[string]any{"user_id": userID})
 }
 
 // ===== Password Reset =====
@@ -1142,7 +1142,7 @@ func (h *UserHandler) SendPasswordResetCode(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	resp := map[string]interface{}{
+	resp := map[string]any{
 		"user_id": userID,
 	}
 	// In dev mode, return the code so E2E tests can read it
@@ -1187,5 +1187,5 @@ func (h *UserHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	JSON(w, map[string]interface{}{"status": "ok"})
+	JSON(w, map[string]any{"status": "ok"})
 }

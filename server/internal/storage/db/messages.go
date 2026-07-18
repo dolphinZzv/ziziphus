@@ -65,7 +65,7 @@ func (r *MessageRepo) GetHistory(ctx context.Context, convID string, beforeMsgID
 		 FROM messages m
 		 LEFT JOIN users u ON u.id = m.sender_id
 		 WHERE m.conv_id = $1 AND m.deleted = false`
-	args := []interface{}{convID}
+	args := []any{convID}
 	argIdx := 2
 
 	if beforeMsgID > 0 {
@@ -105,7 +105,7 @@ func (r *MessageRepo) getHistoryAround(ctx context.Context, convID string, aroun
 		 FROM messages m
 		 LEFT JOIN users u ON u.id = m.sender_id
 		 WHERE m.conv_id = $1 AND m.deleted = false`
-	args := []interface{}{convID}
+	args := []any{convID}
 	argIdx := 2
 
 	if keyword != "" {
@@ -131,7 +131,7 @@ func (r *MessageRepo) getHistoryAround(ctx context.Context, convID string, aroun
 
 	// Messages before the target (ordered DESC, take half)
 	beforeQ := q + fmt.Sprintf(" AND m.msg_id < $%d ORDER BY m.msg_id DESC LIMIT $%d", argIdx, argIdx+1)
-	beforeArgs := append(append([]interface{}{}, args...), aroundMsgID, half)
+	beforeArgs := append(append([]any{}, args...), aroundMsgID, half)
 	beforeRows, err := r.pool.Query(ctx, beforeQ, beforeArgs...)
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func (r *MessageRepo) getHistoryAround(ctx context.Context, convID string, aroun
 
 	// Messages from the target onward (ordered ASC, take half)
 	afterQ := q + fmt.Sprintf(" AND m.msg_id >= $%d ORDER BY m.msg_id ASC LIMIT $%d", argIdx, argIdx+1)
-	afterArgs := append(append([]interface{}{}, args...), aroundMsgID, half)
+	afterArgs := append(append([]any{}, args...), aroundMsgID, half)
 	afterRows, err := r.pool.Query(ctx, afterQ, afterArgs...)
 	if err != nil {
 		return nil, err

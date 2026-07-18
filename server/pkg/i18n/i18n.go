@@ -89,7 +89,7 @@ func LangFromCtx(ctx context.Context) Lang {
 
 // T translates the given key using the language from context.
 // Supports format args via fmt.Sprintf.
-func T(ctx context.Context, key string, args ...interface{}) string {
+func T(ctx context.Context, key string, args ...any) string {
 	lang := LangFromCtx(ctx)
 	entry, ok := Messages[key]
 	if !ok {
@@ -109,7 +109,7 @@ func T(ctx context.Context, key string, args ...interface{}) string {
 }
 
 // TWithLang translates the given key with an explicit language.
-func TWithLang(lang Lang, key string, args ...interface{}) string {
+func TWithLang(lang Lang, key string, args ...any) string {
 	entry, ok := Messages[key]
 	if !ok {
 		return key

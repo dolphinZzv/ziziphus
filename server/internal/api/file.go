@@ -248,7 +248,7 @@ func (h *FileHandler) RenewFileToken(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"token": token})
+	JSON(w, map[string]any{"token": token})
 }
 
 // @Summary Get file info
@@ -638,7 +638,7 @@ func resizeImage(data []byte, tw, th int, ext string, noUpscale ...bool) ([]byte
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
 // @Param body body object true "Create folder request" SchemaExample({"name":"folder_name","parent_path":""})
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 403 {object} APIResponse
 // @Failure 500 {object} APIResponse

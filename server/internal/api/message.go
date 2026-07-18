@@ -46,7 +46,7 @@ func NewMsgHandler(msgRepo msgStorage, receipts receiptStorage, convMgr convMemb
 // @Param        keyword        query string false "Search keyword"
 // @Param        start_date     query int    false "Filter messages after this Unix timestamp"
 // @Param        end_date       query int    false "Filter messages before this Unix timestamp"
-// @Success      200 {array}   map[string]interface{}
+// @Success      200 {array}   map[string]any
 // @Failure      403 {object} APIResponse
 // @Failure      500 {object} APIResponse
 // @Router       /conversations/{conv_id}/messages [get]
@@ -78,9 +78,9 @@ func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items := make([]map[string]interface{}, 0, len(messages))
+	items := make([]map[string]any, 0, len(messages))
 	for _, m := range messages {
-		items = append(items, map[string]interface{}{
+		items = append(items, map[string]any{
 			"msg_id":       m.MsgID,
 			"conv_id":      m.ConvID,
 			"sender_id":    m.SenderID,
@@ -103,7 +103,7 @@ func (h *MsgHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 // @Tags         messages
 // @Security     Bearer
 // @Param        msg_id  path  int64 true "Message ID"
-// @Success      200 {array}   map[string]interface{}
+// @Success      200 {array}   map[string]any
 // @Failure      400 {object} APIResponse
 // @Failure      500 {object} APIResponse
 // @Router       /messages/{msg_id}/receipts [get]
@@ -135,10 +135,10 @@ func (h *MsgHandler) GetReceipts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := make([]map[string]interface{}, 0)
+	result := make([]map[string]any, 0)
 	for _, rc := range receipts {
 		if rc.Status >= model.ReceiptRead {
-			result = append(result, map[string]interface{}{
+			result = append(result, map[string]any{
 				"user_id": rc.UserID,
 			})
 		}

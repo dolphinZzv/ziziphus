@@ -198,7 +198,7 @@ export const authStore = {
       wsClient.connect(result.token as string)
       this.refreshUserProfile()
     } catch (e: unknown) {
-      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : 'Registration failed' }; emit()
+      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : i18n.t('auth.registerError') }; emit()
       throw e
     }
   },

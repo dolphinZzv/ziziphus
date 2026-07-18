@@ -113,9 +113,9 @@ func (h *ContactHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	userMap, _ := h.userRepo.GetByIDs(r.Context(), contactIDs)
 
-	items := make([]map[string]interface{}, 0, len(contacts))
+	items := make([]map[string]any, 0, len(contacts))
 	for _, c := range contacts {
-		item := map[string]interface{}{
+		item := map[string]any{
 			"user_id":  c.ContactID,
 			"nickname": c.Nickname,
 			"added_at": c.AddedAt,
@@ -142,7 +142,7 @@ func (h *ContactHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security Bearer
 // @Param request body addContactReq true "Add contact request"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /contacts [post]
@@ -174,7 +174,7 @@ func (h *ContactHandler) Add(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"user_id": req.UserID, "nickname": req.Nickname})
+	JSON(w, map[string]any{"user_id": req.UserID, "nickname": req.Nickname})
 }
 
 // Remove now performs bidirectional deletion and removes the P2P conversation.
@@ -185,7 +185,7 @@ func (h *ContactHandler) Add(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security Bearer
 // @Param user_id path string true "Contact user ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 500 {object} APIResponse
 // @Router /contacts/{user_id} [delete]
 func (h *ContactHandler) Remove(w http.ResponseWriter, r *http.Request) {
@@ -209,7 +209,7 @@ func (h *ContactHandler) Remove(w http.ResponseWriter, r *http.Request) {
 		_ = h.convMgr.Leave(r.Context(), p2pConvID, contactID)
 	}
 
-	JSON(w, map[string]interface{}{"user_id": contactID})
+	JSON(w, map[string]any{"user_id": contactID})
 }
 
 type updateContactNicknameReq struct {
@@ -224,7 +224,7 @@ type updateContactNicknameReq struct {
 // @Security Bearer
 // @Param user_id path string true "Contact user ID"
 // @Param request body updateContactNicknameReq true "Nickname update request"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /contacts/{user_id} [put]
@@ -242,7 +242,7 @@ func (h *ContactHandler) UpdateNickname(w http.ResponseWriter, r *http.Request) 
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"user_id": contactID, "nickname": req.Nickname})
+	JSON(w, map[string]any{"user_id": contactID, "nickname": req.Nickname})
 }
 
 // ---------------------------------------------------------------------------
@@ -263,7 +263,7 @@ type requestContactReq struct {
 // @Produce json
 // @Security Bearer
 // @Param request body requestContactReq true "Contact request"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Failure 400 {object} APIResponse
 // @Failure 404 {object} APIResponse
 // @Failure 409 {object} APIResponse
@@ -394,7 +394,7 @@ func (h *ContactHandler) RequestContact(w http.ResponseWriter, r *http.Request) 
 			i18n.T(ctx, "contact_request.sent", targetName), senderID)
 	}
 
-	JSON(w, map[string]interface{}{
+	JSON(w, map[string]any{
 		"request_id":  requestID,
 		"form_msg_id": formMsg.MsgID,
 	})

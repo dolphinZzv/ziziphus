@@ -459,7 +459,7 @@ func (h *WebhookHandler) Delete(w http.ResponseWriter, r *http.Request) {
 // @Security Bearer
 // @Param conv_id path string true "Conversation ID"
 // @Param webhook_id path string true "Webhook ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Router /conversations/{conv_id}/webhooks/{webhook_id}/test [post]
 func (h *WebhookHandler) Test(w http.ResponseWriter, r *http.Request) {
 	webhookID, err := strconvParseInt(chi.URLParam(r, "webhook_id"))
@@ -575,7 +575,7 @@ type webhookReceiveReq struct {
 // @Description Receives and processes a message sent by an external service via webhook.
 // @Tags webhooks
 // @Accept json
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} map[string]any
 // @Router /webhooks/receive [post]
 func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) {
 	ip := callerIP(r)

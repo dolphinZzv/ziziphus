@@ -93,7 +93,7 @@ func writeAuthError(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
 	msg := i18n.TWithLang(i18n.DetectLanguage(r), "err.unauthorized")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"code": model.ErrNoPermission,
 		"msg":  msg,
 		"data": nil,
@@ -103,10 +103,10 @@ func writeAuthError(w http.ResponseWriter, r *http.Request) {
 type HTTPResponse struct {
 	Code int         `json:"code"`
 	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
+	Data any `json:"data"`
 }
 
-func WriteJSON(w http.ResponseWriter, code int, data interface{}) {
+func WriteJSON(w http.ResponseWriter, code int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	if code != 0 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -124,7 +124,7 @@ func WriteJSON(w http.ResponseWriter, code int, data interface{}) {
 	_, _ = w.Write(marshalJSON(resp))
 }
 
-func marshalJSON(v interface{}) []byte {
+func marshalJSON(v any) []byte {
 	b, _ := json.Marshal(v)
 	return b
 }

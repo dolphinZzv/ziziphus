@@ -38,7 +38,7 @@ func NewConnection(connID, userID, sessionID string, device int, conn *websocket
 	}
 }
 
-func (c *Connection) SendJSON(v interface{}) error {
+func (c *Connection) SendJSON(v any) error {
 	if c == nil {
 		return nil
 	}
@@ -84,7 +84,7 @@ func (c *Connection) IsClosed() bool {
 }
 
 func (c *Connection) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"conn_id":    c.ConnID,
 		"user_id":    c.UserID,
 		"session_id": c.SessionID,
