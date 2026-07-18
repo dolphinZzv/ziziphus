@@ -1,5 +1,4 @@
 import { useEffect, useSyncExternalStore, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { authStore } from '@/stores/auth-store'
 import { conversationStore } from '@/stores/conversation-store'
 import { uiStore } from '@/stores/ui-store'
@@ -8,14 +7,11 @@ import { MessageType } from '@/types/ws'
 import ConversationList from '@/features/conversation-list/conversation-list'
 import { avatarUrl } from '@/lib/file'
 import { Plus, User, Users, UserPlus, MessageCircle, Search } from 'lucide-react'
-import { useIsMobile } from '@/hooks/use-breakpoint'
 import { useTranslation } from 'react-i18next'
 
 export default function Sidebar() {
-  const navigate = useNavigate()
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
   const { t } = useTranslation()
-  const isMobile = useIsMobile()
   const [showMenu, setShowMenu] = useState(false)
 
   useEffect(() => {
@@ -30,6 +26,19 @@ export default function Sidebar() {
   useEffect(() => {
     conversationStore.load()
   }, [])
+
+  // Set browser chrome/tab color to the user's primary color
+  useEffect(() => {
+    const color = user?.primary_color || '#0F172A'
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null
+    if (meta) meta.content = color
+    else {
+      meta = document.createElement('meta')
+      meta.name = 'theme-color'
+      meta.content = color
+      document.head.appendChild(meta)
+    }
+  }, [user?.primary_color])
 
   useEffect(() => {
     const u1 = wsClient.on(MessageType.MsgPush, () => conversationStore.refresh())
