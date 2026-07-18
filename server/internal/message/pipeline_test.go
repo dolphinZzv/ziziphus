@@ -421,7 +421,7 @@ func newIngestFixture(ratePerSec, burst, maxBody int, defaultID int64) (
 	router := NewRouter(sessGtr, convMgr, connReg)
 	pusher := NewPusher(connReg, receiptW)
 	contactReqDB := &mockContactRequestDB{}
-	ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "")
+	ing = NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "", nil)
 	return
 }
 

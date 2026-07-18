@@ -85,7 +85,7 @@ func newIngestFixtureWithContactReq(ratePerSec, burst, maxBody int, defaultID in
 	rateLmt := NewRateLimiter(ratePerSec, burst, maxBody)
 	router := NewRouter(sessGtr, convMgr, connReg)
 	pusher := NewPusher(connReg, receiptW)
-	return NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "")
+	return NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, contactReqDB, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "", nil)
 }
 
 // ---------------------------------------------------------------------------
@@ -353,7 +353,7 @@ func TestHandleFormResponse_ApproveSuccess(t *testing.T) {
 	rateLmt := NewRateLimiter(100, 100, 100000)
 	router := NewRouter(sessGtr, convMgr, connReg)
 	pusher := NewPusher(connReg, &mockReceiptWriter{})
-	ing := NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, crdb, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "")
+	ing := NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, crdb, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "", nil)
 
 	ctx := context.Background()
 
@@ -400,7 +400,7 @@ func TestHandleFormResponse_AlreadyApproved_Idempotent(t *testing.T) {
 	rateLmt := NewRateLimiter(100, 100, 100000)
 	router := NewRouter(sessGtr, convMgr, connReg)
 	pusher := NewPusher(connReg, &mockReceiptWriter{})
-	ing := NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, crdb, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "")
+	ing := NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, crdb, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "", nil)
 
 	ctx := context.Background()
 
@@ -439,7 +439,7 @@ func TestHandleFormResponse_RejectSuccess(t *testing.T) {
 	rateLmt := NewRateLimiter(100, 100, 100000)
 	router := NewRouter(sessGtr, convMgr, connReg)
 	pusher := NewPusher(connReg, &mockReceiptWriter{})
-	ing := NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, crdb, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "")
+	ing := NewIngest(store, router, pusher, rateLmt, idGen, seqCache, convMgr, crdb, &mockContactCreator{}, &mockUserGetter{}, &mockWhForwarder{}, "", nil)
 
 	ctx := context.Background()
 

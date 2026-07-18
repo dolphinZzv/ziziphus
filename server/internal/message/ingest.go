@@ -1,20 +1,17 @@
 package message
 
 import (
-	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"ziziphus/internal/metrics"
+	"ziziphus/internal/tasks"
 	"ziziphus/pkg/i18n"
 	"ziziphus/pkg/logger"
 	"ziziphus/pkg/model"
@@ -34,6 +31,7 @@ type Ingest struct {
 	userDB       userGetter
 	whDB         whForwarder
 	appName      string
+	taskClient   *asynq.Client
 }
 
 type userGetter interface {
@@ -82,7 +80,7 @@ type convManager interface {
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
 }
 
-func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager, contactReqDB contactRequestDB, contactRepo contactCreator, userDB userGetter, whDB whForwarder, appName string) *Ingest {
+func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *RateLimiter, idGen idGenerator, seqCache seqCache, convMgr convManager, contactReqDB contactRequestDB, contactRepo contactCreator, userDB userGetter, whDB whForwarder, appName string, taskClient *asynq.Client) *Ingest {
 	return &Ingest{
 		store:        store,
 		router:       router,
@@ -96,6 +94,7 @@ func NewIngest(store messageStore, router *Router, pusher *Pusher, rateLimit *Ra
 		userDB:       userDB,
 		whDB:         whDB,
 		appName:      appName,
+		taskClient:   taskClient,
 	}
 }
 
@@ -477,8 +476,11 @@ func parseP2PCounterpart(convID, senderID string) string {
 	return parts[0]
 }
 
-// forwardToWebhooks forwards a message to configured webhook callbacks.
+// forwardToWebhooks enqueues webhook forwarding tasks to the asynq queue.
 func (in *Ingest) forwardToWebhooks(ctx context.Context, msg *model.Message) {
+	if in.taskClient == nil {
+		return
+	}
 	conv, err := in.convMgr.Get(ctx, msg.ConvID)
 	if err != nil || conv.Type != model.ConvGroup {
 		return
@@ -498,80 +500,27 @@ func (in *Ingest) forwardToWebhooks(ctx context.Context, msg *model.Message) {
 		if len(mentioned) > 0 && !mentioned[wh.Name] {
 			continue
 		}
-		go in.sendWebhookWithRetry(ctx, wh, msg)
-	}
-}
-
-func (in *Ingest) sendWebhookWithRetry(ctx context.Context, wh *model.ConvWebhook, msg *model.Message) {
-	payload := buildWebhookPayload(wh.ID, msg)
-	body, _ := json.Marshal(payload)
-
-	maxRetries := 3
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		if attempt > 0 {
-			wait := time.Duration(1<<uint(attempt+1)-1) * time.Second
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(wait):
-			}
-		}
-
-		req, err := http.NewRequestWithContext(ctx, "POST", wh.CallbackURL, bytes.NewReader(body))
+		payload, err := tasks.NewWebhookForwardTask(wh, in.appName, msg)
 		if err != nil {
-			logger.Warn("webhook forward request creation failed", "wh_id", wh.ID, "error", err)
+			logger.Warn("webhook forward task creation failed", "wh_id", wh.ID, "error", err)
 			continue
 		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", in.appName+"-Webhook/1.0")
-		req.Header.Set("X-Signature", computeSignature([]byte(wh.APIKeyHash), body))
-		for _, h := range wh.Headers {
-			req.Header.Set(h.Key, h.Value)
+		raw, err := payload.Marshal()
+		if err != nil {
+			logger.Warn("webhook forward task marshal failed", "wh_id", wh.ID, "error", err)
+			continue
 		}
-
-		resp, doErr := http.DefaultClient.Do(req)
-		if doErr == nil && resp.StatusCode < 500 {
-			resp.Body.Close()
-			in.logWhAudit(ctx, wh.ID, msg.MsgID, "forward", "")
-			return
-		}
-		if doErr != nil {
-			logger.Warn("webhook forward attempt failed",
-				"wh_id", wh.ID, "attempt", attempt, "error", doErr)
-		} else {
-			resp.Body.Close()
+		task := asynq.NewTask(tasks.TypeWebhookForward, raw,
+			asynq.MaxRetry(5),
+			asynq.Timeout(30*time.Second),
+		)
+		if _, err := in.taskClient.Enqueue(task); err != nil {
+			logger.Warn("webhook forward enqueue failed", "wh_id", wh.ID, "error", err)
 		}
 	}
-	in.logWhAudit(ctx, wh.ID, msg.MsgID, "forward_fail",
-		"max retries exhausted")
 }
 
-func (in *Ingest) logWhAudit(ctx context.Context, whID int64, msgID int64, action, reason string) {
-	logger.Info("webhook forward", "webhook_id", whID, "msg_id", msgID, "action", action, "reason", reason)
-}
 
-func buildWebhookPayload(whID int64, msg *model.Message) map[string]any {
-	return map[string]any{
-		"event":      "message.created",
-		"webhook_id": whID,
-		"conv_id":    msg.ConvID,
-		"message": map[string]any{
-			"msg_id":       msg.MsgID,
-			"sender_id":    msg.SenderID,
-			"sender_name":  msg.SenderName,
-			"content_type": int(msg.ContentType),
-			"body":         msg.Body,
-			"reply_to":     msg.ReplyTo,
-			"timestamp":    msg.Timestamp,
-		},
-	}
-}
-
-func computeSignature(secret, body []byte) string {
-	mac := hmac.New(sha256.New, secret)
-	mac.Write(body)
-	return hex.EncodeToString(mac.Sum(nil))
-}
 
 func extractMentions(body string) map[string]bool {
 	result := make(map[string]bool)

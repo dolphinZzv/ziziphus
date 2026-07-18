@@ -123,6 +123,7 @@ func main() {
 	mailDispatcher := tasks.NewMailDispatcher(asynqClient, mailer.Enabled())
 	mailHandler := tasks.NewMailHandler(mailer)
 
+	webhookTaskHandler := tasks.NewWebhookHandler()
 	asynqServer := asynq.NewServer(
 		asynq.RedisClientOpt{
 			Addr:     cfg.Redis.Addr,
@@ -137,7 +138,8 @@ func main() {
 	go func() {
 		mux := asynq.NewServeMux()
 		mailHandler.RegisterHandlers(mux)
-		if err := asynqServer.Start(mux); err != nil {
+			webhookTaskHandler.RegisterHandlers(mux)
+			if err := asynqServer.Start(mux); err != nil {
 			logger.Error("asynq server error", "error", err)
 		}
 	}()
@@ -180,7 +182,7 @@ func main() {
 
 	// Ingest pipeline
 	contactReqRepo := db.NewContactRequestRepo(pool)
-	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr, contactReqRepo, contactRepo, userRepo, webhookRepo, cfg.App.Name)
+	ingest := message.NewIngest(msgRepo, msgRouter, pusher, rl, sf, seqCache, convMgr, contactReqRepo, contactRepo, userRepo, webhookRepo, cfg.App.Name, asynqClient)
 
 	// Sync handler
 	syncHandler := message.NewSyncHandler(msgRepo, seqCache)
