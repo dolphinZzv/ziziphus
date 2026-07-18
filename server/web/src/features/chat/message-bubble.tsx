@@ -7,7 +7,7 @@ import { authStore } from '@/stores/auth-store'
 import { formatTime } from '@/lib/time'
 import { avatarUrl } from '@/lib/file'
 import { cn } from '@/lib/cn'
-import { Check, CheckCheck, Clock, AlertCircle, Copy, Reply, Cpu, PenLine, Trash2, MoreHorizontal, Bot } from 'lucide-react'
+import { Check, CheckCheck, Clock, AlertCircle, Copy, Reply, Cpu, PenLine, Trash2, MoreHorizontal } from 'lucide-react'
 import TextBubble from './text-bubble'
 import ImageBubble from './image-bubble'
 import FileBubble from './file-bubble'
@@ -204,13 +204,6 @@ export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, h
   if (isCentered) {
     return (
       <div className="flex justify-center my-2">
-        {isSystem && (
-          <div className="flex items-center gap-1.5 mr-1.5">
-            <div className="w-5 h-5 rounded-full bg-[var(--color-accent)]/10 flex items-center justify-center flex-shrink-0">
-              <Bot size={11} className="text-[var(--color-accent)]" />
-            </div>
-          </div>
-        )}
         <span className="inline-block px-3 py-1 rounded-full bg-[var(--color-surface-soft)] text-[11px] text-[var(--color-muted)] max-w-[85%] text-center">
           {message.content_type === ContentType.Recall ? String(t('chat.recalled')) : message.body}
         </span>
@@ -226,7 +219,15 @@ export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, h
     )}>
       {/* Avatar */}
       {!isGrouped && !isOwn && (
-        <AvatarDot name={senderInitials} avatar={_senderInfo.avatar} userId={message.sender_id} clickable={message.content_type !== ContentType.System && !message.sender_id.startsWith('webhook:')} isAgent={_senderInfo.isAgent} />
+        message.sender_id.startsWith('webhook:') ? (
+          <div className="flex-shrink-0 self-start mt-1">
+            <div className="w-8 h-8 rounded-full bg-white dark:bg-[var(--color-surface-card)] flex items-center justify-center shadow-sm">
+              <Cpu size={16} className="text-[var(--color-muted)]" />
+            </div>
+          </div>
+        ) : (
+          <AvatarDot name={senderInitials} avatar={_senderInfo.avatar} userId={message.sender_id} clickable={message.content_type !== ContentType.System} isAgent={_senderInfo.isAgent} />
+        )
       )}
       {isGrouped && !isOwn && <div className="w-8 flex-shrink-0 self-start" />}
 
