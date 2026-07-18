@@ -1,7 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { contactStore } from '@/stores/contact-store'
-import { authStore } from '@/stores/auth-store'
 import { uiStore } from '@/stores/ui-store'
 import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
@@ -22,7 +21,7 @@ export default function ContactList({ onClose, inline }: Props) { const isMobile
   useEffect(() => { contactStore.load() }, [])
 
   const handleChat = async (userId: string) => {
-    try { const r = await conversationService.createP2P(userId); uiStore.setSidebarView(null); navigate(`/conversations/${r.conv_id}`) } catch {}
+    try { const r = await conversationService.createP2P(userId); uiStore.setSidebarView(null); navigate(`/conversations/${r.conv_id}`) } catch (e) { console.error(e) }
   }
 
   const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'

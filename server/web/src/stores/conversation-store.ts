@@ -104,13 +104,13 @@ export const conversationStore = {
   },
 
   async pin(convId: string) {
-    try { await api.request(`/api/v1/conversations/${convId}/pin`, { method: 'POST' }) } catch {}
+    try { await api.request(`/api/v1/conversations/${convId}/pin`, { method: 'POST' }) } catch (e) { console.error(e) }
     const updated = state.conversations.map(c => c.conv_id === convId ? { ...c, pinned: true } : c)
     state = { ...state, conversations: sortConversations(updated) }; emit()
   },
 
   async unpin(convId: string) {
-    try { await api.request(`/api/v1/conversations/${convId}/unpin`, { method: 'POST' }) } catch {}
+    try { await api.request(`/api/v1/conversations/${convId}/unpin`, { method: 'POST' }) } catch (e) { console.error(e) }
     const updated = state.conversations.map(c => c.conv_id === convId ? { ...c, pinned: false } : c)
     state = { ...state, conversations: sortConversations(updated) }; emit()
   },

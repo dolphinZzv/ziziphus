@@ -1,11 +1,9 @@
-import { useEffect, useRef, useState, useSyncExternalStore, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, useMemo } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { chatStore } from '@/stores/chat-store'
 import { authStore } from '@/stores/auth-store'
-import { uiStore } from '@/stores/ui-store'
 import { conversationStore } from '@/stores/conversation-store'
 import { conversationService } from '@/services/conversation-service'
-import { fileService } from '@/services/file-service'
 import { wsClient } from '@/services/websocket-client'
 import { MessageType } from '@/types/ws'
 import type { MsgPushPayload } from '@/types/ws'
@@ -44,7 +42,7 @@ export default function ChatView() {
         try {
           const tm = JSON.parse(m.body)
           if (tm.parentMsgID > 0 && parentMsgIds.has(tm.parentMsgID)) return false
-        } catch {}
+        } catch (e) { console.error(e) }
       }
       return true
     })
@@ -139,7 +137,7 @@ export default function ChatView() {
       const r = await conversationService.clone(convId)
       setShowMenu(false)
       navigate(`/conversations/${r.conv_id}`)
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   const handleDisband = async () => {
@@ -150,7 +148,7 @@ export default function ChatView() {
       conversationStore.removeConversation(convId)
       setShowMenu(false)
       navigate('/conversations')
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   const handleLeave = async () => {
@@ -161,7 +159,7 @@ export default function ChatView() {
       conversationStore.removeConversation(convId)
       setShowMenu(false)
       navigate('/conversations')
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   useEffect(() => {

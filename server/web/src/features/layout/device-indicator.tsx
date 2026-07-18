@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { sessionService } from '@/services/session-service'
 import type { Session } from '@/types/session'
 import { DeviceType } from '@/types/session'
-import { Smartphone, Monitor, Tablet, Globe, LogOut, Laptop } from 'lucide-react'
+import { Smartphone, Monitor, Tablet, Globe, LogOut } from 'lucide-react'
 
 function getLabel(d: DeviceType): string {
   switch (d) {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
 import { uiStore } from '@/stores/ui-store'
 import type { ConvListItem } from '@/types/conversation'
-import { X, Search, UserPlus } from 'lucide-react'
+import { X, Search } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 interface Props { onClose: () => void }
@@ -17,12 +17,12 @@ export default function JoinGroupDialog({ onClose }: Props) {
   const handleSearch = async () => {
     if (!query.trim()) return
     setSearching(true)
-    try { setResults(await conversationService.searchGroups(query.trim())) } catch {}
+    try { setResults(await conversationService.searchGroups(query.trim())) } catch (e) { console.error(e) }
     setSearching(false)
   }
 
   const handleJoin = async (convId: string) => {
-    try { await conversationService.requestJoin(convId); uiStore.closeSheet(); navigate(`/conversations/${convId}`) } catch {}
+    try { await conversationService.requestJoin(convId); uiStore.closeSheet(); navigate(`/conversations/${convId}`) } catch (e) { console.error(e) }
   }
 
   const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'

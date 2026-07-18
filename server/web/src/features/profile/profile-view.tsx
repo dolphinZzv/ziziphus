@@ -24,13 +24,13 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
   const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     setUploading(true)
-    try { const r = await fileService.upload(file, file.name, 0); await authStore.updateProfile({ avatar: r.url }) } catch {}
+    try { const r = await fileService.upload(file, file.name, 0); await authStore.updateProfile({ avatar: r.url }) } catch (e) { console.error(e) }
     setUploading(false)
   }
   const handleCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     setUploadingCover(true)
-    try { const r = await fileService.upload(file, file.name, 0); await authStore.updateProfile({ cover: r.url }) } catch {}
+    try { const r = await fileService.upload(file, file.name, 0); await authStore.updateProfile({ cover: r.url }) } catch (e) { console.error(e) }
     setUploadingCover(false)
   }
   const handleLogout = () => { authStore.logout(); onClose(); navigate('/login') }

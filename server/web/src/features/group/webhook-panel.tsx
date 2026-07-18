@@ -51,7 +51,7 @@ export default function WebhookPanel({ convId, onClose }: Props) { const isMobil
 
   const handleDelete = async (id: number) => {
     if (!confirm(t('conversation.webhookDeleteConfirm'))) return
-    try { await webhookService.delete(convId, id); setWebhooks(prev => prev.filter(w => w.id !== id)) } catch {}
+    try { await webhookService.delete(convId, id); setWebhooks(prev => prev.filter(w => w.id !== id)) } catch (e) { console.error(e) }
   }
 
   const handleTest = async (id: number) => {
@@ -164,7 +164,7 @@ export default function WebhookPanel({ convId, onClose }: Props) { const isMobil
                     let socatCmd = ''
                     let socatPort = '8080'
                     if (hasCallback) {
-                      try { const u = new URL(editing.callback_url || form.callback_url!); socatPort = u.port || '8080'; socatCmd = `socat TCP-LISTEN:${socatPort},reuseaddr,fork -` } catch {}
+                      try { const u = new URL(editing.callback_url || form.callback_url!); socatPort = u.port || '8080'; socatCmd = `socat TCP-LISTEN:${socatPort},reuseaddr,fork -` } catch (e) { console.error(e) }
                     }
                     return (
                     <>

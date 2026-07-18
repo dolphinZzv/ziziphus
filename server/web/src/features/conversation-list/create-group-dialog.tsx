@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
 import { userService } from '@/services/user-service'
-import { uiStore } from '@/stores/ui-store'
 import type { User } from '@/types/user'
-import { X, Search, Users } from 'lucide-react'
+import { X, Search } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 interface Props { onClose: () => void }
@@ -22,7 +21,7 @@ export default function CreateGroupDialog({ onClose }: Props) {
 
   const handleSearch = async () => {
     if (!query.trim()) return
-    try { setResults(await userService.search(query.trim())) } catch {}
+    try { setResults(await userService.search(query.trim())) } catch (e) { console.error(e) }
   }
 
   const toggleUser = (user: User) => {
@@ -37,7 +36,7 @@ export default function CreateGroupDialog({ onClose }: Props) {
       // Navigate first — SheetRouteSync's URL change handler will close the sheet
       // with syncing.current=true, preventing navigate(-1) from firing
       navigate(`/conversations/${r.conv_id}`);
-    } catch {}
+    } catch (e) { console.error(e) }
     setCreating(false)
   }
 

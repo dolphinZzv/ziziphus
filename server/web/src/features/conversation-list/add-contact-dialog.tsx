@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { contactRequestService } from '@/services/contact-request-service'
 import { userService } from '@/services/user-service'
-import { uiStore } from '@/stores/ui-store'
 import type { User } from '@/types/user'
-import { X, Search, UserPlus, Check } from 'lucide-react'
+import { X, Search, Check } from 'lucide-react'
 
 interface Props { onClose: () => void }
 
@@ -17,7 +16,7 @@ export default function AddContactDialog({ onClose }: Props) {
   const handleSearch = async () => {
     if (!query.trim()) return
     setSearching(true)
-    try { setResults(await userService.search(query.trim())) } catch {}
+    try { setResults(await userService.search(query.trim())) } catch (e) { console.error(e) }
     setSearching(false)
   }
 

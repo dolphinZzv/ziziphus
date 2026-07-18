@@ -115,7 +115,7 @@ export const chatStore = {
               appendMap.get(t.parentMsgID)!.push(...(t.entries || []))
               continue // Don't show as separate bubble
             }
-          } catch {}
+          } catch (e) { console.error(e) }
         }
         filtered.push(m)
       }
@@ -125,7 +125,7 @@ export const chatStore = {
         const parentStatus = new Map<number, string>()
         for (const msg of messages) {
           if (msg.content_type === ContentType.AgentTimeline) {
-            try { const t = JSON.parse(msg.body); if (t.parentMsgID > 0) parentStatus.set(t.parentMsgID, t.status || 'running') } catch {}
+            try { const t = JSON.parse(msg.body); if (t.parentMsgID > 0) parentStatus.set(t.parentMsgID, t.status || 'running') } catch (e) { console.error(e) }
           }
         }
         for (let i = 0; i < filtered.length; i++) {
@@ -141,7 +141,7 @@ export const chatStore = {
               }
               if (parentStatus.has(m.msg_id)) parentBody.status = parentStatus.get(m.msg_id)
               filtered[i] = { ...m, body: JSON.stringify(parentBody) }
-            } catch {}
+            } catch (e) { console.error(e) }
           }
         }
       }
@@ -395,10 +395,10 @@ export const chatStore = {
                 state = { ...state, messagesByConvId }; emit()
                 return // Don't add a separate bubble for the append
               }
-            } catch {}
+            } catch (e) { console.error(e) }
           }
         }
-      } catch {}
+      } catch (e) { console.error(e) }
     }
 
     this.upsertMessage(payload.conv_id, msg)

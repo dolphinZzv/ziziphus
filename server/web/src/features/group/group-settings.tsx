@@ -83,7 +83,7 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
       const settings = await conversationService.getSettings(convId)
       const merged = { ...settings.settings, [key]: value }
       await conversationService.updateSettings(convId, merged as any)
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   const handleBgRemove = async () => {

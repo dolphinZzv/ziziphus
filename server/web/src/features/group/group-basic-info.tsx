@@ -36,14 +36,14 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
       setDetail(d)
       const ids = d.members.map(m => m.user_id)
       if (ids.length > 0) {
-        try { const users = await userService.batchGet(ids); setUserMap(users) } catch {}
+        try { const users = await userService.batchGet(ids); setUserMap(users) } catch (e) { console.error(e) }
       }
     }).catch(() => {})
     conversationService.listJoinRequests(convId).then(async reqs => {
       setJoinRequests(reqs)
       const ids = reqs.map(r => r.user_id)
       if (ids.length > 0) {
-        try { const users = await userService.batchGet(ids); setUserMap(prev => ({ ...prev, ...users })) } catch {}
+        try { const users = await userService.batchGet(ids); setUserMap(prev => ({ ...prev, ...users })) } catch (e) { console.error(e) }
       }
     }).catch(() => {})
   }, [convId])
@@ -58,7 +58,7 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
   const actions = {
     removeMember: async (userId: string) => {
       if (!confirm(t('group.removeConfirm'))) return
-      try { await conversationService.removeMember(convId, userId); setDetail({ ...detail, members: detail.members.filter(m => m.user_id !== userId) }) } catch {}
+      try { await conversationService.removeMember(convId, userId); setDetail({ ...detail, members: detail.members.filter(m => m.user_id !== userId) }) } catch (e) { console.error(e) }
     },
     approve: async (userId: string) => {
       await conversationService.approveJoinRequest(convId, userId); setJoinRequests(prev => prev.filter(r => r.user_id !== userId))
@@ -77,15 +77,15 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
       setUploadingCover(false); e.target.value = ''
     },
     generateShare: async () => {
-      try { const r = await conversationService.generateShareToken(convId); setDetail({ ...detail!, share_token: r.share_token }) } catch {}
+      try { const r = await conversationService.generateShareToken(convId); setDetail({ ...detail!, share_token: r.share_token }) } catch (e) { console.error(e) }
     },
     removeShare: async () => {
       if (!confirm(t('group.removeShareConfirm') || '确定关闭分享链接？')) return
-      try { await conversationService.removeShareToken(convId); setDetail({ ...detail!, share_token: '' }) } catch {}
+      try { await conversationService.removeShareToken(convId); setDetail({ ...detail!, share_token: '' }) } catch (e) { console.error(e) }
     },
     copyLink: async () => {
       if (!shareLink) return
-      try { await navigator.clipboard.writeText(shareLink); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {}
+      try { await navigator.clipboard.writeText(shareLink); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch (e) { console.error(e) }
     },
   }
 

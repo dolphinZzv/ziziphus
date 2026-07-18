@@ -39,10 +39,10 @@ export default function UserCard({ userId, onClose }: Props) {
 
   const copyId = () => { navigator.clipboard.writeText(userId); setCopied(true); setTimeout(() => setCopied(false), 2000) }
   const handleStartChat = async () => {
-    try { const r = await conversationService.createP2P(userId); onClose(); navigate(`/conversations/${r.conv_id}`) } catch {}
+    try { const r = await conversationService.createP2P(userId); onClose(); navigate(`/conversations/${r.conv_id}`) } catch (e) { console.error(e) }
   }
   const handleAddContact = async () => {
-    try { await contactRequestService.send(userId); setRequestSent(true) } catch {}
+    try { await contactRequestService.send(userId); setRequestSent(true) } catch (e) { console.error(e) }
   }
 
   const initials = (user?.name || userId).charAt(0).toUpperCase()

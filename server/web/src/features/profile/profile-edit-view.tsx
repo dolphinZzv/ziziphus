@@ -16,7 +16,7 @@ export default function ProfileEditView({ onClose }: Props) {
 
   const handleSave = async () => {
     setSaving(true)
-    try { await authStore.updateProfile({ name, headline, primary_color: primaryColor, secondary_color: secondaryColor }); onClose() } catch {}
+    try { await authStore.updateProfile({ name, headline, primary_color: primaryColor, secondary_color: secondaryColor }); onClose() } catch (e) { console.error(e) }
     setSaving(false)
   }
 

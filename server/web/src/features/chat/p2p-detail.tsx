@@ -49,7 +49,7 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
         if (pid) userService.getUser(pid).then(setPeer).catch(() => {})
         const ids = d.members.map(m => m.user_id)
         if (ids.length > 0) {
-          try { const users = await userService.batchGet(ids); setMemberMap(users) } catch {}
+          try { const users = await userService.batchGet(ids); setMemberMap(users) } catch (e) { console.error(e) }
         }
       }
     }).catch(() => {})
@@ -63,18 +63,18 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
     const file = e.target.files?.[0]
     if (!file) return
     setUploadingCover(true)
-    try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { cover: r.url }); setDetail({ ...detail!, cover: r.url }) } catch {}
+    try { const r = await fileService.upload(file, file.name, 0); await conversationService.updateGroup(convId, { cover: r.url }); setDetail({ ...detail!, cover: r.url }) } catch (e) { console.error(e) }
     setUploadingCover(false)
   }
 
   const handleAddContact = async () => {
     if (!peerId) return
-    try { await contactRequestService.send(peerId); setRequestSent(true) } catch {}
+    try { await contactRequestService.send(peerId); setRequestSent(true) } catch (e) { console.error(e) }
   }
 
   const handleLeave = async () => {
     if (!confirm(t('group.leaveConfirm'))) return
-    try { await conversationService.leave(convId); conversationStore.removeConversation(convId); onClose(); navigate('/conversations') } catch {}
+    try { await conversationService.leave(convId); conversationStore.removeConversation(convId); onClose(); navigate('/conversations') } catch (e) { console.error(e) }
   }
 
   const initials = peer?.name?.charAt(0)?.toUpperCase() || '?'

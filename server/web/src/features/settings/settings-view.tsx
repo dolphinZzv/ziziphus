@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { uiStore } from '@/stores/ui-store'
 import { authStore } from '@/stores/auth-store'
 import { api } from '@/services/api-client'
-import { X, Monitor, Sun, Moon, Trash2, ArrowLeft, Bell, ChevronDown } from 'lucide-react'
+import { X, Monitor, Sun, Moon, Trash2, ArrowLeft, ChevronDown } from 'lucide-react'
 import { requestNotificationPermission, isNotificationGranted } from '@/services/notifications'
 import { cn } from '@/lib/cn'
 import { useTranslation } from 'react-i18next'
@@ -16,7 +16,6 @@ export default function SettingsView({ onClose, inline }: Props) {
   const navigate = useNavigate()
   const theme = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.theme)
   const language = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.language)
-  const serverUrl = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.serverUrl)
   const bubbleColor = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.bubbleColor)
   const deviceId = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.deviceId)
 
@@ -31,7 +30,6 @@ export default function SettingsView({ onClose, inline }: Props) {
     } catch { /* error handled by api-client */ }
   }
 
-  const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'
   const segBtn = (active: boolean) => cn('flex-1 h-[34px] rounded text-xs font-medium transition-colors flex items-center justify-center gap-1.5',
     active ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-soft)] text-[var(--color-body)] hover:bg-[var(--color-hairline)]')
 

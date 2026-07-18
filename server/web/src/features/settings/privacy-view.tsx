@@ -76,7 +76,7 @@ export default function PrivacyView({ onClose }: Props) {
     try {
       await mfaService.disable()
       setMFA({ enabled: false, mfa_type: 0 })
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   const copySecret = () => { navigator.clipboard.writeText(totpSecret); setCopied(true); setTimeout(() => setCopied(false), 2000) }

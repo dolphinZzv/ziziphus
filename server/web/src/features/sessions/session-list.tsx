@@ -23,7 +23,7 @@ export default function SessionList({ onClose, inline }: Props) {
 
   const handleEndSession = async (sessionId: string) => {
     if (!confirm('确定下线该设备？')) return
-    try { await sessionService.delete(sessionId); setSessions(s => s.filter(s => s.session_id !== sessionId)) } catch {}
+    try { await sessionService.delete(sessionId); setSessions(s => s.filter(s => s.session_id !== sessionId)) } catch (e) { console.error(e) }
   }
 
   const inner = (

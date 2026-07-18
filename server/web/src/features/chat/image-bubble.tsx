@@ -22,7 +22,7 @@ export default function ImageBubble({ body, _msgId }: Props) {
   try {
     const parsed = JSON.parse(body)
     url = parsed.url || parsed.thumbnail_url || body
-  } catch {}
+  } catch (e) { console.error(e) }
 
   if (error) {
     return (

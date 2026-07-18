@@ -26,7 +26,7 @@ export default function DetailBar
       setDetail(d)
       const ids = d.members.map(m => m.user_id)
       if (ids.length > 0) {
-        try { const users = await userService.batchGet(ids); setUserMap(users) } catch {}
+        try { const users = await userService.batchGet(ids); setUserMap(users) } catch (e) { console.error(e) }
       }
     }).catch(onClose)
   }, [convId])
@@ -45,7 +45,7 @@ export default function DetailBar
       const r = await conversationService.clone(convId)
       onClose()
       navigate(`/conversations/${r.conv_id}`)
-    } catch {}
+    } catch (e) { console.error(e) }
     setCloning(false)
   }
 

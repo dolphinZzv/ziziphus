@@ -114,7 +114,7 @@ function TimelineEntry({ entry }: { entry: AgentTimelineEntry }) {
       try {
         const parsed = JSON.parse(entry.content)
         formatted = JSON.stringify(parsed, null, 2)
-      } catch {}
+      } catch (e) { console.error(e) }
       return (
         <div className="mt-1.5 p-2 bg-black/5 dark:bg-white/5 rounded text-[11px] whitespace-pre-wrap break-words font-mono opacity-80 max-h-[200px] overflow-y-auto">
           {formatted}

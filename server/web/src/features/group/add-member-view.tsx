@@ -19,7 +19,7 @@ export default function AddMemberView({ convId: _convId, onClose, onAdded, exclu
     try {
       const users = await userService.search(query.trim())
       setResults(users.filter(x => !excludeIds.has(x.user_id)))
-    } catch {}
+    } catch (e) { console.error(e) }
     setSearching(false)
   }
 

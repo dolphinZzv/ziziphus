@@ -44,7 +44,7 @@ export default function FilePanel({ convId, onClose, width }: Props) {
       ])
       setFolders(dirs)
       setEntries(fls.items)
-    } catch {}
+    } catch (e) { console.error(e) }
     setLoading(false)
   }
 
@@ -52,7 +52,7 @@ export default function FilePanel({ convId, onClose, width }: Props) {
 
   const uploadFile = async (file: File) => {
     setUploading(true)
-    try { await fileService.upload(file, file.name, file.type.startsWith('image/') ? 0 : 1, undefined, convId, currentPath); loadData() } catch {}
+    try { await fileService.upload(file, file.name, file.type.startsWith('image/') ? 0 : 1, undefined, convId, currentPath); loadData() } catch (e) { console.error(e) }
     setUploading(false)
   }
 
@@ -72,8 +72,6 @@ export default function FilePanel({ convId, onClose, width }: Props) {
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true) }
   const handleDragLeave = () => setDragOver(false)
 
-  const goRoot = () => setCurrentPath('')
-
   const createFolder = async () => {
     const n = newFolderName.trim()
     if (!n) return
@@ -81,17 +79,17 @@ export default function FilePanel({ convId, onClose, width }: Props) {
       await api.request(`/api/v1/conversations/${convId}/folders`, { method: 'POST', body: { name: n, parent_path: currentPath } })
       setNewFolderName(''); setNewFolderInput(false)
       loadData()
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   const deleteFile = async (id: string) => {
-    try { await fileService.deleteConvFile(convId, id); setEntries(f => f.filter(x => x.file_id !== id)) } catch {}
+    try { await fileService.deleteConvFile(convId, id); setEntries(f => f.filter(x => x.file_id !== id)) } catch (e) { console.error(e) }
     setMenuFileId(null)
   }
 
   const deleteFolder = async (path: string) => {
     if (!confirm('删除此文件夹？')) return
-    try { await fileService.deleteFolder(convId, path); loadData() } catch {}
+    try { await fileService.deleteFolder(convId, path); loadData() } catch (e) { console.error(e) }
   }
 
   // Breadcrumb segments
@@ -173,8 +171,8 @@ export default function FilePanel({ convId, onClose, width }: Props) {
                       e.preventDefault(); setDragFolderOver(null)
                       const fileId = e.dataTransfer.getData('text/file')
                       const srcFolder = e.dataTransfer.getData('text/folder')
-                      if (fileId) { try { await fileService.moveFile(convId, fileId, f.path); } catch {} }
-                      if (srcFolder && srcFolder !== f.path) { try { await fileService.moveFolder(convId, srcFolder, f.path); } catch {} }
+                      if (fileId) { try { await fileService.moveFile(convId, fileId, f.path); } catch (e) { console.error(e) } }
+                      if (srcFolder && srcFolder !== f.path) { try { await fileService.moveFolder(convId, srcFolder, f.path); } catch (e) { console.error(e) } }
                       loadData()
                     }}
                     onClick={() => setCurrentPath(f.path)}>

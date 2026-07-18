@@ -17,12 +17,12 @@ export default function AgentList({ onClose, inline }: Props) {
   const [showCreate, setShowCreate] = useState(false)
   const [filterQuery, setFilterQuery] = useState('')
 
-  const load = async () => { setLoading(true); try { setAgents(await authService.listAgents()) } catch {}; setLoading(false) }
+  const load = async () => { setLoading(true); try { setAgents(await authService.listAgents()) } catch (e) { console.error(e) }; setLoading(false) }
   useEffect(() => { load() }, [])
 
   const handleDelete = async (id: string) => {
     if (!confirm('确定删除该 Agent？')) return
-    try { await authService.deleteAgent(id); load() } catch {}
+    try { await authService.deleteAgent(id); load() } catch (e) { console.error(e) }
   }
 
   const filteredAgents = filterQuery.trim()
@@ -108,7 +108,6 @@ export default function AgentList({ onClose, inline }: Props) {
 }
 
 function AgentEditDialog({ agent, onClose, onSaved }: { agent: User | null; onClose: () => void; onSaved: () => void }) {
-  const { t } = useTranslation()
   const [name, setName] = useState(agent?.name || '')
   const [headline, setHeadline] = useState(agent?.headline || '')
   const [avatar, setAvatar] = useState(agent?.avatar || '')
@@ -130,29 +129,33 @@ function AgentEditDialog({ agent, onClose, onSaved }: { agent: User | null; onCl
     setSaving(true)
     try {
       const data = { name, headline, avatar, cover, wake_mode: wakeMode, primary_color: primaryColor, secondary_color: secondaryColor }
-      agent ? await authService.updateAgent(agent.user_id, data) : await authService.createAgent(data)
+      if (agent) {
+        await authService.updateAgent(agent.user_id, data)
+      } else {
+        await authService.createAgent(data)
+      }
       onSaved(); onClose()
-    } catch {}
+    } catch (e) { console.error(e) }
     setSaving(false)
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     setUploading(true)
-    try { const r = await fileService.upload(file, file.name, 0); setAvatar(r.url) } catch {}
+    try { const r = await fileService.upload(file, file.name, 0); setAvatar(r.url) } catch (e) { console.error(e) }
     setUploading(false); e.target.value = ''
   }
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     setUploadingCover(true)
-    try { const r = await fileService.upload(file, file.name, 0); setCover(r.url) } catch {}
+    try { const r = await fileService.upload(file, file.name, 0); setCover(r.url) } catch (e) { console.error(e) }
     setUploadingCover(false); e.target.value = ''
   }
 
   const handleRegenerateKey = async () => {
     if (!agent || !confirm('重新生成 API Key？')) return
-    try { const r = await authService.regenerateAgentKey(agent.user_id); setApiKey(r.api_key) } catch {}
+    try { const r = await authService.regenerateAgentKey(agent.user_id); setApiKey(r.api_key) } catch (e) { console.error(e) }
   }
 
   const copyKey = () => { navigator.clipboard.writeText(apiKey); setCopied(true); setTimeout(() => setCopied(false), 2000) }

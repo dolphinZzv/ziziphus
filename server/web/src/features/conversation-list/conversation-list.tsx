@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useIsMobile } from '@/hooks/use-breakpoint'
 import { conversationStore } from '@/stores/conversation-store'
 import { uiStore } from '@/stores/ui-store'
 import ConversationRow from './conversation-row'

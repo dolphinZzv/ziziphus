@@ -24,7 +24,7 @@ export default function MemberListView({ convId, onClose }: Props) { const isMob
       setDetail(d)
       const ids = d.members.map(m => m.user_id)
       if (ids.length > 0) {
-        try { const users = await userService.batchGet(ids); setUserMap(users) } catch {}
+        try { const users = await userService.batchGet(ids); setUserMap(users) } catch (e) { console.error(e) }
       }
     }).catch(() => {})
   }
@@ -50,7 +50,7 @@ export default function MemberListView({ convId, onClose }: Props) { const isMob
     try {
       await conversationService.removeMember(convId, userId)
       setDetail({ ...detail, members: detail.members.filter(m => m.user_id !== userId) })
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   return (

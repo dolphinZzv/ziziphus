@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { conversationService, type GroupCardInfo } from '@/services/conversation-service'
+import { conversationService } from '@/services/conversation-service'
 import { conversationStore } from '@/stores/conversation-store'
 import { getConvSettings, toggleConvSetting, subscribe as settingsSubscribe } from '@/stores/conversation-settings-store'
 import { userService } from '@/services/user-service'
@@ -10,7 +10,7 @@ import { authStore } from '@/stores/auth-store'
 import type { ConversationDetail, JoinRequest } from '@/types/conversation'
 import type { User } from '@/types/user'
 import { ConvRole } from '@/types/conversation'
-import { X, Crown, Shield, Trash2, Check, X as XIcon, Camera, Search, Cpu, UserPlus, Bell, Edit2, EyeOff, FileUp, Share2, Link, Copy, CheckCheck } from 'lucide-react'
+import { X, Camera, Check, EyeOff, FileUp, Share2, Link, Copy, CheckCheck, Bell, Edit2 } from 'lucide-react'
 import WebhookPanel from './webhook-panel'
 
 interface Props { convId: string; onClose: () => void }
@@ -25,7 +25,6 @@ export default function GroupDetail({ convId, onClose }: Props) {
   const [editName, setEditName] = useState('')
   const [editingNotice, setEditingNotice] = useState(false)
   const [editNotice, setEditNotice] = useState('')
-  const [showAddMember, setShowAddMember] = useState(false)
   const [addQuery, setAddQuery] = useState('')
   const [addResults, setAddResults] = useState<User[]>([])
   const [showNotice, setShowNotice] = useState(false)
@@ -66,14 +65,14 @@ export default function GroupDetail({ convId, onClose }: Props) {
       setDetail(d)
       const ids = d.members.map(m => m.user_id)
       if (ids.length > 0) {
-        try { const users = await userService.batchGet(ids); setUserMap(users) } catch {}
+        try { const users = await userService.batchGet(ids); setUserMap(users) } catch (e) { console.error(e) }
       }
     }).catch(() => {})
     conversationService.listJoinRequests(convId).then(async reqs => {
       setJoinRequests(reqs)
       const ids = reqs.map(r => r.user_id)
       if (ids.length > 0) {
-        try { const users = await userService.batchGet(ids); setUserMap(prev => ({ ...prev, ...users })) } catch {}
+        try { const users = await userService.batchGet(ids); setUserMap(prev => ({ ...prev, ...users })) } catch (e) { console.error(e) }
       }
     }).catch(() => {})
   }, [convId])
@@ -83,13 +82,12 @@ export default function GroupDetail({ convId, onClose }: Props) {
   const me = detail.members.find(m => m.user_id === currentUserId)
   const isAdmin = me?.role === ConvRole.Admin || me?.role === ConvRole.Owner
   const isOwner = me?.role === ConvRole.Owner
-  const u = (id: string) => userMap[id]
   const uname = (id: string) => userMap[id]?.name || id
 
   const actions = {
     remove: async (userId: string) => {
       if (!confirm(t('group.removeConfirm'))) return
-      try { await conversationService.removeMember(convId, userId); setDetail({ ...detail, members: detail.members.filter(m => m.user_id !== userId) }) } catch {}
+      try { await conversationService.removeMember(convId, userId); setDetail({ ...detail, members: detail.members.filter(m => m.user_id !== userId) }) } catch (e) { console.error(e) }
     },
     approve: async (userId: string) => {
       await conversationService.approveJoinRequest(convId, userId); setJoinRequests(prev => prev.filter(r => r.user_id !== userId))
@@ -99,17 +97,17 @@ export default function GroupDetail({ convId, onClose }: Props) {
     },
     leave: async () => {
       if (!confirm(t('group.leaveConfirm'))) return
-      try { await conversationService.leave(convId); conversationStore.removeConversation(convId); onClose() } catch {}
+      try { await conversationService.leave(convId); conversationStore.removeConversation(convId); onClose() } catch (e) { console.error(e) }
     },
     saveName: async () => {
       const v = editName.trim()
       if (!v) return
-      try { await conversationService.updateGroup(convId, { name: v }); setDetail({ ...detail, name: v }) } catch {}
+      try { await conversationService.updateGroup(convId, { name: v }); setDetail({ ...detail, name: v }) } catch (e) { console.error(e) }
       setEditingName(false)
     },
     saveNotice: async () => {
       const v = editNotice.trim()
-      try { await conversationService.updateGroup(convId, { notice: v }); setDetail({ ...detail, notice: v }) } catch {}
+      try { await conversationService.updateGroup(convId, { notice: v }); setDetail({ ...detail, notice: v }) } catch (e) { console.error(e) }
       setEditingNotice(false)
     },
     avatar: async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +122,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
     },
     searchMember: async () => {
       if (!addQuery.trim()) return
-      try { const users = await userService.search(addQuery.trim()); setAddResults(users.filter(x => !detail.members.some(m => m.user_id === x.user_id))) } catch {}
+      try { const users = await userService.search(addQuery.trim()); setAddResults(users.filter(x => !detail.members.some(m => m.user_id === x.user_id))) } catch (e) { console.error(e) }
     },
     addMember: async (userId: string) => {
       try {
@@ -133,7 +131,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
         if (x) setUserMap(prev => ({ ...prev, [userId]: x }))
         setDetail(d => d ? { ...d, members: [...d.members, { conv_id: convId, user_id: userId, role: ConvRole.Member, mute: false, joined_at: Date.now(), user_type: x?.type || 0, wake_mode: x?.wake_mode || 0 }] } : null)
         setAddResults(prev => prev.filter(x => x.user_id !== userId))
-      } catch {}
+      } catch (e) { console.error(e) }
     },
   }
 
@@ -141,7 +139,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
     try {
       const result = await conversationService.generateShareToken(convId)
       setDetail({ ...detail!, share_token: result.share_token })
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   const handleRemoveShare = async () => {
@@ -149,7 +147,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
     try {
       await conversationService.removeShareToken(convId)
       setDetail({ ...detail!, share_token: '' })
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   const handleCopyLink = async () => {
@@ -158,7 +156,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
       await navigator.clipboard.writeText(shareLink)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch {}
+    } catch (e) { console.error(e) }
   }
 
   const inputSm = 'w-full h-9 px-3 rounded-xl bg-[var(--color-surface-card)] text-sm border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
@@ -257,7 +255,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
                     </div>
                     <div className="flex-1 min-w-0 text-[13px] font-medium text-[var(--color-ink)]">{uname(req.user_id)}</div>
                     <button onClick={() => actions.approve(req.user_id)} className="p-1.5 rounded-xl hover:bg-[var(--success)]/10 text-[var(--success)]"><Check size={15} /></button>
-                    <button onClick={() => actions.reject(req.user_id)} className="p-1.5 rounded-xl hover:bg-[var(--destructive)]/10 text-[var(--destructive)]"><XIcon size={15} /></button>
+                    <button onClick={() => actions.reject(req.user_id)} className="p-1.5 rounded-xl hover:bg-[var(--destructive)]/10 text-[var(--destructive)]"><X size={15} /></button>
                   </div>
                 ))}
               </div>

@@ -21,7 +21,7 @@ export default function GroupEditView({ convId, name, headline, notice, primaryC
       await conversationService.updateGroup(convId, data)
       onSaved?.(data)
       onClose()
-    } catch {}
+    } catch (e) { console.error(e) }
     setSaving(false)
   }
 

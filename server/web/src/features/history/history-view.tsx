@@ -37,7 +37,7 @@ export default function HistoryView({ convId, onClose }: Props) { const isMobile
         setMessages(arr)
       }
       setHasMore(arr.length >= 30)
-    } catch {}
+    } catch (e) { console.error(e) }
     setLoading(false)
     setLoadingMore(false)
   }

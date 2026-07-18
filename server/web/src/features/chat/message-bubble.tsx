@@ -199,8 +199,6 @@ export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, h
   // System messages and recalled messages — centered, no avatar, distinct style
   const isCentered = message.content_type === ContentType.System || message.content_type === ContentType.Recall
 
-  const isSystem = message.content_type === ContentType.System
-
   if (isCentered) {
     return (
       <div className="flex justify-center my-2">

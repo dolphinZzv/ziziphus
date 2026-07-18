@@ -7,7 +7,7 @@ interface Props { body: string }
 export default function FormResponseBubble({ body }: Props) {
   const { t } = useTranslation()
   let resp: { action: string; responder_name?: string } | null = null
-  try { resp = JSON.parse(body) } catch {}
+  try { resp = JSON.parse(body) } catch (e) { console.error(e) }
 
   if (!resp) {
     return <div className="text-xs text-[var(--color-muted)]">[Response]</div>

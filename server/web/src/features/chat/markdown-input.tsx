@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect } from 'react'
 import { cn } from '@/lib/cn'
 import { useIsMobile } from '@/hooks/use-breakpoint'
 

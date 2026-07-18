@@ -92,7 +92,7 @@ export default function AuthPage() {
   const handleMfaVerify = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!mfaCode.trim()) return
-    try { await authStore.mfaVerify(mfaCode.trim()) } catch {}
+    try { await authStore.mfaVerify(mfaCode.trim()) } catch (e) { console.error(e) }
   }
   const fillAccount = (acc: string) => setAccount(acc)
   const deleteAccount = (acc: string, e: React.MouseEvent) => {
@@ -108,7 +108,7 @@ export default function AuthPage() {
     if (!regPassword.trim()) { setLocalRegError(t('auth.passwordRequired', '请填写密码')); return }
     if (regPassword.trim().length < 8) { setLocalRegError(t('auth.passwordTooShort', '密码至少8位')); return }
     if (regPassword !== regConfirm) { setLocalRegError(t('auth.passwordMismatch')); return }
-    try { await authStore.register(regAccount.trim(), regName.trim(), regPassword.trim(), regEmail.trim() || undefined) } catch {}
+    try { await authStore.register(regAccount.trim(), regName.trim(), regPassword.trim(), regEmail.trim() || undefined) } catch (e) { console.error(e) }
   }
 
   // ---- Forgot Password ----
