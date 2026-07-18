@@ -191,12 +191,12 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 	// 7. route + push
 	targets := in.router.Route(ctx, msg)
 	if len(targets) > 0 {
-		in.pusher.Push(context.Background(), msg, targets)
+		in.pusher.Push(ctx, msg, targets)
 	}
 
-	// 8. webhook forwarding (async, group only)
+	// 8. webhook forwarding (enqueues asynq task — already async via Redis queue)
 	if in.whDB != nil {
-		go in.forwardToWebhooks(context.Background(), msg)
+		in.forwardToWebhooks(ctx, msg)
 	}
 
 	return &protocol.MsgSendAckPayload{
