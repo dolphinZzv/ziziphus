@@ -221,9 +221,9 @@ func TestTWithLang_WithArgs(t *testing.T) {
 
 func TestMiddleware_StoresLangInContext(t *testing.T) {
 	tests := []struct {
-		name   string
-		xlang  string
-		want   Lang
+		name  string
+		xlang string
+		want  Lang
 	}{
 		{"X-Language en", "en", LangEN},
 		{"X-Language ja", "ja", LangJA},

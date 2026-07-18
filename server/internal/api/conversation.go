@@ -185,7 +185,7 @@ func (h *ConvHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 		"members":       members,
 		"unread_count":  unread,
 		"created_at":    conv.CreatedAt,
-			"share_token":  conv.ShareToken,
+		"share_token":   conv.ShareToken,
 	})
 }
 

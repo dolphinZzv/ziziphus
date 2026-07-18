@@ -30,12 +30,12 @@ import (
 	"ziziphus/pkg/model"
 
 	_ "net/http/pprof" // pprof
-	_ "ziziphus/docs" // swagger docs
+	_ "ziziphus/docs"  // swagger docs
 )
 
 //	@title			Ziziphus API
 //	@version		1.0
-//	@description	Ziziphus IM 服务 REST API 文档
+//	@description	Ziziphus IM Service REST API Documentation
 //	@host			localhost:8080
 //	@BasePath		/api/v1
 

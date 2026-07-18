@@ -211,10 +211,10 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	JSON(w, uploadResp{
-		FileID: fileID,
-		URL:    fileURL,
-		Size:   finfo.Size,
-		Name:   finfo.Name,
+		FileID:     fileID,
+		URL:        fileURL,
+		Size:       finfo.Size,
+		Name:       finfo.Name,
 		Width:      width,
 		Height:     height,
 		Visibility: visibility,
@@ -420,10 +420,9 @@ func (h *FileHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		// Public file or file without conv_id: no auth needed.
-	} else {
-		// File metadata not found — serve freely for backward compatibility.
-		// Private files are protected above when metadata exists.
 	}
+	// No else — file metadata not found is served freely for backward
+	// compatibility. Private files are protected above when metadata exists.
 
 	rc, err := h.store.Open(r.Context(), filePath)
 	if err != nil {
@@ -495,6 +494,7 @@ func (h *FileHandler) requireConvMember(w http.ResponseWriter, r *http.Request, 
 // authUserFromRequest extracts and validates the user from either:
 //   - Authorization: Bearer <JWT>    (JWT access token)
 //   - Authorization: Bearer <token>  (short-lived file access token, 48+ hex chars)
+//
 // Returns the user ID and true on success; ("", false) on failure WITHOUT
 // writing any response. Callers must handle the error response themselves.
 func (h *FileHandler) authUserFromRequest(r *http.Request) (string, bool) {
