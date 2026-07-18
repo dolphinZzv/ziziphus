@@ -171,6 +171,12 @@ func (c *mockSeqCache) SetRecentMsg(_ context.Context, convID string, msgID int6
 	return nil
 }
 
+func (c *mockSeqCache) GetConvSeq(_ context.Context, convID string) (int64, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.convSeqs[convID], nil
+}
+
 // receiptSeqCache methods
 
 func (c *mockSeqCache) SetUserSeq(_ context.Context, userID, convID string, seq int64) error {
@@ -1404,6 +1410,10 @@ func (e *errSeqCache) GetUserSeq(_ context.Context, _, _ string) (int64, error) 
 }
 
 func (e *errSeqCache) GetAndIncrementConvSeq(_ context.Context, _ string) (int64, error) {
+	return 0, e.err
+}
+
+func (e *errSeqCache) GetConvSeq(_ context.Context, _ string) (int64, error) {
 	return 0, e.err
 }
 

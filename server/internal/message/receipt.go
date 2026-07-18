@@ -28,6 +28,7 @@ type receiptSeqCache interface {
 	SetUserSeq(ctx context.Context, userID, convID string, seq int64) error
 	GetUserSeq(ctx context.Context, userID, convID string) (int64, error)
 	GetAndIncrementConvSeq(ctx context.Context, convID string) (int64, error)
+	GetConvSeq(ctx context.Context, convID string) (int64, error)
 }
 
 type receiptConvRepo interface {
@@ -54,14 +55,27 @@ func (h *ReceiptHandler) MarkRead(ctx context.Context, userID, convID string, ms
 	msg, err := h.msgRepo.Get(ctx, msgID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			logger.Debug("mark read: msg not found", "msg_id", msgID)
+			// Message not found — try to clear unread by using the conversation's
+			// current convSeq directly. This handles stale msg_ids from the frontend.
+			if convSeq, getErr := h.seqCache.GetConvSeq(ctx, convID); getErr == nil && convSeq > 0 {
+				if setErr := h.seqCache.SetUserSeq(ctx, userID, convID, convSeq); setErr != nil {
+					logger.Error("mark read: set user seq after missing msg failed", "error", setErr)
+				}
+			}
+			logger.Debug("mark read: msg not found, used convSeq", "msg_id", msgID, "conv_id", convID)
 			return nil
 		}
 		return err
 	}
 
 	if msg.ConvID != convID {
-		logger.Debug("mark read: msg convID mismatch", "msg_id", msgID, "msg_conv_id", msg.ConvID, "conv_id", convID)
+		// convID mismatch — still try to clear unread
+		if convSeq, getErr := h.seqCache.GetConvSeq(ctx, convID); getErr == nil && convSeq > 0 {
+			if setErr := h.seqCache.SetUserSeq(ctx, userID, convID, convSeq); setErr != nil {
+				logger.Error("mark read: set user seq after convID mismatch failed", "error", setErr)
+			}
+		}
+		logger.Debug("mark read: msg convID mismatch, used convSeq", "msg_id", msgID, "msg_conv_id", msg.ConvID, "conv_id", convID)
 		return nil
 	}
 

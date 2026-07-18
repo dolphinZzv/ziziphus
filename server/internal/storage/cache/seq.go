@@ -72,6 +72,10 @@ func (c *SeqCache) GetUnreadCount(ctx context.Context, userID, convID string) (i
 	return unread, nil
 }
 
+func (c *SeqCache) GetConvSeq(ctx context.Context, convID string) (int64, error) {
+	return c.client.Get(ctx, "conv:seq:"+convID).Int64()
+}
+
 func (c *SeqCache) SetRecentMsg(ctx context.Context, convID string, msgID int64, score float64) error {
 	pipe := c.client.Pipeline()
 	pipe.ZAdd(ctx, "conv:recent:"+convID, &redis.Z{Score: score, Member: msgID})
