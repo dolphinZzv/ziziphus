@@ -249,7 +249,8 @@ export default function ChatView() {
               <ArrowLeft size={20} />
             </button>
           )}
-          <div className="relative flex-shrink-0">
+          <button onClick={() => isGroup ? openPanel('info') : !isSystem ? openPanel('detail') : undefined}
+            className="relative flex-shrink-0">
             {displayAvatar ? (
               <img src={avatarUrl(displayAvatar)} alt="" className="w-7 h-7 rounded-full object-cover" />
             ) : isSystem ? (
@@ -270,11 +271,14 @@ export default function ChatView() {
                 <Users size={8} className="text-[var(--color-muted)]" />
               </div>
             )}
-          </div>
+          </button>
           <div className="flex-1 min-w-0">
-            <span className="font-headline text-sm font-semibold text-[var(--color-ink)] truncate block">
-              {displayName}
-            </span>
+            <button onClick={() => isGroup ? openPanel('info') : !isSystem ? openPanel('detail') : undefined}
+              className="text-left w-full">
+              <span className="font-headline text-sm font-semibold text-[var(--color-ink)] truncate block">
+                {displayName}
+              </span>
+            </button>
             {isSystem ? (
               <div className="h-[15px]" />
             ) : (
