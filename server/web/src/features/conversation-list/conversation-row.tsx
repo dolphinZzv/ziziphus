@@ -6,7 +6,7 @@ import { ConvType, type ConvListItem } from '@/types/conversation'
 import { UserType } from '@/types/user'
 import { ContentType } from '@/types/message'
 import { chatStore } from '@/stores/chat-store'
-import { BellOff, Cpu, Pin, Users } from 'lucide-react'
+import { BellOff, Cpu, Pin, Users, MessageCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 /** Auto-updating relative time label. Re-renders every 30s so "刚刚" → "X分钟前" → "HH:mm". */
@@ -55,7 +55,6 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
 
   const draft = chatStore.getDraft(conversation.conv_id)
   const rawPreview = getPreview()
-  const previewText = draft ? draft : rawPreview
   const hasDraft = !!(draft && draft.trim())
 
   return (
@@ -72,6 +71,11 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
       <div className="relative flex-shrink-0">
         {avatar ? (
           <img src={avatarUrl(avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
+        ) : isSystem ? (
+          <div className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>
+            <MessageCircle size={18} className="text-white" />
+          </div>
         ) : (
           <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold"
             style={{ background: isAI ? 'linear-gradient(135deg, #8B5CF6, #A78BFA)' : `linear-gradient(135deg, var(--color-primary), var(--color-muted))` }}>
