@@ -15,9 +15,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"ziziphus/internal/auth"
-	"ziziphus/pkg/i18n"
 	"ziziphus/internal/gateway"
 	"ziziphus/internal/storage/db"
+	"ziziphus/pkg/i18n"
 	"ziziphus/pkg/model"
 )
 
@@ -90,11 +90,11 @@ type mockUserRepo struct {
 	deleteAgentFunc       func(ctx context.Context, agentID, uid string) error
 	getByAPIKeyFunc       func(ctx context.Context, apiKey string) (*model.User, error)
 	updateAgentAPIKeyFunc func(ctx context.Context, agentID, uid, apiKey string) error
-	deleteAccountFunc       func(ctx context.Context, userID string) error
-	updateLanguageFunc      func(ctx context.Context, userID, language string) error
-	getByEmailFunc          func(ctx context.Context, email string) (*model.User, error)
-	updatePasswordFunc      func(ctx context.Context, userID, password string) error
-	getByAccountFunc        func(ctx context.Context, account string) (*model.User, error)
+	deleteAccountFunc     func(ctx context.Context, userID string) error
+	updateLanguageFunc    func(ctx context.Context, userID, language string) error
+	getByEmailFunc        func(ctx context.Context, email string) (*model.User, error)
+	updatePasswordFunc    func(ctx context.Context, userID, password string) error
+	getByAccountFunc      func(ctx context.Context, account string) (*model.User, error)
 }
 
 func (m *mockUserRepo) Create(ctx context.Context, u *model.User) error {
@@ -401,18 +401,18 @@ func (m *mockSysMsgSender) SendSystemMessage(ctx context.Context, convID, body s
 // ---------------------------------------------------------------------------
 
 type mockConvDataRepo struct {
-	getUserConvsFunc     func(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
-	updateNameAvatarFunc func(ctx context.Context, convID, name, avatar string) error
-	updateNoticeFunc     func(ctx context.Context, convID, notice string) error
-	updateCoverFunc          func(ctx context.Context, convID, cover string) error
-	updatePrimaryColorFunc   func(ctx context.Context, convID, color string) error
-	searchByNameFunc     func(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
-	pinFunc              func(ctx context.Context, userID, convID string) error
-	unpinFunc            func(ctx context.Context, userID, convID string) error
-	cloneFunc            func(ctx context.Context, src, dst, owner, name string, idGen func() int64) error
-	areContactsFunc      func(ctx context.Context, userA, userB string) (bool, error)
-	getSettingsFunc      func(ctx context.Context, convID string) (map[string]any, error)
-	updateSettingsFunc   func(ctx context.Context, convID string, settings map[string]any) error
+	getUserConvsFunc       func(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error)
+	updateNameAvatarFunc   func(ctx context.Context, convID, name, avatar string) error
+	updateNoticeFunc       func(ctx context.Context, convID, notice string) error
+	updateCoverFunc        func(ctx context.Context, convID, cover string) error
+	updatePrimaryColorFunc func(ctx context.Context, convID, color string) error
+	searchByNameFunc       func(ctx context.Context, q string, page, size int) ([]*db.GroupSearchItem, int, error)
+	pinFunc                func(ctx context.Context, userID, convID string) error
+	unpinFunc              func(ctx context.Context, userID, convID string) error
+	cloneFunc              func(ctx context.Context, src, dst, owner, name string, idGen func() int64) error
+	areContactsFunc        func(ctx context.Context, userA, userB string) (bool, error)
+	getSettingsFunc        func(ctx context.Context, convID string) (map[string]any, error)
+	updateSettingsFunc     func(ctx context.Context, convID string, settings map[string]any) error
 }
 
 func (m *mockConvDataRepo) GetUserConvs(ctx context.Context, userID string, page, size int) ([]*db.ConvListItem, int, error) {
@@ -854,9 +854,9 @@ func (m *mockEmailVerifyHandler) Delete(_ context.Context, _ string) error { ret
 
 type mockEmailSender struct{}
 
-func (m *mockEmailSender) Enabled() bool                              { return false }
-func (m *mockEmailSender) SendVerificationCode(_, _ string) error     { return nil }
-func (m *mockEmailSender) SendPasswordResetCode(_, _ string) error    { return nil }
+func (m *mockEmailSender) Enabled() bool                           { return false }
+func (m *mockEmailSender) SendVerificationCode(_, _ string) error  { return nil }
+func (m *mockEmailSender) SendPasswordResetCode(_, _ string) error { return nil }
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -998,9 +998,9 @@ func TestUnauthorized_returns401(t *testing.T) {
 
 func TestHandlers_DetectLanguage(t *testing.T) {
 	tests := []struct {
-		name    string
-		accept  string
-		want    string
+		name   string
+		accept string
+		want   string
 	}{
 		{name: "empty header returns zh", accept: "", want: "zh"},
 		{name: "accepts en", accept: "en-US,en;q=0.9", want: "en"},

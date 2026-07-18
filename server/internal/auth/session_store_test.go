@@ -75,5 +75,3 @@ func TestSetSignupCode_ConcurrentSafe(t *testing.T) {
 		ClearSignupCode(code)
 	}
 }
-
-

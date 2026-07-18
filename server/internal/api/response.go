@@ -9,17 +9,17 @@ import (
 )
 
 type APIResponse struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Key  string      `json:"key,omitempty"`
-	Data any `json:"data"`
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Key  string `json:"key,omitempty"`
+	Data any    `json:"data"`
 }
 
 type PaginatedData struct {
 	Items any `json:"items"`
-	Total int         `json:"total"`
-	Page  int         `json:"page"`
-	Size  int         `json:"size"`
+	Total int `json:"total"`
+	Page  int `json:"page"`
+	Size  int `json:"size"`
 }
 
 func JSON(w http.ResponseWriter, data any) {

@@ -101,9 +101,9 @@ func writeAuthError(w http.ResponseWriter, r *http.Request) {
 }
 
 type HTTPResponse struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data any `json:"data"`
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data any    `json:"data"`
 }
 
 func WriteJSON(w http.ResponseWriter, code int, data any) {

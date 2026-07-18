@@ -89,7 +89,7 @@ func TestWebhookRepo_GetByID(t *testing.T) {
 		AddRow(int64(1), "conv_1", "my-webhook", "key-plain", "key-hash", "https://example.com/cb", []model.WebhookHeader{}, []string{}, "u1", now)
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		`SELECT `+scanCols+` FROM conv_webhooks WHERE id = $1`,
+		`SELECT ` + scanCols + ` FROM conv_webhooks WHERE id = $1`,
 	)).
 		WithArgs(int64(1)).
 		WillReturnRows(rows)
@@ -123,7 +123,7 @@ func TestWebhookRepo_GetByID_NotFound(t *testing.T) {
 	repo := NewWebhookRepo(mock)
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		`SELECT `+scanCols+` FROM conv_webhooks WHERE id = $1`,
+		`SELECT ` + scanCols + ` FROM conv_webhooks WHERE id = $1`,
 	)).
 		WithArgs(int64(999)).
 		WillReturnError(pgx.ErrNoRows)
@@ -151,7 +151,7 @@ func TestWebhookRepo_GetByAPIKey(t *testing.T) {
 		AddRow(int64(1), "conv_1", "my-webhook", "test-api-key", "hash", "", []model.WebhookHeader{}, []string{}, "u1", now)
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		`SELECT `+scanCols+` FROM conv_webhooks WHERE api_key_plain = $1`,
+		`SELECT ` + scanCols + ` FROM conv_webhooks WHERE api_key_plain = $1`,
 	)).
 		WithArgs("test-api-key").
 		WillReturnRows(rows)
@@ -180,7 +180,7 @@ func TestWebhookRepo_ListByConvID(t *testing.T) {
 		AddRow(int64(2), "conv_1", "wh2", "k2", "h2", "", []model.WebhookHeader{}, []string{}, "u2", now)
 
 	mock.ExpectQuery(regexp.QuoteMeta(
-		`SELECT `+scanCols+` FROM conv_webhooks WHERE conv_id = $1 ORDER BY created_at ASC`,
+		`SELECT ` + scanCols + ` FROM conv_webhooks WHERE conv_id = $1 ORDER BY created_at ASC`,
 	)).
 		WithArgs("conv_1").
 		WillReturnRows(rows)
@@ -211,7 +211,7 @@ func TestWebhookRepo_ListByConvID_Empty(t *testing.T) {
 
 	rows := pgxmock.NewRows([]string{"id", "conv_id", "name", "api_key_plain", "api_key_hash", "callback_url", "headers", "cidr_whitelist", "created_by", "created_at"})
 	mock.ExpectQuery(regexp.QuoteMeta(
-		`SELECT `+scanCols+` FROM conv_webhooks WHERE conv_id = $1 ORDER BY created_at ASC`,
+		`SELECT ` + scanCols + ` FROM conv_webhooks WHERE conv_id = $1 ORDER BY created_at ASC`,
 	)).
 		WithArgs("conv_empty").
 		WillReturnRows(rows)

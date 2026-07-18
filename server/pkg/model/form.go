@@ -63,7 +63,7 @@ type FormField struct {
 	Required     bool            `json:"required"`
 	Options      []string        `json:"options,omitempty"`
 	Placeholder  string          `json:"placeholder,omitempty"`
-	DefaultValue any     `json:"default_value,omitempty"`
+	DefaultValue any             `json:"default_value,omitempty"`
 	Validation   *FormValidation `json:"validation,omitempty"`
 }
 
@@ -95,8 +95,8 @@ type FormDefinitionBody struct {
 
 // FormAnswer is a single field-value pair in a form response.
 type FormAnswer struct {
-	FieldID string      `json:"field_id"`
-	Value   any `json:"value"`
+	FieldID string `json:"field_id"`
+	Value   any    `json:"value"`
 }
 
 // FormResponseBody is the JSON-serialized body for ContentType=11 messages.

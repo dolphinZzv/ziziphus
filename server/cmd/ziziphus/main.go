@@ -138,8 +138,8 @@ func main() {
 	go func() {
 		mux := asynq.NewServeMux()
 		mailHandler.RegisterHandlers(mux)
-			webhookTaskHandler.RegisterHandlers(mux)
-			if err := asynqServer.Start(mux); err != nil {
+		webhookTaskHandler.RegisterHandlers(mux)
+		if err := asynqServer.Start(mux); err != nil {
 			logger.Error("asynq server error", "error", err)
 		}
 	}()

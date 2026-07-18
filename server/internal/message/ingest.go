@@ -520,8 +520,6 @@ func (in *Ingest) forwardToWebhooks(ctx context.Context, msg *model.Message) {
 	}
 }
 
-
-
 func extractMentions(body string) map[string]bool {
 	result := make(map[string]bool)
 	words := strings.Fields(body)
