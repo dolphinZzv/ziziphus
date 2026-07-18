@@ -60,6 +60,7 @@ export default function App() {
           <Route path="conversations/:convId/detail" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
           <Route path="conversations/:convId/history" element={<Suspense fallback={<PageFallback />}><ChatView /></Suspense>} />
           <Route path="profile" element={null} />
+          <Route path="profile/edit" element={null} />
           <Route path="profile/agents" element={null} />
           <Route path="profile/privacy" element={null} />
           <Route path="profile/sessions" element={null} />

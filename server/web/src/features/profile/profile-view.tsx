@@ -6,7 +6,7 @@ import { uiStore } from '@/stores/ui-store'
 import { avatarUrl } from '@/lib/file'
 import { fileService } from '@/services/file-service'
 import { UserType } from '@/types/user'
-import { X, ArrowLeft, Edit, LogOut, Settings, Bot, Camera, Smartphone, Copy, Check, Shield } from 'lucide-react'
+import { Edit, LogOut, Settings, Bot, Camera, Smartphone, Copy, Check, Shield, X, ArrowLeft } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { onClose?: () => void; variant?: 'modal' | 'page' }
@@ -62,7 +62,7 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
           </button>
         </div>
         <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
-          <button onClick={() => navigate('/profile/edit')} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
+          <button onClick={() => uiStore.openSheet('editProfile')} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
             <Edit size={15} />
           </button>
           {onClose && !isMobile && (
