@@ -10,6 +10,7 @@ export async function requestNotificationPermission() {
 }
 
 export function isNotificationGranted() {
+  if (!('Notification' in window)) return false
   return granted || Notification.permission === 'granted'
 }
 

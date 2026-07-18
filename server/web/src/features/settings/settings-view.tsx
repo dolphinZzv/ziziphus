@@ -78,14 +78,16 @@ export default function SettingsView({ onClose, inline }: Props) {
           </div>
         </div>
 
-        {/* Notifications */}
-        <div>
-          <label className="block text-xs font-medium text-[var(--color-body)] mb-2">{t('settings.notifications')}</label>
-          <button onClick={() => requestNotificationPermission().then(g => g && alert(t('settings.notifyGranted') || 'Notifications enabled'))}
-            className="w-full h-10 rounded-xl border border-[var(--color-hairline)] text-sm text-[var(--color-body)] hover:bg-[var(--color-surface-soft)] transition-colors flex items-center justify-center gap-2">
-            {isNotificationGranted() ? t('settings.notifyEnabled') : t('settings.notifyEnable')}
-          </button>
-        </div>
+        {/* Notifications — only supported browsers */}
+        {'Notification' in window && (
+          <div>
+            <label className="block text-xs font-medium text-[var(--color-body)] mb-2">{t('settings.notifications')}</label>
+            <button onClick={() => requestNotificationPermission().then(g => g && alert(t('settings.notifyGranted') || 'Notifications enabled'))}
+              className="w-full h-10 rounded-xl border border-[var(--color-hairline)] text-sm text-[var(--color-body)] hover:bg-[var(--color-surface-soft)] transition-colors flex items-center justify-center gap-2">
+              {isNotificationGranted() ? t('settings.notifyEnabled') : t('settings.notifyEnable')}
+            </button>
+          </div>
+        )}
 
         {/* Bubble color */}
         <div>
