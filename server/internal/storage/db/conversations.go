@@ -104,20 +104,20 @@ func (r *ConvRepo) UpdateLastMsg(ctx context.Context, convID string, msgID int64
 }
 
 type ConvListItem struct {
-	ConvID        string           `json:"conv_id"`
-	Type          model.ConvType   `json:"type"`
-	Name          string           `json:"name"`
-	Avatar        string           `json:"avatar"`
-	PrimaryColor  string           `json:"primary_color"`
-	SecondaryColor string          `json:"secondary_color"`
-	UnreadCount   int64            `json:"unread_count"`
-	LastMessage   *LastMessageInfo `json:"last_message,omitempty"`
-	LastMsgAt     int64            `json:"last_msg_at"`
-	Role          model.ConvRole   `json:"role"`
-	Mute          bool             `json:"mute"`
-	MentionMe     bool             `json:"mention_me"`
-	PartnerType   int              `json:"partner_type"`
-	Pinned        bool             `json:"pinned"`
+	ConvID         string           `json:"conv_id"`
+	Type           model.ConvType   `json:"type"`
+	Name           string           `json:"name"`
+	Avatar         string           `json:"avatar"`
+	PrimaryColor   string           `json:"primary_color"`
+	SecondaryColor string           `json:"secondary_color"`
+	UnreadCount    int64            `json:"unread_count"`
+	LastMessage    *LastMessageInfo `json:"last_message,omitempty"`
+	LastMsgAt      int64            `json:"last_msg_at"`
+	Role           model.ConvRole   `json:"role"`
+	Mute           bool             `json:"mute"`
+	MentionMe      bool             `json:"mention_me"`
+	PartnerType    int              `json:"partner_type"`
+	Pinned         bool             `json:"pinned"`
 }
 
 type LastMessageInfo struct {
@@ -208,7 +208,7 @@ func (r *ConvRepo) GetUserConvs(ctx context.Context, userID string, page, size i
 	if len(partnerIDs) > 0 {
 		type partnerInfo struct {
 			id, name, nickname, avatar, primaryColor, secondaryColor string
-			userType                                                  int
+			userType                                                 int
 		}
 		partnerMap := make(map[string]*partnerInfo, len(partnerIDs))
 		rows, err := r.pool.Query(ctx,

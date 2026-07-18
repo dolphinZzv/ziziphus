@@ -35,19 +35,19 @@ type Conversation struct {
 }
 
 type ConvMember struct {
-	ConvID        string   `json:"conv_id"`
-	UserID        string   `json:"user_id"`
-	Role          ConvRole `json:"role"`
-	Nickname      string   `json:"nickname,omitempty"`
-	Mute          bool     `json:"mute"`
-	JoinedAt      int64    `json:"joined_at"`
-	UserType      UserType `json:"user_type"`
-	WakeMode      WakeMode `json:"wake_mode"`
-	Pinned        bool     `json:"pinned"`
-	Avatar        string   `json:"avatar,omitempty"`
-	Name          string   `json:"name,omitempty"`
-	PrimaryColor  string   `json:"primary_color,omitempty"`
-	SecondaryColor string  `json:"secondary_color,omitempty"`
+	ConvID         string   `json:"conv_id"`
+	UserID         string   `json:"user_id"`
+	Role           ConvRole `json:"role"`
+	Nickname       string   `json:"nickname,omitempty"`
+	Mute           bool     `json:"mute"`
+	JoinedAt       int64    `json:"joined_at"`
+	UserType       UserType `json:"user_type"`
+	WakeMode       WakeMode `json:"wake_mode"`
+	Pinned         bool     `json:"pinned"`
+	Avatar         string   `json:"avatar,omitempty"`
+	Name           string   `json:"name,omitempty"`
+	PrimaryColor   string   `json:"primary_color,omitempty"`
+	SecondaryColor string   `json:"secondary_color,omitempty"`
 }
 
 type JoinRequestStatus int
