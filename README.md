@@ -1,11 +1,8 @@
 # Ziziphus
 
-[![Backend](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg?query=branch:main+job:"Backend+\(test+%2B+lint\)")](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
-[![Frontend](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg?query=branch:main+job:"Frontend+\(lint+%2B+build\)")](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
-[![Container](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg?query=branch:main+job:"Container+\(build+%2B+smoke+%2B+push\)")](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
+[![CI](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml/badge.svg)](https://github.com/dolphinZzv/ziziphus/actions/workflows/ci.yml)
 [![Demo](https://img.shields.io/badge/demo-online-brightgreen)](http://47.95.200.101:10011/)
 
-> **Demo**: [http://47.95.200.101:10011/](http://47.95.200.101:10011/)
 
 [English](README.md) | [中文](docs/README.zh.md) | [日本語](docs/README.ja.md) | [Français](docs/README.fr.md) | [Deutsch](docs/README.de.md) | [Español](docs/README.es.md) | [한국어](docs/README.ko.md) | [Русский](docs/README.ru.md)
 

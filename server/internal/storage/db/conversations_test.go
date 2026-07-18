@@ -92,10 +92,10 @@ func TestConvRepo_Get(t *testing.T) {
 	repo := NewConvRepo(mock)
 	now := time.Now()
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT conv_id, type, name, owner_id, avatar, cover, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline, COALESCE(primary_color, '') FROM conversations WHERE conv_id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT conv_id, type, name, owner_id, avatar, cover, notice, max_members, last_msg_id, last_msg_at, created_at, COALESCE(settings, '{}'), headline, COALESCE(primary_color, ''), COALESCE(share_token, '') FROM conversations WHERE conv_id = $1`)).
 		WithArgs("conv1").
-		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "type", "name", "owner_id", "avatar", "cover", "notice", "max_members", "last_msg_id", "last_msg_at", "created_at", "settings", "headline", "primary_color"}).
-			AddRow("conv1", model.ConvP2P, "test", "u1", "av.jpg", "cover.jpg", "notice", 2, int64(100), &now, now, map[string]any{}, "", ""))
+		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "type", "name", "owner_id", "avatar", "cover", "notice", "max_members", "last_msg_id", "last_msg_at", "created_at", "settings", "headline", "primary_color", "share_token"}).
+			AddRow("conv1", model.ConvP2P, "test", "u1", "av.jpg", "cover.jpg", "notice", 2, int64(100), &now, now, map[string]any{}, "", "", ""))
 
 	c, err := repo.Get(context.Background(), "conv1")
 	if err != nil {
@@ -124,8 +124,8 @@ func TestConvRepo_Get_NoLastMsg(t *testing.T) {
 
 	mock.ExpectQuery(`FROM conversations WHERE conv_id`).
 		WithArgs("conv_new").
-		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "type", "name", "owner_id", "avatar", "cover", "notice", "max_members", "last_msg_id", "last_msg_at", "created_at", "settings", "headline", "primary_color"}).
-			AddRow("conv_new", model.ConvP2P, "new", "u1", "", "", "", 2, nil, nil, now, map[string]any{}, "", ""))
+		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "type", "name", "owner_id", "avatar", "cover", "notice", "max_members", "last_msg_id", "last_msg_at", "created_at", "settings", "headline", "primary_color", "share_token"}).
+			AddRow("conv_new", model.ConvP2P, "new", "u1", "", "", "", 2, nil, nil, now, map[string]any{}, "", "", ""))
 
 	c, err := repo.Get(context.Background(), "conv_new")
 	if err != nil {
@@ -460,7 +460,7 @@ func TestConvRepo_Clone(t *testing.T) {
 		WithArgs("new_conv", "Cloned", "u1", "src_conv").
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
-	mock.ExpectExec(`INSERT INTO conv_members \(conv_id, user_id, role, nickname, mute, pinned, joined_at\) SELECT \$1, user_id, CASE WHEN user_id = \$2 THEN 2 ELSE 0 END, nickname, mute, FALSE, NOW\(\) FROM conv_members WHERE conv_id = \$3`).
+	mock.ExpectExec(`INSERT INTO conv_members \(conv_id, user_id, role, nickname, mute, pinned, joined_at\) SELECT \$1, user_id, CASE WHEN user_id = \$2 THEN 2 ELSE 0 END, nickname, FALSE, FALSE, NOW\(\) FROM conv_members WHERE conv_id = \$3`).
 		WithArgs("new_conv", "u1", "src_conv").
 		WillReturnResult(pgxmock.NewResult("INSERT", 3))
 
