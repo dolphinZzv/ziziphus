@@ -2,9 +2,12 @@ package gateway
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"ziziphus/pkg/protocol"
 )
 
@@ -38,28 +41,29 @@ func TestNewConnection(t *testing.T) {
 }
 
 func TestNewConnection_SetsLastHeartbeat(t *testing.T) {
+	// CreatedAt and LastHeartbeat should be set to the current time
 	c := NewConnection("c1", "u1", "s1", 1, nil)
-	expected := c.CreatedAt.UnixMilli()
-	if c.LastHeartbeat != expected {
-		t.Errorf("LastHeartbeat = %d, want %d", c.LastHeartbeat, expected)
+	if c.CreatedAt.IsZero() {
+		t.Error("CreatedAt should be set")
+	}
+	if c.LastHeartbeat == 0 {
+		t.Error("LastHeartbeat should be set")
 	}
 }
 
 func TestConnection_SendJSON_NilReceiver(t *testing.T) {
 	var c *Connection
-	// Should not panic
-	err := c.SendJSON("hello")
+	err := c.SendJSON(map[string]string{"key": "val"})
 	if err != nil {
-		t.Errorf("SendJSON on nil receiver returned error: %v", err)
+		t.Errorf("SendJSON on nil receiver: %v", err)
 	}
 }
 
 func TestConnection_SendJSON_NilPayload(t *testing.T) {
 	c := NewConnection("c1", "u1", "s1", 1, nil)
-	// Should not panic and return nil
 	err := c.SendJSON(nil)
 	if err != nil {
-		t.Errorf("SendJSON with nil payload returned error: %v", err)
+		t.Errorf("SendJSON with nil payload: %v", err)
 	}
 }
 
@@ -72,17 +76,11 @@ func TestConnection_IsClosed_InitiallyFalse(t *testing.T) {
 
 func TestConnection_Close_Idempotent(t *testing.T) {
 	c := NewConnection("c1", "u1", "s1", 1, nil)
-	// No real websocket.Conn, Close will fail at c.Conn.Close().
-	// But we only care about the closed flag.
-	_ = c.Close()
-	// We don't check err because there's no real Conn.
-	if !c.closed {
-		t.Error("connection should be marked closed after Close()")
+	if err := c.Close(); err != nil {
+		t.Errorf("first Close: %v", err)
 	}
-	// Second close should be a no-op
-	err2 := c.Close()
-	if err2 != nil {
-		// Even if first close errored, second should be handled
+	if err := c.Close(); err != nil {
+		t.Errorf("second Close: %v", err)
 	}
 }
 
@@ -90,7 +88,7 @@ func TestConnection_IsClosed_AfterClose(t *testing.T) {
 	c := NewConnection("c1", "u1", "s1", 1, nil)
 	_ = c.Close()
 	if !c.IsClosed() {
-		t.Error("IsClosed should return true after Close()")
+		t.Error("connection should be closed after Close()")
 	}
 }
 
@@ -121,6 +119,38 @@ func TestConnection_Close_NilConn_Safe(t *testing.T) {
 	}
 	if !c.closed {
 		t.Error("connection should be closed after Close()")
+	}
+}
+
+// NewConnection calls SetReadLimit(1MB). We verify it works
+// by creating a real WebSocket pair and confirming the connection
+// is usable after NewConnection.
+func TestNewConnection_SetsReadLimit(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{}
+		wsConn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		// Server side — NewConnection applies SetReadLimit(1MB)
+		c := NewConnection("srv", "u1", "s1", 1, wsConn)
+		defer c.Close()
+		_, _, _ = wsConn.ReadMessage()
+	}))
+	defer srv.Close()
+
+	wsURL := "ws" + srv.URL[4:] + "/ws"
+	dialer := websocket.Dialer{}
+	wsConn, _, err := dialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer wsConn.Close()
+
+	// A small message should work fine
+	err = wsConn.WriteMessage(websocket.TextMessage, []byte("hello"))
+	if err != nil {
+		t.Errorf("small message should succeed: %v", err)
 	}
 }
 

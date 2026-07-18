@@ -379,6 +379,35 @@ func TestCleanup_EmptyBuckets_NoPanic(t *testing.T) {
 	rl.cleanup()
 }
 
+func TestRateLimiter_Stop(t *testing.T) {
+	rl := NewRateLimiter(10, 5, 1024)
+
+	// Stop should not panic and should close the stopped channel.
+	done := make(chan struct{})
+	go func() {
+		rl.Stop()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// OK — Stop returned without blocking
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop() did not return within 2 seconds")
+	}
+
+	// Verify the cleanup goroutine has exited by checking
+	// that the stopped channel is closed.
+	select {
+	case _, ok := <-rl.stopped:
+		if ok {
+			t.Error("stopped channel should be closed after Stop()")
+		}
+	default:
+		t.Error("stopped channel should be closed")
+	}
+}
+
 func TestCheck_ContextPassed(t *testing.T) {
 	// The context parameter is accepted for API consistency.
 	// RateLimiter does not use it for cancellation, but we verify

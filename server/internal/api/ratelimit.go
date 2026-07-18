@@ -190,6 +190,11 @@ func (rl *LoginRateLimiter) Middleware(next http.Handler) http.Handler {
 	})
 }
 
+func (rl *LoginRateLimiter) Stop() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+}
+
 func (rl *LoginRateLimiter) cleanupLoop() {
 	for {
 		time.Sleep(rl.cleanupTick)

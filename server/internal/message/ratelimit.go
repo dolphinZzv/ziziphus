@@ -77,6 +77,11 @@ func (rl *RateLimiter) SetParams(msgPerSec, burstSize, maxBodyBytes int) {
 	rl.maxBodyBytes = maxBodyBytes
 }
 
+// Stop cleanly shuts down the cleanup loop, preventing goroutine leaks on server shutdown.
+func (rl *RateLimiter) Stop() {
+	close(rl.stopped)
+}
+
 func (rl *RateLimiter) cleanupLoop() {
 	ticker := time.NewTicker(rl.cleanupInterval)
 	defer ticker.Stop()

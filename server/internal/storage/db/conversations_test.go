@@ -230,11 +230,11 @@ func TestConvRepo_GetMembers(t *testing.T) {
 	repo := NewConvRepo(mock)
 	now := time.Now()
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT cm.conv_id, cm.user_id, cm.role, cm.nickname, cm.mute, cm.joined_at, COALESCE(u.type, 0), COALESCE(u.wake_mode, 0) FROM conv_members cm LEFT JOIN users u ON u.id = cm.user_id WHERE cm.conv_id = $1 ORDER BY cm.joined_at`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT cm.conv_id, cm.user_id, cm.role, cm.nickname, cm.mute, cm.joined_at, COALESCE(u.type, 0), COALESCE(u.wake_mode, 0), COALESCE(u.name, ''), COALESCE(u.avatar, ''), COALESCE(u.primary_color, ''), COALESCE(u.secondary_color, '') FROM conv_members cm LEFT JOIN users u ON u.id = cm.user_id WHERE cm.conv_id = $1 ORDER BY cm.joined_at`)).
 		WithArgs("conv1").
-		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "user_id", "role", "nickname", "mute", "joined_at", "user_type", "wake_mode"}).
-			AddRow("conv1", "u1", model.ConvRoleOwner, "Owner", false, now, model.UserHuman, 0).
-			AddRow("conv1", "u2", model.ConvRoleMember, "", false, now, model.UserHuman, 0))
+		WillReturnRows(pgxmock.NewRows([]string{"conv_id", "user_id", "role", "nickname", "mute", "joined_at", "user_type", "wake_mode", "name", "avatar", "primary_color", "secondary_color"}).
+			AddRow("conv1", "u1", model.ConvRoleOwner, "Owner", false, now, model.UserHuman, 0, "", "", "", "").
+			AddRow("conv1", "u2", model.ConvRoleMember, "", false, now, model.UserHuman, 0, "", "", "", ""))
 
 	members, err := repo.GetMembers(context.Background(), "conv1")
 	if err != nil {
@@ -507,10 +507,10 @@ func TestConvRepo_GetUserConvs(t *testing.T) {
 				nil, model.ConvRoleMember, false, false))
 
 	// Resolve partner names - for u1:u3 P2P
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT u.id, u.name, u.type, COALESCE(c.nickname, '') FROM users u LEFT JOIN contacts c ON c.user_id = $1 AND c.contact_id = u.id WHERE u.id = ANY($2)`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT u.id, u.name, u.type, COALESCE(u.avatar, ''), COALESCE(u.primary_color, ''), COALESCE(u.secondary_color, ''), COALESCE(c.nickname, '') FROM users u LEFT JOIN contacts c ON c.user_id = $1 AND c.contact_id = u.id WHERE u.id = ANY($2)`)).
 		WithArgs("u1", []string{"u3"}).
-		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "type", "nickname"}).
-			AddRow("u3", "Charlie", model.UserHuman, ""))
+		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "type", "avatar", "primary_color", "secondary_color", "nickname"}).
+			AddRow("u3", "Charlie", model.UserHuman, "", "", "", ""))
 
 	items, total, err := repo.GetUserConvs(context.Background(), "u1", 1, 20)
 	if err != nil {
@@ -696,10 +696,10 @@ func TestConvRepo_GetUserConvs_NoLastMsg(t *testing.T) {
 			0, "", "", "", 0, int64(0), 0,
 			nil, model.ConvRoleMember, false, false))
 
-	mock.ExpectQuery(`SELECT u.id, u.name, u.type, COALESCE\(c.nickname, ''\)`).
+	mock.ExpectQuery(`SELECT u.id, u.name, u.type, COALESCE(u.avatar, ''), COALESCE(u.primary_color, ''), COALESCE(u.secondary_color, ''), COALESCE(c.nickname, '')`).
 		WithArgs("u1", []string{"p2p_conv"}).
-		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "type", "nickname"}).
-			AddRow("p2p_conv", "", model.UserHuman, ""))
+		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "type", "avatar", "primary_color", "secondary_color", "nickname"}).
+			AddRow("p2p_conv", "", model.UserHuman, "", "", "", ""))
 
 	items, _, err := repo.GetUserConvs(context.Background(), "u1", 1, 20)
 	if err != nil {

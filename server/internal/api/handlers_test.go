@@ -523,11 +523,19 @@ func (m *mockConvDataRepo) RemoveShareToken(ctx context.Context, convID string) 
 
 type mockMsgStorage struct {
 	getHistoryFunc func(ctx context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error)
+	getFunc        func(ctx context.Context, msgID int64) (*model.Message, error)
 }
 
 func (m *mockMsgStorage) GetHistory(ctx context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error) {
 	if m.getHistoryFunc != nil {
 		return m.getHistoryFunc(ctx, convID, beforeMsgID, aroundMsgID, limit, keyword, startDate, endDate)
+	}
+	return nil, nil
+}
+
+func (m *mockMsgStorage) Get(ctx context.Context, msgID int64) (*model.Message, error) {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, msgID)
 	}
 	return nil, nil
 }
@@ -2122,6 +2130,16 @@ func TestMsgHandler_GetHistory_NotMember(t *testing.T) {
 
 func TestMsgHandler_GetReceipts_Success(t *testing.T) {
 	handler := &MsgHandler{
+		msgRepo: &mockMsgStorage{
+			getFunc: func(_ context.Context, msgID int64) (*model.Message, error) {
+				return &model.Message{MsgID: msgID, ConvID: "conv_1"}, nil
+			},
+		},
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
+			},
+		},
 		receipts: &mockReceiptStorage{
 			getByMsgIDFunc: func(_ context.Context, msgID int64) ([]*model.Receipt, error) {
 				return []*model.Receipt{
@@ -2162,8 +2180,43 @@ func TestMsgHandler_GetReceipts_InvalidID(t *testing.T) {
 	}
 }
 
+func TestMsgHandler_GetReceipts_NotMember(t *testing.T) {
+	handler := &MsgHandler{
+		msgRepo: &mockMsgStorage{
+			getFunc: func(_ context.Context, msgID int64) (*model.Message, error) {
+				return &model.Message{MsgID: msgID, ConvID: "conv_1"}, nil
+			},
+		},
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return false, nil
+			},
+		},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/messages/{msg_id}/receipts", nil)
+	req = setChiURLParam(req, "msg_id", "1")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.GetReceipts(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNotFound {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNotFound)
+	}
+}
+
 func TestMsgHandler_GetReceipts_Empty(t *testing.T) {
 	handler := &MsgHandler{
+		msgRepo: &mockMsgStorage{
+			getFunc: func(_ context.Context, msgID int64) (*model.Message, error) {
+				return &model.Message{MsgID: msgID, ConvID: "conv_1"}, nil
+			},
+		},
+		convMgr: &mockConvManager{
+			isMemberFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return true, nil
+			},
+		},
 		receipts: &mockReceiptStorage{
 			getByMsgIDFunc: func(_ context.Context, msgID int64) ([]*model.Receipt, error) {
 				return nil, nil
@@ -2184,9 +2237,25 @@ func TestMsgHandler_GetReceipts_Empty(t *testing.T) {
 	}
 }
 
-// =========================================================================
-// Tests: ContactHandler
-// =========================================================================
+func TestMsgHandler_GetReceipts_MsgNotFound(t *testing.T) {
+	handler := &MsgHandler{
+		msgRepo: &mockMsgStorage{
+			getFunc: func(_ context.Context, msgID int64) (*model.Message, error) {
+				return nil, model.ErrConvNotFound
+			},
+		},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/messages/{msg_id}/receipts", nil)
+	req = setChiURLParam(req, "msg_id", "999")
+	req = setAuthCtx(req, "user_1")
+	w := httptest.NewRecorder()
+	handler.GetReceipts(w, req)
+
+	resp := decodeResponse(t, w)
+	if resp.Code != model.ErrNotFound {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrNotFound)
+	}
+}
 
 func TestContactHandler_List(t *testing.T) {
 	handler := &ContactHandler{

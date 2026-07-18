@@ -194,6 +194,12 @@ func (h *WSHandler) readLoop(ctx context.Context, gwConn *gateway.Connection, us
 }
 
 func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, conn *gateway.Connection) error {
+	// Use a 30-second timeout context for all dispatching paths.
+	// When the WebSocket connection drops, operations like DB queries
+	// and message pushing are cancelled promptly rather than hanging.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	switch frame.Type {
 	case protocol.Ping:
 		return conn.SendFrame(protocol.Frame{Type: protocol.Pong})
@@ -203,7 +209,7 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 		if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 			return err
 		}
-		ack, err := h.ingest.Ingest(context.Background(), userID, sessionID, payload)
+		ack, err := h.ingest.Ingest(ctx, userID, sessionID, payload)
 		if err != nil {
 			errCode := model.ErrInternal
 			if appErr, ok := err.(*model.AppError); ok {
@@ -220,7 +226,7 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 		if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 			return err
 		}
-		res, err := h.sync.Handle(context.Background(), sessionID, payload)
+		res, err := h.sync.Handle(ctx, sessionID, payload)
 		if err != nil {
 			errCode := model.ErrInternal
 			if appErr, ok := err.(*model.AppError); ok {
@@ -237,18 +243,18 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 		if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 			return err
 		}
-		return h.receipt.MarkRead(context.Background(), userID, payload.ConvID, payload.MsgID)
+		return h.receipt.MarkRead(ctx, userID, payload.ConvID, payload.MsgID)
 
 	case protocol.MsgEdit:
 		var p protocol.MsgEditPayload
 		if err := json.Unmarshal(frame.Payload, &p); err != nil {
 			return err
 		}
-		msg, err := h.msgRepo.Get(context.Background(), p.MsgID)
+		msg, err := h.msgRepo.Get(ctx, p.MsgID)
 		if err != nil || msg.SenderID != userID {
 			return nil
 		}
-		if err := h.msgRepo.UpdateBody(context.Background(), p.MsgID, p.NewBody); err != nil {
+		if err := h.msgRepo.UpdateBody(ctx, p.MsgID, p.NewBody); err != nil {
 			return err
 		}
 		now := time.Now().UnixMilli()
@@ -265,11 +271,11 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 		if err := json.Unmarshal(frame.Payload, &p); err != nil {
 			return err
 		}
-		m, err := h.msgRepo.Get(context.Background(), p.MsgID)
+		m, err := h.msgRepo.Get(ctx, p.MsgID)
 		if err != nil || m.SenderID != userID {
 			return nil
 		}
-		if err := h.msgRepo.Recall(context.Background(), p.MsgID); err != nil {
+		if err := h.msgRepo.Recall(ctx, p.MsgID); err != nil {
 			return err
 		}
 		now := time.Now().UnixMilli()
@@ -293,10 +299,10 @@ func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, con
 			return err
 		}
 		recoveredID := sessionID
-		existingSess := h.sessMgr.Get(context.Background(), payload.SessionID)
+		existingSess := h.sessMgr.Get(ctx, payload.SessionID)
 		if existingSess != nil && existingSess.UserID == userID {
 			recoveredID = payload.SessionID
-			if err := h.sessMgr.BindConnection(context.Background(), payload.SessionID, conn.ConnID); err != nil {
+			if err := h.sessMgr.BindConnection(ctx, payload.SessionID, conn.ConnID); err != nil {
 				recoveredID = sessionID
 			}
 		}

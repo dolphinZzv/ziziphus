@@ -85,15 +85,19 @@ func (m *Manager) DisconnectBySessionID(ctx context.Context, sessionID string) {
 	}
 	connID := conn.ConnID
 	userID := conn.UserID
+	// Remove from sessConns under lock, but defer Close()/Sleep() until after unlock
 	delete(m.sessConns, sessionID)
-	if c, ok2 := m.conns[connID]; ok2 {
-		// send kicked error frame before closing
-		errPayload, _ := json.Marshal(protocol.ErrorPayload{Code: 4001, Message: "kicked"})
-		_ = c.SendFrame(protocol.Frame{Type: protocol.Error, Payload: errPayload})
-		time.Sleep(100 * time.Millisecond)
-		c.Close()
-		delete(m.conns, connID)
-	}
+	m.mu.Unlock()
+
+	// Send kick frame and close outside the lock to avoid blocking other operations
+	errPayload, _ := json.Marshal(protocol.ErrorPayload{Code: 4001, Message: "kicked"})
+	_ = conn.SendFrame(protocol.Frame{Type: protocol.Error, Payload: errPayload})
+	time.Sleep(100 * time.Millisecond)
+	conn.Close()
+
+	// Re-acquire lock to clean up remaining maps
+	m.mu.Lock()
+	delete(m.conns, connID)
 	if userMap, ok2 := m.userConns[userID]; ok2 {
 		delete(userMap, connID)
 		if len(userMap) == 0 {

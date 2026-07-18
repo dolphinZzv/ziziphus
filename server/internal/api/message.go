@@ -17,6 +17,7 @@ type convMemberChecker interface {
 
 type msgStorage interface {
 	GetHistory(ctx context.Context, convID string, beforeMsgID, aroundMsgID int64, limit int, keyword string, startDate, endDate int64) ([]*model.Message, error)
+	Get(ctx context.Context, msgID int64) (*model.Message, error)
 }
 
 type receiptStorage interface {
@@ -110,6 +111,20 @@ func (h *MsgHandler) GetReceipts(w http.ResponseWriter, r *http.Request) {
 	msgID, err := strconv.ParseInt(chi.URLParam(r, "msg_id"), 10, 64)
 	if err != nil || msgID <= 0 {
 		Error(w, r, http.StatusBadRequest, model.ErrBadMsgContent)
+		return
+	}
+	userID := auth.UserFromCtx(r.Context())
+
+	// Fetch the message to get its conv_id, then verify membership
+	msg, err := h.msgRepo.Get(r.Context(), msgID)
+	if err != nil {
+		logger.Error("get message for receipts failed", "msg_id", msgID, "error", err)
+		Error(w, r, http.StatusNotFound, model.ErrConvNotFound)
+		return
+	}
+	isMember, err := h.convMgr.IsMember(r.Context(), msg.ConvID, userID)
+	if err != nil || !isMember {
+		Error(w, r, http.StatusForbidden, model.ErrConvNotFound)
 		return
 	}
 

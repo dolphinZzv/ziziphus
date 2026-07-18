@@ -23,6 +23,9 @@ type Connection struct {
 }
 
 func NewConnection(connID, userID, sessionID string, device int, conn *websocket.Conn) *Connection {
+	if conn != nil {
+		conn.SetReadLimit(1 * 1024 * 1024) // 1MB max frame size — prevents OOM from large frames
+	}
 	now := time.Now()
 	return &Connection{
 		ConnID:        connID,
