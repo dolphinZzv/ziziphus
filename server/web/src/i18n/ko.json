@@ -48,7 +48,8 @@
     "passwordTooShort": "비밀번호는 8자 이상이어야 합니다",
     "accountRequired": "계정을 입력해주세요",
     "nameRequired": "닉네임을 입력해주세요",
-    "passwordRequired": "비밀번호를 입력해주세요"
+    "passwordRequired": "비밀번호를 입력해주세요",
+    "hasAccount": "이미 계정이 있으신가요?"
   },
   "chat": {
     "inputPlaceholder": "메시지 입력...",
@@ -168,7 +169,9 @@
     "discoverable": "검색 가능",
     "discoverableHint": "사용자가 검색으로 이 그룹을 찾을 수 있도록 허용",
     "webhookUsageExamples": "사용 예시",
-    "webhookHeadersHint": "줄당 하나, 형식: Key: Value"
+    "webhookHeadersHint": "줄당 하나, 형식: Key: Value",
+    "bgImage": "채팅 배경",
+    "bgImageHint": "권장 크기 1080×1920"
   },
   "group": {
     "detail": "그룹 정보",
@@ -207,7 +210,18 @@
     "name": "그룹명",
     "headline": "그룹 소개",
     "disband": "그룹 해산",
-    "disbandConfirm": "이 그룹을 해산하시겠습니까? 모든 멤버가 제거됩니다."
+    "disbandConfirm": "이 그룹을 해산하시겠습니까? 모든 멤버가 제거됩니다.",
+    "shareLink": "그룹 공유",
+    "generateShareLink": "공유 링크 생성",
+    "removeShareLink": "공유 링크 비활성화",
+    "noShareLink": "아직 공유 링크가 없습니다",
+    "removeShareConfirm": "공유 링크를 비활성화하시겠습니까?",
+    "cardNotFoundTitle": "그룹을 찾을 수 없음",
+    "cardNotFoundDesc": "이 공유 링크가 유효하지 않거나 그룹이 해산되었습니다",
+    "goToLogin": "로그인",
+    "joinGroup": "로그인 후 그룹 참여",
+    "register": "회원가입",
+    "themeColor": "테마 색상"
   },
   "contact": {
     "title": "연락처",
@@ -295,7 +309,7 @@
     "languageDE": "Deutsch",
     "languageES": "Español",
     "languageKO": "한국어",
-    "languageKO": "한국어",
+    "languageRU": "Русский",
     "bubbleColor": "버블 색상",
     "deviceID": "기기 ID",
     "sessionID": "세션 ID",
@@ -341,7 +355,9 @@
     "desktop": "데스크톱",
     "web": "웹",
     "tablet": "태블릿",
-    "noSessions": "다른 기기가 없습니다"
+    "noSessions": "다른 기기가 없습니다",
+    "deviceUnit": "대 기기",
+    "otherDevices": "다른 기기 {{count}}대"
   },
   "connection": {
     "connected": "연결됨",
@@ -356,7 +372,8 @@
     "unauthorized": "인증되지 않았습니다. 다시 로그인해주세요.",
     "notFound": "사용자를 찾을 수 없습니다",
     "timeoutRetry": "작업 시간이 초과되었습니다. 다시 시도해주세요.",
-    "operationFailed": "작업에 실패했습니다. 다시 시도해주세요."
+    "operationFailed": "작업에 실패했습니다. 다시 시도해주세요.",
+    "retry": "재시도"
   },
   "sidebar": {
     "newChat": "새 채팅",
@@ -390,7 +407,9 @@
     "edit": "편집",
     "remove": "제거",
     "pin": "고정",
-    "unpin": "고정 해제"
+    "unpin": "고정 해제",
+    "details": "상세",
+    "required": "필수 입력"
   },
   "time": {
     "justNow": "방금",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Megaphone } from 'lucide-react'
 
 const DISMISS_KEY = 'ziziphus_dismissed_announcement'
@@ -16,6 +17,7 @@ function fingerprint(a: Announcement): string {
 }
 
 export default function AnnouncementBanner() {
+  const { t } = useTranslation()
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
   const [dismissed, setDismissed] = useState(false)
 
@@ -44,7 +46,7 @@ export default function AnnouncementBanner() {
         {announcement.url && (
           <a href={announcement.url} target="_blank" rel="noopener noreferrer"
             className="ml-2 underline underline-offset-2 hover:opacity-80 whitespace-nowrap">
-            详情
+            {t("common.details")}
           </a>
         )}
       </div>

@@ -98,8 +98,6 @@ export default function Sidebar() {
       <div className="flex-1 overflow-hidden">
         <ConversationList />
       </div>
-
-      {/* Lazy-loaded sheets rendered in app-layout instead */}
     </>
   )
 }

@@ -1,10 +1,14 @@
 import SwiftUI
+import Combine
 import IMCore
 
 struct ConversationRowView: View {
     let conv: ConvListItem
 
     @State private var lastImageURL: URL?
+
+    private let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+    @State private var now = Date()
 
     var body: some View {
         HStack(spacing: 12) {
@@ -40,11 +44,11 @@ struct ConversationRowView: View {
                     Spacer()
 
                     if let timestamp = conv.lastMessage?.timestamp, timestamp > 0 {
-                        Text(DateFormatterCache.string(from: timestamp))
+                        Text(RelativeTimeFormatter.string(from: timestamp, now: now))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     } else if conv.lastMsgAt > 0 {
-                        Text(DateFormatterCache.string(from: conv.lastMsgAt))
+                        Text(RelativeTimeFormatter.string(from: conv.lastMsgAt, now: now))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -123,6 +127,7 @@ struct ConversationRowView: View {
         .task {
             lastImageURL = lastImageFileURL
         }
+        .onReceive(timer) { _ in now = Date() }
     }
 
     private var lastImageFileURL: URL? {
@@ -158,18 +163,25 @@ struct ConversationRowView: View {
     }
 }
 
-// MARK: - DateFormatter cache
+// MARK: - Relative time formatter (auto-updating via timer)
 
-private enum DateFormatterCache {
-    static func string(from timestamp: Int64) -> String {
+private enum RelativeTimeFormatter {
+    static func string(from timestamp: Int64, now: Date = Date()) -> String {
         let date = Date(timeIntervalSince1970: Double(timestamp) / 1000)
+        let diff = now.timeIntervalSince(date)
+        if diff < 60 {
+            return "刚刚"
+        }
+        if diff < 3600 {
+            return "\(Int(diff / 60))分钟前"
+        }
         if Calendar.current.isDateInToday(date) {
             return todayFormatter.string(from: date)
-        } else if Calendar.current.isDateInYesterday(date) {
-            return yesterdayFormatter.string(from: date)
-        } else {
-            return otherFormatter.string(from: date)
         }
+        if Calendar.current.isDateInYesterday(date) {
+            return "昨天 \(yesterdayFormatter.string(from: date))"
+        }
+        return otherFormatter.string(from: date)
     }
 
     private static let todayFormatter: DateFormatter = {
@@ -180,7 +192,7 @@ private enum DateFormatterCache {
 
     private static let yesterdayFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "'昨天' HH:mm"
+        f.dateFormat = "HH:mm"
         return f
     }()
 

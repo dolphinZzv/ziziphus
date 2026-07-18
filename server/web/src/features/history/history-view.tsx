@@ -3,7 +3,6 @@ import { messageService } from '@/services/message-service'
 import type { Message } from '@/types/message'
 import { ContentType } from '@/types/message'
 import { X, Search, Loader2, ArrowLeft } from 'lucide-react'
-import { format } from 'date-fns'
 import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void }
@@ -79,7 +78,7 @@ export default function HistoryView({ convId, onClose }: Props) { const isMobile
             <div key={msg.msg_id} className="px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-soft)]">
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-xs font-medium text-[var(--color-ink)]">{msg.sender_name || msg.sender_id}</span>
-                <span className="text-[10px] text-[var(--color-muted)]">{msg.timestamp ? format(new Date(msg.timestamp), 'MM/dd HH:mm') : ''}</span>
+                <span className="text-[10px] text-[var(--color-muted)]">{msg.timestamp ? new Date(msg.timestamp).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}</span>
               </div>
               <div className="text-xs text-[var(--color-body)] line-clamp-2">
                 {msg.content_type === ContentType.Image ? '[图片]' : msg.content_type === ContentType.File ? '[文件]' : msg.content_type === ContentType.AgentTimeline ? '[Agent]' : msg.body?.slice(0, 100)}

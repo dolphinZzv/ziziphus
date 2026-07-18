@@ -15,6 +15,7 @@ export interface AuthState {
   user: User | null
   token: string
   refreshToken: string
+  fileToken: string
   sessionId: string
   isLoggedIn: boolean
   isLoading: boolean
@@ -28,11 +29,13 @@ function getInitialState(): AuthState {
   let user: User | null = null
   let sessionId = ''
   let refreshToken = ''
+  let fileToken = ''
   try {
     token = getItem<string>('token', '')!
     user = getItem<User>('user', null)!
     sessionId = getItem<string>('session_id', '')!
     refreshToken = getItem<string>('refresh_token', '')!
+    fileToken = getItem<string>('file_token', '')!
     // Validate cached user has essential fields
     if (user && !user.name && !user.account) {
       user = null
@@ -49,6 +52,7 @@ function getInitialState(): AuthState {
     user,
     token,
     refreshToken,
+    fileToken,
     sessionId,
     isLoggedIn: !!token && !!user,
     isLoading: false,
@@ -60,6 +64,9 @@ function getInitialState(): AuthState {
 
 let state = getInitialState()
 const listeners = new Set<() => void>()
+
+/** Periodic file token refresh timer (3 min interval, 5 min TTL on server). */
+let _tokenRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 // Wire up auto-logout when API returns 401
 __setLogoutHandler(() => authStore.logout())
@@ -114,9 +121,11 @@ export const authStore = {
         allow_direct_chat: (result.allow_direct_chat as boolean) ?? true,
         created_at: (result.created_at as number) || 0,
       }
-      this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '')
+      this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '', result.file_token as string || '')
       wsClient.connect(result.token as string)
       this.refreshUserProfile()
+      // Ensure file token for private file access
+      if (!result.file_token) this.ensureFileToken()
     } catch (e: unknown) {
       state = { ...state, isLoading: false, error: e instanceof Error ? e.message : 'Login failed' }; emit()
       throw e
@@ -150,7 +159,7 @@ export const authStore = {
         allow_direct_chat: (result.allow_direct_chat as boolean) ?? true,
         created_at: (result.created_at as number) || 0,
       }
-      this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '')
+      this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '', result.file_token as string || '')
       wsClient.connect(result.token as string)
       this.refreshUserProfile()
       state = { ...state, mfaChallenge: null }; emit()
@@ -184,7 +193,7 @@ export const authStore = {
         allow_direct_chat: (result.allow_direct_chat as boolean) ?? true,
         created_at: (result.created_at as number) || 0,
       }
-      this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '')
+      this.setAuth(user, result.token as string, result.refresh_token as string, (result.session_id as string) || '', result.file_token as string || '')
       wsClient.connect(result.token as string)
       this.refreshUserProfile()
     } catch (e: unknown) {
@@ -193,12 +202,13 @@ export const authStore = {
     }
   },
 
-  setAuth(user: User, token: string, refreshToken: string, sessionId: string) {
+  setAuth(user: User, token: string, refreshToken: string, sessionId: string, fileToken?: string) {
     setItem('user', user)
     setItem('token', token)
     setItem('refresh_token', refreshToken)
     setItem('session_id', sessionId)
-    state = { ...state, user, token, refreshToken, sessionId, isLoggedIn: true, isLoading: false, error: null, _initialized: true }
+    if (fileToken) setItem('file_token', fileToken)
+    state = { ...state, user, token, refreshToken, fileToken: fileToken || state.fileToken, sessionId, isLoggedIn: true, isLoading: false, error: null, _initialized: true }
     emit()
   },
 
@@ -210,7 +220,22 @@ export const authStore = {
     } catch { /* keep cached user */ }
   },
 
-  async checkExistingSession() {
+  /** Ensure a valid file token exists for loading private images/files. */
+  async ensureFileToken() {
+    const curToken = getItem<string>('file_token', '')
+    try {
+      const result = await api.request<{ token: string }>('/api/v1/files/token', {
+        method: 'POST',
+        body: { token: curToken || '' },
+      })
+      if (result?.token) {
+        setItem('file_token', result.token)
+        state = { ...state, fileToken: result.token }; emit()
+      }
+    } catch { /* keep existing token if refresh fails */ }
+  },
+
+    async checkExistingSession() {
     const token = getItem<string>('token', '')
     const user = getItem<User>('user', null)
     if (!token || !user) {
@@ -224,6 +249,11 @@ export const authStore = {
       const me = await api.request<User>('/api/v1/users/me')
       setItem('user', me)
       state = { ...state, user: me, isLoading: false, _initialized: true }; emit()
+      // Ensure file token is available for private file access
+      await this.ensureFileToken()
+      // Periodically refresh the file token so shared URLs expire quickly (5 min TTL → refresh every 3 min)
+      if (_tokenRefreshTimer) clearInterval(_tokenRefreshTimer)
+      _tokenRefreshTimer = setInterval(() => { this.ensureFileToken() }, 180_000)
     } catch {
       // Token may be expired but keep showing cached UI
       state = { ...state, isLoading: false, _initialized: true }; emit()
@@ -254,16 +284,18 @@ export const authStore = {
 
   logout() {
     wsClient.disconnect()
+    if (_tokenRefreshTimer) { clearInterval(_tokenRefreshTimer); _tokenRefreshTimer = null }
     removeItem('user')
     removeItem('token')
     removeItem('refresh_token')
+    removeItem('file_token')
     removeItem('session_id')
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith('ziziphus_msg_') || key.startsWith('ziziphus_conv_')) {
         localStorage.removeItem(key)
       }
     }
-    state = { ...state, user: null, token: '', refreshToken: '', sessionId: '', isLoggedIn: false, isLoading: false, error: null, _initialized: true }
+    state = { ...state, user: null, token: '', refreshToken: '', fileToken: '', sessionId: '', isLoggedIn: false, isLoading: false, error: null, _initialized: true }
     emit()
   },
 }

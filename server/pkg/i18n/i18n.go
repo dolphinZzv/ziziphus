@@ -13,15 +13,54 @@ type Lang string
 const (
 	LangZH Lang = "zh-Hans"
 	LangEN Lang = "en"
+	LangJA Lang = "ja"
+	LangFR Lang = "fr"
+	LangDE Lang = "de"
+	LangES Lang = "es"
+	LangKO Lang = "ko"
+	LangRU Lang = "ru"
 )
 
 type ctxKey string
 
 const langCtxKey ctxKey = "lang"
 
-// DetectLanguage parses the Accept-Language header and returns the best match.
+// ParseLang converts a language code string to a Lang constant.
+// Accepts both short codes (zh, en, ja, fr, de, es, ko, ru) and
+// canonical server codes (zh-Hans, en, ja, fr, de, es, ko, ru).
+// Returns LangZH for unrecognized codes.
+func ParseLang(code string) Lang {
+	switch strings.ToLower(strings.TrimSpace(code)) {
+	case "zh", "zh-cn", "zh-hans", "zh-hk", "zh-tw":
+		return LangZH
+	case "en", "en-us", "en-gb":
+		return LangEN
+	case "ja", "ja-jp":
+		return LangJA
+	case "fr", "fr-fr":
+		return LangFR
+	case "de", "de-de":
+		return LangDE
+	case "es", "es-es":
+		return LangES
+	case "ko", "ko-kr":
+		return LangKO
+	case "ru", "ru-ru":
+		return LangRU
+	default:
+		return LangZH
+	}
+}
+
+// DetectLanguage detects the language from the request.
+// Priority: X-Language header (set by frontend) > Accept-Language header.
 // Defaults to LangZH if no supported language is found.
 func DetectLanguage(r *http.Request) Lang {
+	// Frontend sends language via X-Language header (e.g. "en", "zh", "ja")
+	if xlang := r.Header.Get("X-Language"); xlang != "" {
+		return ParseLang(xlang)
+	}
+
 	accept := r.Header.Get("Accept-Language")
 	if accept == "" {
 		return LangZH
@@ -30,13 +69,7 @@ func DetectLanguage(r *http.Request) Lang {
 	lang := strings.Split(accept, ",")[0]
 	lang = strings.TrimSpace(lang)
 	lang = strings.Split(lang, ";")[0]
-	lang = strings.Split(lang, "-")[0] // "zh-CN" -> "zh"
-	switch lang {
-	case "en":
-		return LangEN
-	default:
-		return LangZH
-	}
+	return ParseLang(lang)
 }
 
 // WithLang stores the language in the context.

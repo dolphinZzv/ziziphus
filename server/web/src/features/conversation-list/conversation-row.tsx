@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
 import { formatMessageTime } from '@/lib/time'
 import { avatarUrl } from '@/lib/file'
@@ -7,6 +8,16 @@ import { ContentType } from '@/types/message'
 import { chatStore } from '@/stores/chat-store'
 import { BellOff, Cpu, Pin, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+
+/** Auto-updating relative time label. Re-renders every 30s so "刚刚" → "X分钟前" → "HH:mm". */
+function RelativeTime({ ts }: { ts: number }) {
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => tick(n => n + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
+  return <>{formatMessageTime(ts)}</>
+}
 
 interface Props { conversation: ConvListItem; isSelected: boolean; onClick: () => void }
 
@@ -85,7 +96,7 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
             {pinned && <Pin size={10} className="text-[var(--color-accent)] flex-shrink-0" />}
             <span className="text-sm font-medium text-[var(--color-ink)] truncate">{displayName}</span>
           </div>
-          <span className="text-[10px] text-[var(--color-muted-soft)] flex-shrink-0">{formatMessageTime(last_msg_at)}</span>
+          <span className="text-[10px] text-[var(--color-muted-soft)] flex-shrink-0"><RelativeTime ts={last_msg_at} /></span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
           <span className="text-[12px] text-[var(--color-muted)] truncate leading-snug">

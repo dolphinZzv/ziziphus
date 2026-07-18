@@ -6,7 +6,79 @@ import (
 	"testing"
 )
 
-func TestDetectLanguage(t *testing.T) {
+func TestParseLang(t *testing.T) {
+	tests := []struct {
+		name string
+		code string
+		want Lang
+	}{
+		{"zh short code", "zh", LangZH},
+		{"zh-Hans canonical", "zh-Hans", LangZH},
+		{"zh-CN", "zh-CN", LangZH},
+		{"en", "en", LangEN},
+		{"en-US", "en-US", LangEN},
+		{"en-GB", "en-GB", LangEN},
+		{"ja", "ja", LangJA},
+		{"ja-JP", "ja-JP", LangJA},
+		{"fr", "fr", LangFR},
+		{"fr-FR", "fr-FR", LangFR},
+		{"de", "de", LangDE},
+		{"de-DE", "de-DE", LangDE},
+		{"es", "es", LangES},
+		{"es-ES", "es-ES", LangES},
+		{"ko", "ko", LangKO},
+		{"ko-KR", "ko-KR", LangKO},
+		{"ru", "ru", LangRU},
+		{"ru-RU", "ru-RU", LangRU},
+		{"unknown falls back to zh", "xx", LangZH},
+		{"empty falls back to zh", "", LangZH},
+		{"case insensitive", "EN", LangEN},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ParseLang(tt.code); got != tt.want {
+				t.Errorf("ParseLang(%q) = %v, want %v", tt.code, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDetectLanguage_FromXLanguage(t *testing.T) {
+	tests := []struct {
+		name   string
+		header string
+		want   Lang
+	}{
+		{"X-Language en", "en", LangEN},
+		{"X-Language zh", "zh", LangZH},
+		{"X-Language ja", "ja", LangJA},
+		{"X-Language fr", "fr", LangFR},
+		{"X-Language de", "de", LangDE},
+		{"X-Language es", "es", LangES},
+		{"X-Language ko", "ko", LangKO},
+		{"X-Language ru", "ru", LangRU},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &http.Request{Header: http.Header{}}
+			r.Header.Set("X-Language", tt.header)
+			if got := DetectLanguage(r); got != tt.want {
+				t.Errorf("DetectLanguage() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDetectLanguage_XLanguageTakesPriority(t *testing.T) {
+	r := &http.Request{Header: http.Header{}}
+	r.Header.Set("X-Language", "fr")
+	r.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	if got := DetectLanguage(r); got != LangFR {
+		t.Errorf("DetectLanguage() = %v, want %v (X-Language should win)", got, LangFR)
+	}
+}
+
+func TestDetectLanguage_FromAcceptLanguage(t *testing.T) {
 	tests := []struct {
 		name   string
 		accept string
@@ -16,10 +88,14 @@ func TestDetectLanguage(t *testing.T) {
 		{name: "en first", accept: "en-US,en;q=0.9", want: LangEN},
 		{name: "en only", accept: "en", want: LangEN},
 		{name: "zh default", accept: "zh-CN,zh;q=0.8", want: LangZH},
-		{name: "ja falls back to zh", accept: "ja-JP", want: LangZH},
-		{name: "multiple with en", accept: "fr,en;q=0.8,zh;q=0.5", want: LangZH},
-		{name: "complex quality", accept: "en;q=0.1,zh;q=0.9", want: LangEN},
-		{name: "only fr falls back", accept: "fr-FR", want: LangZH},
+		{name: "ja", accept: "ja-JP", want: LangJA},
+		{name: "fr", accept: "fr-FR,fr;q=0.9", want: LangFR},
+		{name: "de", accept: "de-DE,de;q=0.9", want: LangDE},
+		{name: "es", accept: "es-ES", want: LangES},
+		{name: "ko", accept: "ko-KR", want: LangKO},
+		{name: "ru", accept: "ru-RU", want: LangRU},
+		{name: "multiple with en", accept: "fr,en;q=0.8,zh;q=0.5", want: LangFR},
+		{name: "only xx falls back", accept: "xx-XX", want: LangZH},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -35,9 +111,8 @@ func TestDetectLanguage(t *testing.T) {
 func TestWithLang_LangFromCtx(t *testing.T) {
 	ctx := context.Background()
 
-	// Default is LangZH
 	if got := LangFromCtx(ctx); got != LangZH {
-		t.Errorf("LangFromCtx() = %v, want %v", got, LangZH)
+		t.Errorf("LangFromCtx() default = %v, want %v", got, LangZH)
 	}
 
 	ctx = WithLang(ctx, LangEN)
@@ -45,9 +120,14 @@ func TestWithLang_LangFromCtx(t *testing.T) {
 		t.Errorf("LangFromCtx() = %v, want %v", got, LangEN)
 	}
 
-	ctx = WithLang(ctx, LangZH)
-	if got := LangFromCtx(ctx); got != LangZH {
-		t.Errorf("LangFromCtx() = %v, want %v", got, LangZH)
+	ctx = WithLang(ctx, LangJA)
+	if got := LangFromCtx(ctx); got != LangJA {
+		t.Errorf("LangFromCtx() = %v, want %v", got, LangJA)
+	}
+
+	ctx = WithLang(ctx, LangRU)
+	if got := LangFromCtx(ctx); got != LangRU {
+		t.Errorf("LangFromCtx() = %v, want %v", got, LangRU)
 	}
 }
 
@@ -82,7 +162,6 @@ func TestT_MissingKey(t *testing.T) {
 }
 
 func TestT_KeyMissingInLangFallsBackToZH(t *testing.T) {
-	// Add a key that only has zh translation
 	Messages["test.zh_only"] = map[Lang]string{LangZH: "中文"}
 	defer delete(Messages, "test.zh_only")
 
@@ -94,7 +173,6 @@ func TestT_KeyMissingInLangFallsBackToZH(t *testing.T) {
 }
 
 func TestT_NoTranslationForKey(t *testing.T) {
-	// Add a key with an empty translation map
 	Messages["test.empty"] = map[Lang]string{}
 	defer delete(Messages, "test.empty")
 
@@ -142,19 +220,32 @@ func TestTWithLang_WithArgs(t *testing.T) {
 }
 
 func TestMiddleware_StoresLangInContext(t *testing.T) {
-	r := &http.Request{Header: http.Header{}}
-	r.Header.Set("Accept-Language", "en")
-	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		lang := LangFromCtx(r.Context())
-		if lang != LangEN {
-			t.Errorf("lang = %v, want %v", lang, LangEN)
-		}
-	}))
-	handler.ServeHTTP(nil, r)
+	tests := []struct {
+		name   string
+		xlang  string
+		want   Lang
+	}{
+		{"X-Language en", "en", LangEN},
+		{"X-Language ja", "ja", LangJA},
+		{"X-Language ru", "ru", LangRU},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &http.Request{Header: http.Header{}}
+			r.Header.Set("X-Language", tt.xlang)
+			handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				lang := LangFromCtx(r.Context())
+				if lang != tt.want {
+					t.Errorf("lang = %v, want %v", lang, tt.want)
+				}
+			}))
+			handler.ServeHTTP(nil, r)
+		})
+	}
 }
 
 func TestMiddleware_DefaultLang(t *testing.T) {
-	r := &http.Request{Header: http.Header{}} // no Accept-Language
+	r := &http.Request{Header: http.Header{}} // no headers
 	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		lang := LangFromCtx(r.Context())
 		if lang != LangZH {
@@ -162,4 +253,22 @@ func TestMiddleware_DefaultLang(t *testing.T) {
 		}
 	}))
 	handler.ServeHTTP(nil, r)
+}
+
+func TestParseLang_RoundTrip(t *testing.T) {
+	// Verify that ParseLang can handle what langToFrontendCode (from api) would send back
+	codes := []string{"zh", "en", "ja", "fr", "de", "es", "ko", "ru"}
+	for _, code := range codes {
+		t.Run(code, func(t *testing.T) {
+			parsed := ParseLang(code)
+			if parsed == LangZH && code != "zh" {
+				t.Errorf("ParseLang(%q) fell back to zh unexpectedly", code)
+			}
+			// Verify it round-trips: ParseLang can re-parse its own output
+			rt := ParseLang(string(parsed))
+			if rt != parsed {
+				t.Errorf("Round-trip ParseLang(ParseLang(%q)) = %v, want %v", code, rt, parsed)
+			}
+		})
+	}
 }

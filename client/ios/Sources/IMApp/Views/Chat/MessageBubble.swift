@@ -246,7 +246,7 @@ struct MessageBubble: View {
             // PDF inline preview
             if let body = fileBody, body.name.lowercased().hasSuffix(".pdf"),
                let url = URL(string: AppSettings.shared.serverURL + body.url) {
-                PDFPreviewView(url: url, filename: body.name)
+                AuthPDFPreviewView(url: url, filename: body.name)
                     .padding(.top, 4)
             }
         }
@@ -257,7 +257,7 @@ struct MessageBubble: View {
         .contextMenu {
             if let url = fileBody.flatMap({ URL(string: AppSettings.shared.serverURL + $0.url) }) {
                 Button(loc("common.download")) {
-                    UIApplication.shared.open(url)
+                    AuthDownloader.downloadAndShare(url: url)
                 }
             }
             Button(loc("common.copy")) {
@@ -532,7 +532,11 @@ private struct ImageDownloadView: View {
         defer { session.invalidateAndCancel() }
 
         do {
-            let (tempURL, _) = try await session.download(from: url)
+            var request = URLRequest(url: url)
+            if let token = AuthManager.shared.readToken() {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            let (tempURL, _) = try await session.download(for: request)
             guard let data = try? Data(contentsOf: tempURL),
                   let image = UIImage(data: data) else {
                 await MainActor.run { phase = .failure }

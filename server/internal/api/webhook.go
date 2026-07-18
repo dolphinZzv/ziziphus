@@ -569,7 +569,7 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if !checkCIDR(wh.CIDRWhitelist, ip) {
-		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: "ip not in whitelist"})
+		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.permission_denied"), Key: "err.permission_denied"})
 		return
 	}
 

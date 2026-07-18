@@ -148,9 +148,10 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Get("/api/v1/sessions", h.Session.ListSessions)
 		r.Delete("/api/v1/sessions/{session_id}", h.Session.DeleteSession)
 
-		// File upload (authenticated)
+		// File upload & access (authenticated)
 		r.Post("/api/v1/files/upload", h.File.Upload)
 		r.Get("/api/v1/files/{file_id}", h.File.GetInfo)
+		r.Post("/api/v1/files/token", h.File.RenewFileToken)
 	})
 
 	// Static file serving (public)

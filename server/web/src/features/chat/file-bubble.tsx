@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { FileText, Download, X, ZoomIn, ZoomOut, ExternalLink } from 'lucide-react'
 import { formatFileSize } from '@/lib/file'
+import { withFileToken } from '@/lib/file-token'
 
 interface Props { body: string }
 
@@ -29,7 +31,7 @@ export default function FileBubble({ body }: Props) {
       setViewerOpen(true)
       setZoom(1)
     } else if (url) {
-      window.open(url, '_blank')
+      window.open(withFileToken(url), '_blank')
     }
   }
 
@@ -51,6 +53,73 @@ export default function FileBubble({ body }: Props) {
     }
   }, [viewerOpen, handleKeyDown])
 
+  const pdfViewer = viewerOpen ? (
+    <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText size={16} className="text-white/70 flex-shrink-0" />
+          <span className="text-sm text-white/80 truncate">{name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={zoomOut}
+            className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+            title={t('chat.zoomOut')}
+          >
+            <ZoomOut size={16} />
+          </button>
+          <span className="text-xs text-white/60 min-w-[36px] text-center">{Math.round(zoom * 100)}%</span>
+          <button
+            onClick={zoomIn}
+            className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+            title={t('chat.zoomIn')}
+          >
+            <ZoomIn size={16} />
+          </button>
+          <a
+            href={withFileToken(url)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+            title={t('chat.openInNewTab')}
+          >
+            <ExternalLink size={16} />
+          </a>
+          <button
+            onClick={() => setViewerOpen(false)}
+            className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* PDF viewer */}
+      <div className="flex-1 min-h-0 px-4 pb-4">
+        <object
+          data={`${withFileToken(url)}#zoom=${Math.round(zoom * 100)}`}
+          type="application/pdf"
+          className="w-full h-full rounded-lg"
+          title={name}
+        >
+          <div className="flex flex-col items-center justify-center h-full text-white/60 gap-4">
+            <FileText size={48} />
+            <p className="text-sm">{t('chat.pdfNotSupported')}</p>
+            <a
+              href={withFileToken(url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+            >
+              {t('chat.openInNewTab')}
+            </a>
+          </div>
+        </object>
+      </div>
+    </div>
+  ) : null
+
   return (
     <>
       <button
@@ -67,73 +136,7 @@ export default function FileBubble({ body }: Props) {
         <Download size={16} className="flex-shrink-0 opacity-60" />
       </button>
 
-      {/* Full-screen PDF viewer (like image preview) */}
-      {viewerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
-          {/* Top bar */}
-          <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <FileText size={16} className="text-white/70 flex-shrink-0" />
-              <span className="text-sm text-white/80 truncate">{name}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={zoomOut}
-                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
-                title={t('chat.zoomOut')}
-              >
-                <ZoomOut size={16} />
-              </button>
-              <span className="text-xs text-white/60 min-w-[36px] text-center">{Math.round(zoom * 100)}%</span>
-              <button
-                onClick={zoomIn}
-                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
-                title={t('chat.zoomIn')}
-              >
-                <ZoomIn size={16} />
-              </button>
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
-                title={t('chat.openInNewTab')}
-              >
-                <ExternalLink size={16} />
-              </a>
-              <button
-                onClick={() => setViewerOpen(false)}
-                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* PDF viewer */}
-          <div className="flex-1 min-h-0 px-4 pb-4">
-            <object
-              data={`${url}#zoom=${Math.round(zoom * 100)}`}
-              type="application/pdf"
-              className="w-full h-full rounded-lg"
-              title={name}
-            >
-              <div className="flex flex-col items-center justify-center h-full text-white/60 gap-4">
-                <FileText size={48} />
-                <p className="text-sm">{t('chat.pdfNotSupported')}</p>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
-                >
-                  {t('chat.openInNewTab')}
-                </a>
-              </div>
-            </object>
-          </div>
-        </div>
-      )}
+      {pdfViewer && createPortal(pdfViewer, document.body)}
     </>
   )
 }

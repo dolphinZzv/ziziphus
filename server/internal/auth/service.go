@@ -58,6 +58,8 @@ type passwordUpdater interface {
 const (
 	refreshTokenKeyPrefix = "refresh_token:"
 	blacklistKeyPrefix    = "token_blacklist:"
+	fileTokenKeyPrefix    = "file_token:"
+	fileTokenTTL          = 5 * time.Minute
 )
 
 // NewService creates a new auth Service.
@@ -356,4 +358,50 @@ func (s *Service) ResetPassword(ctx context.Context, userID, code, newPassword s
 	_ = resetStore.Delete(ctx, userID)
 
 	return nil
+}
+
+// GenerateFileToken creates a short-lived opaque token for accessing private files.
+// The token is stored in Redis and mapped to the user ID.
+func (s *Service) GenerateFileToken(ctx context.Context, userID string) (string, error) {
+	if s.rdb == nil {
+		return "", fmt.Errorf("redis not configured")
+	}
+	tokenBytes := make([]byte, 24)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", fmt.Errorf("generate file token: %w", err)
+	}
+	token := hex.EncodeToString(tokenBytes)
+
+	if err := s.rdb.Set(ctx, fileTokenKeyPrefix+token, userID, fileTokenTTL).Err(); err != nil {
+		return "", fmt.Errorf("store file token: %w", err)
+	}
+	return token, nil
+}
+
+// ValidateFileToken looks up a file access token in Redis and returns the associated user ID.
+// Returns an error if the token is invalid or expired.
+func (s *Service) ValidateFileToken(ctx context.Context, token string) (string, error) {
+	if s.rdb == nil {
+		return "", fmt.Errorf("redis not configured")
+	}
+	userID, err := s.rdb.Get(ctx, fileTokenKeyPrefix+token).Result()
+	if err == redis.Nil {
+		return "", fmt.Errorf("file token not found or expired")
+	}
+	return userID, err
+}
+
+// RefreshFileToken renews the TTL on an existing file token, or creates a new one if none exists.
+func (s *Service) RefreshFileToken(ctx context.Context, token, userID string) (string, error) {
+	if token != "" {
+		// Try to extend the existing token
+		storedUserID, err := s.ValidateFileToken(ctx, token)
+		if err == nil && storedUserID == userID {
+			if s.rdb.Expire(ctx, fileTokenKeyPrefix+token, fileTokenTTL).Err() == nil {
+				return token, nil
+			}
+		}
+	}
+	// Fall back to generating a new one
+	return s.GenerateFileToken(ctx, userID)
 }

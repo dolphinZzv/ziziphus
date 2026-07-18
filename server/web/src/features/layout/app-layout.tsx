@@ -4,6 +4,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '@/features/layout/sidebar'
 import SheetRouteSync from '@/features/layout/sheet-route'
 import { SheetWrapper } from '@/features/layout/lazy-sheets'
+import DeviceIndicator from '@/features/layout/device-indicator'
 import { authStore } from '@/stores/auth-store'
 import { uiStore } from '@/stores/ui-store'
 import { wsClient } from '@/services/websocket-client'
@@ -41,9 +42,11 @@ export default function AppLayout() {
     return () => clearTimeout(timer)
   }, [connStatus])
 
-  // Desktop notifications
+  // Desktop/mobile notifications (silently skip on unsupported environments)
   useEffect(() => {
     if (!('Notification' in window)) return
+    // Mobile browsers silently reject permission prompts — skip entirely
+    if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return
     if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
       Notification.requestPermission()
     }
@@ -54,10 +57,12 @@ export default function AppLayout() {
       if (push.sender_id === user?.user_id) return
       if (Notification.permission !== 'granted') return
       const body = push.body || ''
-      new Notification(push.sender_name || '新消息', {
-        body: body.length > 120 ? body.slice(0, 120) + '...' : body,
-        icon: '/favicon.ico',
-      })
+      try {
+        new Notification(push.sender_name || '新消息', {
+          body: body.length > 120 ? body.slice(0, 120) + '...' : body,
+          icon: '/favicon.ico',
+        })
+      } catch { /* mobile browsers throw silently — ignore */ }
     })
     return () => handler?.()
   }, [])
@@ -147,6 +152,8 @@ export default function AppLayout() {
 
       {/* Syncs activeSheet ↔ URL for route-based modals */}
       <SheetRouteSync />
+
+      <DeviceIndicator />
     </div>
   )
 }

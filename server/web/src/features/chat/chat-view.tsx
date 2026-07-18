@@ -108,28 +108,7 @@ export default function ChatView() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [currentMatchIndex, searchMatches])
 
-  // --- Feature 2: Drag-drop on chat area ---
-  const handleDropOnChat = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault()
-    if (!convId) return
-    const files = Array.from(e.dataTransfer?.files || [])
-    if (files.length === 0) return
-    for (const file of files) {
-      const type = file.type.startsWith('image/') ? ('image' as const) : ('file' as const)
-      try {
-        const result = await fileService.upload(file, file.name, type === 'image' ? 0 : 1)
-        const body = JSON.stringify({ url: result.url, name: file.name, size: file.size, file_id: result.file_id })
-        chatStore.sendMessage(convId, body, type === 'image' ? ContentType.Image : ContentType.File)
-      } catch { /* ignore */ }
-    }
-  }, [convId])
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    if (e.dataTransfer?.types?.some(t => t === 'Files')) {
-      e.preventDefault()
-      e.dataTransfer.dropEffect = 'copy'
-    }
-  }, [])
+  // --- Drag-drop handled by InputBar ---
 
   // --- End drag-drop ---
 
@@ -241,8 +220,6 @@ export default function ChatView() {
   return (
     <div
       className="flex h-full"
-      onDragOver={handleDragOver}
-      onDrop={handleDropOnChat}
     >
       <div ref={containerRef} className={'flex-1 flex flex-col min-w-0' + (bgImage ? ' relative' : '')}
         style={bgImage ? { backgroundImage: 'url(' + bgImage + ')', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } as React.CSSProperties : undefined}>

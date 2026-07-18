@@ -14,5 +14,12 @@ type FileInfo struct {
 	UploaderName string `json:"uploader_name,omitempty"`
 	ConvID       string `json:"conv_id,omitempty"`
 	FolderPath   string `json:"folder_path,omitempty"`
+	Visibility   string `json:"visibility"` // "public" or "private"
 	CreatedAt    int64  `json:"created_at"`
 }
+
+// File visibility constants.
+const (
+	VisibilityPublic  = "public"
+	VisibilityPrivate = "private"
+)

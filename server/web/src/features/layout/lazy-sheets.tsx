@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 
-// Lazy-load all modal/sheet components for code splitting
 const NewChatDialog = lazy(() => import('@/features/conversation-list/new-chat-dialog'))
 const CreateGroupDialog = lazy(() => import('@/features/conversation-list/create-group-dialog'))
 const JoinGroupDialog = lazy(() => import('@/features/conversation-list/join-group-dialog'))

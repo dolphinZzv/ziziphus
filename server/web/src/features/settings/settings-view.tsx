@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { uiStore } from '@/stores/ui-store'
 import { authStore } from '@/stores/auth-store'
 import { api } from '@/services/api-client'
-import { X, Monitor, Sun, Moon, Trash2, ArrowLeft, Bell } from 'lucide-react'
+import { X, Monitor, Sun, Moon, Trash2, ArrowLeft, Bell, ChevronDown } from 'lucide-react'
 import { requestNotificationPermission, isNotificationGranted } from '@/services/notifications'
 import { cn } from '@/lib/cn'
 import { useTranslation } from 'react-i18next'
@@ -64,10 +64,17 @@ export default function SettingsView({ onClose, inline }: Props) {
         {/* Language */}
         <div>
           <label className="block text-xs font-medium text-[var(--color-body)] mb-2">{t('settings.language')}</label>
-          <div className="flex gap-2">
-            {[{ v: 'auto' as const, l: t('settings.languageAuto') }, { v: 'zh' as const, l: t('settings.languageZH') }, { v: 'en' as const, l: t('settings.languageEN') }, { v: 'ja' as const, l: t('settings.languageJA') }, { v: 'fr' as const, l: t('settings.languageFR') }, { v: 'de' as const, l: t('settings.languageDE') }, { v: 'es' as const, l: t('settings.languageES') }, { v: 'ko' as const, l: t('settings.languageKO') }].map(item => (
-              <button key={item.v} onClick={() => uiStore.setLanguage(item.v)} className={segBtn(language === item.v)}>{item.l}</button>
-            ))}
+          <div className="relative">
+            <select
+              value={language}
+              onChange={e => uiStore.setLanguage(e.target.value)}
+              className="appearance-none w-full h-10 pl-3 pr-10 rounded-xl border border-[var(--color-hairline)] text-sm text-[var(--color-body)] bg-[var(--color-surface-card)] outline-none focus:border-[var(--color-primary)] cursor-pointer"
+            >
+              {[{ v: 'auto', l: t('settings.languageAuto') }, { v: 'zh', l: t('settings.languageZH') }, { v: 'en', l: t('settings.languageEN') }, { v: 'ja', l: t('settings.languageJA') }, { v: 'fr', l: t('settings.languageFR') }, { v: 'de', l: t('settings.languageDE') }, { v: 'es', l: t('settings.languageES') }, { v: 'ko', l: t('settings.languageKO') }, { v: 'ru', l: t('settings.languageRU') }].map(item => (
+                <option key={item.v} value={item.v} className="bg-[var(--color-surface-card)] text-[var(--color-ink)]">{item.l}</option>
+              ))}
+            </select>
+            <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted-soft)]" />
           </div>
         </div>
 

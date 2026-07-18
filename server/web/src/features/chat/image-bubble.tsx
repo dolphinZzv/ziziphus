@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from 'react'
 import { Image } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { withFileToken } from '@/lib/file-token'
 
 const ImageViewer = lazy(() => import('@/components/image-viewer'))
 
@@ -40,7 +41,7 @@ export default function ImageBubble({ body, _msgId }: Props) {
           </div>
         )}
         <img
-          src={thumbUrl(url)}
+          src={withFileToken(thumbUrl(url))}
           alt=""
           className={cn('rounded-xl max-w-full max-h-[360px] w-auto h-auto cursor-pointer hover:opacity-90 transition-opacity', !loaded && 'hidden')}
           onLoad={() => setLoaded(true)}

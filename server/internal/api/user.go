@@ -120,12 +120,14 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
+	fileToken, _ := h.authSvc.GenerateFileToken(r.Context(), user.ID)
 	JSON(w, map[string]interface{}{
 		"user_id":       user.ID,
 		"account":       user.Account,
 		"name":          user.Name,
 		"token":         accessToken,
 		"refresh_token": refreshToken,
+		"file_token":    fileToken,
 	})
 }
 
@@ -216,12 +218,14 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 			_ = h.userRepo.UpdateLanguage(r.Context(), userID, lang)
 		}
 	}
+	fileToken, _ := h.authSvc.GenerateFileToken(r.Context(), userID)
 	JSON(w, map[string]interface{}{
 		"user_id":       userID,
 		"account":       req.Account,
 		"name":          user.Name,
 		"token":         accessToken,
 		"refresh_token": refreshToken,
+		"file_token":    fileToken,
 		"expires_at":    expiresAt,
 	})
 }

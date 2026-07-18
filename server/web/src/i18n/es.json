@@ -48,7 +48,8 @@
     "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
     "accountRequired": "Por favor ingresa tu cuenta",
     "nameRequired": "Por favor ingresa tu apodo",
-    "passwordRequired": "Por favor ingresa tu contraseña"
+    "passwordRequired": "Por favor ingresa tu contraseña",
+    "hasAccount": "¿Ya tienes cuenta?"
   },
   "chat": {
     "inputPlaceholder": "Escribe un mensaje...",
@@ -168,7 +169,9 @@
     "discoverable": "Descubrible",
     "discoverableHint": "Permitir que otros encuentren este grupo mediante búsqueda",
     "webhookUsageExamples": "Ejemplos de uso",
-    "webhookHeadersHint": "Uno por línea, formato: Clave: Valor"
+    "webhookHeadersHint": "Uno por línea, formato: Clave: Valor",
+    "bgImage": "Fondo del chat",
+    "bgImageHint": "Tamaño recomendado 1080×1920"
   },
   "group": {
     "detail": "Información del grupo",
@@ -207,7 +210,18 @@
     "name": "Nombre",
     "headline": "Descripción",
     "disband": "Disolver grupo",
-    "disbandConfirm": "¿Disolver este grupo? Todos los miembros serán eliminados."
+    "disbandConfirm": "¿Disolver el grupo? Todos los miembros serán eliminados.",
+    "shareLink": "Compartir grupo",
+    "generateShareLink": "Generar enlace de compartir",
+    "removeShareLink": "Desactivar enlace de compartir",
+    "noShareLink": "Aún no hay enlace de compartir",
+    "removeShareConfirm": "¿Desactivar el enlace de compartir?",
+    "cardNotFoundTitle": "Grupo no encontrado",
+    "cardNotFoundDesc": "Este enlace no es válido o el grupo ha sido disuelto",
+    "goToLogin": "Iniciar sesión",
+    "joinGroup": "Inicia sesión para unirte al grupo",
+    "register": "Crear cuenta",
+    "themeColor": "Color del tema"
   },
   "contact": {
     "title": "Contactos",
@@ -295,6 +309,7 @@
     "languageDE": "Deutsch",
     "languageES": "Español",
     "languageKO": "한국어",
+    "languageRU": "Русский",
     "bubbleColor": "Color de burbuja",
     "deviceID": "ID del dispositivo",
     "sessionID": "ID de sesión",
@@ -340,7 +355,9 @@
     "desktop": "Escritorio",
     "web": "Web",
     "tablet": "Tableta",
-    "noSessions": "Sin otras sesiones"
+    "noSessions": "Sin otras sesiones",
+    "deviceUnit": " dispositivo(s)",
+    "otherDevices": "{{count}} otro(s) dispositivo(s)"
   },
   "connection": {
     "connected": "Conectado",
@@ -355,7 +372,8 @@
     "unauthorized": "No autorizado, por favor inicia sesión de nuevo",
     "notFound": "Usuario no encontrado",
     "timeoutRetry": "La operación expiró, por favor inténtalo de nuevo",
-    "operationFailed": "La operación falló, por favor inténtalo de nuevo"
+    "operationFailed": "La operación falló, por favor inténtalo de nuevo",
+    "retry": "Reintentar"
   },
   "sidebar": {
     "newChat": "Nuevo chat",
@@ -389,7 +407,9 @@
     "edit": "Editar",
     "remove": "Eliminar",
     "pin": "Fijar",
-    "unpin": "Desfijar"
+    "unpin": "Desfijar",
+    "details": "Detalles",
+    "required": "Obligatorio"
   },
   "time": {
     "justNow": "Ahora mismo",

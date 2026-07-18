@@ -1,10 +1,13 @@
 import SwiftUI
+import Combine
 import IMCore
 
 struct ConversationRowView: View {
     @EnvironmentObject private var localizationManager: LocalizationManager
 
     let conv: ConvListItem
+    private let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+    @State private var now = Date()
 
     var body: some View {
         HStack(spacing: AppleDesign.Spacing.xs) {
@@ -110,6 +113,7 @@ struct ConversationRowView: View {
             }
         }
         .padding(.vertical, 8)
+        .onReceive(timer) { _ in now = Date() }
     }
 
     private func agentPreviewBody(_ body: String) -> String {
@@ -151,13 +155,26 @@ struct ConversationRowView: View {
 
     private func formatTime(_ timestamp: Int64) -> String {
         let date = Date(timeIntervalSince1970: Double(timestamp) / 1000)
-        let formatter = DateFormatter()
-        if Calendar.current.isDateInToday(date) {
-            formatter.dateFormat = "HH:mm"
-        } else {
-            formatter.dateFormat = "MM/dd"
+        let diff = now.timeIntervalSince(date)
+        if diff < 60 {
+            return "刚刚"
         }
-        return formatter.string(from: date)
+        if diff < 3600 {
+            return "\(Int(diff / 60))分钟前"
+        }
+        if Calendar.current.isDateInToday(date) {
+            let f = DateFormatter()
+            f.dateFormat = "HH:mm"
+            return f.string(from: date)
+        }
+        if Calendar.current.isDateInYesterday(date) {
+            let f = DateFormatter()
+            f.dateFormat = "'昨天' HH:mm"
+            return f.string(from: date)
+        }
+        let f = DateFormatter()
+        f.dateFormat = "MM/dd"
+        return f.string(from: date)
     }
 }
 

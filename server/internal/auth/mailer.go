@@ -20,20 +20,68 @@ var verifyCodeZH string
 //go:embed email_templates/verify_code_en.html
 var verifyCodeEN string
 
+//go:embed email_templates/verify_code_ja.html
+var verifyCodeJA string
+
+//go:embed email_templates/verify_code_fr.html
+var verifyCodeFR string
+
+//go:embed email_templates/verify_code_de.html
+var verifyCodeDE string
+
+//go:embed email_templates/verify_code_es.html
+var verifyCodeES string
+
+//go:embed email_templates/verify_code_ko.html
+var verifyCodeKO string
+
+//go:embed email_templates/verify_code_ru.html
+var verifyCodeRU string
+
 //go:embed email_templates/reset_password_zh.html
 var resetPasswordZH string
 
 //go:embed email_templates/reset_password_en.html
 var resetPasswordEN string
 
+//go:embed email_templates/reset_password_ja.html
+var resetPasswordJA string
+
+//go:embed email_templates/reset_password_fr.html
+var resetPasswordFR string
+
+//go:embed email_templates/reset_password_de.html
+var resetPasswordDE string
+
+//go:embed email_templates/reset_password_es.html
+var resetPasswordES string
+
+//go:embed email_templates/reset_password_ko.html
+var resetPasswordKO string
+
+//go:embed email_templates/reset_password_ru.html
+var resetPasswordRU string
+
 var emailTemplates = map[string]map[string]string{
 	"verify_code": {
 		"zh": verifyCodeZH,
 		"en": verifyCodeEN,
+		"ja": verifyCodeJA,
+		"fr": verifyCodeFR,
+		"de": verifyCodeDE,
+		"es": verifyCodeES,
+		"ko": verifyCodeKO,
+		"ru": verifyCodeRU,
 	},
 	"reset_password": {
 		"zh": resetPasswordZH,
 		"en": resetPasswordEN,
+		"ja": resetPasswordJA,
+		"fr": resetPasswordFR,
+		"de": resetPasswordDE,
+		"es": resetPasswordES,
+		"ko": resetPasswordKO,
+		"ru": resetPasswordRU,
 	},
 }
 
@@ -101,6 +149,12 @@ func (m *Mailer) SendPasswordResetCodeLang(to, code, lang string) error {
 	subjects := map[string]string{
 		"zh": appName + " - 密码重置验证码",
 		"en": appName + " - Password Reset Code",
+		"ja": appName + " - パスワードリセットコード",
+		"fr": appName + " - Code de réinitialisation du mot de passe",
+		"de": appName + " - Passwort zurücksetzen-Code",
+		"es": appName + " - Código de restablecimiento de contraseña",
+		"ko": appName + " - 비밀번호 재설정 코드",
+		"ru": appName + " - Код сброса пароля",
 	}
 	subject := appName + " - Password Reset Code"
 	if s, ok := subjects[lang]; ok {
@@ -148,6 +202,12 @@ func (m *Mailer) SendVerificationCodeLang(to, code, lang string) error {
 	subjects := map[string]string{
 		"zh": appName + " - 邮箱验证码",
 		"en": appName + " - Email Verification Code",
+		"ja": appName + " - 認証コード",
+		"fr": appName + " - Code de vérification",
+		"de": appName + " - Bestätigungscode",
+		"es": appName + " - Código de verificación",
+		"ko": appName + " - 인증 코드",
+		"ru": appName + " - Код подтверждения",
 	}
 	subject := appName + " - Verification Code"
 	if s, ok := subjects[lang]; ok {

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { X, ChevronLeft, ChevronRight, Download, ZoomIn, ZoomOut } from 'lucide-react'
+import { withFileToken } from '@/lib/file-token'
 
 interface Props {
   images: string[]
@@ -33,7 +35,7 @@ export default function ImageViewer({ images, currentIndex, onClose }: Props) {
 
   useEffect(() => { setScale(1) }, [index])
 
-  return (
+  const viewer = (
     <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
       {/* Close button */}
       <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-10">
@@ -50,7 +52,7 @@ export default function ImageViewer({ images, currentIndex, onClose }: Props) {
         <button onClick={zoomOut} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"><ZoomOut size={18} /></button>
         <button onClick={() => setScale(1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs">1:1</button>
         <button onClick={zoomIn} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"><ZoomIn size={18} /></button>
-        <button onClick={() => window.open(images[index], '_blank')} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"><Download size={18} /></button>
+        <button onClick={() => window.open(withFileToken(images[index]), '_blank')} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"><Download size={18} /></button>
       </div>
 
       {/* Navigation */}
@@ -63,7 +65,7 @@ export default function ImageViewer({ images, currentIndex, onClose }: Props) {
 
       {/* Image */}
       <img
-        src={images[index]}
+        src={withFileToken(images[index])}
         alt=""
         className="max-w-[90vw] max-h-[85vh] object-contain transition-transform duration-200 select-none"
         style={{ transform: `scale(${scale})` }}
@@ -72,4 +74,6 @@ export default function ImageViewer({ images, currentIndex, onClose }: Props) {
       />
     </div>
   )
+
+  return createPortal(viewer, document.body)
 }

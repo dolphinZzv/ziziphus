@@ -48,7 +48,8 @@
     "passwordTooShort": "Password must be at least 8 characters",
     "accountRequired": "Please enter your account",
     "nameRequired": "Please enter your nickname",
-    "passwordRequired": "Please enter your password"
+    "passwordRequired": "Please enter your password",
+    "hasAccount": "Already have an account?"
   },
   "chat": {
     "inputPlaceholder": "Type a message...",
@@ -168,7 +169,9 @@
     "discoverable": "Discoverable",
     "discoverableHint": "Allow users to find this group via search",
     "webhookUsageExamples": "Usage Examples",
-    "webhookHeadersHint": "One per line, format: Key: Value"
+    "webhookHeadersHint": "One per line, format: Key: Value",
+    "bgImage": "Chat Background",
+    "bgImageHint": "Recommended size 1080×1920"
   },
   "group": {
     "detail": "Group Info",
@@ -217,7 +220,8 @@
     "cardNotFoundDesc": "This share link is invalid or the group has been disbanded",
     "goToLogin": "Log In",
     "joinGroup": "Log in to join this group",
-    "register": "Create Account"
+    "register": "Create Account",
+    "themeColor": "Theme Color"
   },
   "contact": {
     "title": "Contacts",
@@ -305,6 +309,7 @@
     "languageDE": "Deutsch",
     "languageES": "Español",
     "languageKO": "한국어",
+    "languageRU": "Русский",
     "bubbleColor": "Bubble Color",
     "deviceID": "Device ID",
     "sessionID": "Session ID",
@@ -350,7 +355,9 @@
     "desktop": "Desktop",
     "web": "Web",
     "tablet": "Tablet",
-    "noSessions": "No other sessions"
+    "noSessions": "No other sessions",
+    "deviceUnit": " device(s)",
+    "otherDevices": "{{count}} other device(s)"
   },
   "connection": {
     "connected": "Connected",
@@ -365,7 +372,8 @@
     "unauthorized": "Unauthorized, please login again",
     "notFound": "User not found",
     "timeoutRetry": "Operation timed out, please retry",
-    "operationFailed": "Operation failed, please retry"
+    "operationFailed": "Operation failed, please retry",
+    "retry": "Retry"
   },
   "sidebar": {
     "newChat": "New Chat",
@@ -399,7 +407,9 @@
     "edit": "Edit",
     "remove": "Remove",
     "pin": "Pin",
-    "unpin": "Unpin"
+    "unpin": "Unpin",
+    "details": "Details",
+    "required": "Required"
   },
   "time": {
     "justNow": "Just now",

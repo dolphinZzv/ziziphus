@@ -33,6 +33,14 @@ type idGenerator interface {
 	NextID() int64
 }
 
+// fileTokenParser authenticates file serve requests via either JWT (Bearer header)
+// or a short-lived file access token (?token= query param).
+type fileTokenParser interface {
+	ParseToken(tokenStr string) (*auth.Claims, error)
+	ValidateFileToken(ctx context.Context, token string) (string, error)
+	RefreshFileToken(ctx context.Context, token, userID string) (string, error)
+}
+
 type fileDB interface {
 	Insert(ctx context.Context, f *model.FileInfo) error
 	GetByID(ctx context.Context, fileID string) (*model.FileInfo, error)
@@ -52,13 +60,14 @@ type fileSysMsgSender interface {
 }
 
 type FileHandler struct {
-	store   *file.Store
-	fileDB  fileDB
-	idGen   idGenerator
-	baseURL string
-	convMgr fileConvChecker
-	sysMsg  fileSysMsgSender
-	userDB  userGetter
+	store       *file.Store
+	fileDB      fileDB
+	idGen       idGenerator
+	baseURL     string
+	convMgr     fileConvChecker
+	sysMsg      fileSysMsgSender
+	userDB      userGetter
+	tokenParser fileTokenParser
 }
 
 // isValidRelPath rejects path components that could cause directory traversal.
@@ -66,8 +75,8 @@ func isValidRelPath(p string) bool {
 	return !strings.Contains(p, "..")
 }
 
-func NewFileHandler(store *file.Store, fileDB fileDB, idGen idGenerator, baseURL string, convMgr fileConvChecker, sysMsg fileSysMsgSender, userDB userGetter) *FileHandler {
-	return &FileHandler{store: store, fileDB: fileDB, idGen: idGen, baseURL: baseURL, convMgr: convMgr, sysMsg: sysMsg, userDB: userDB}
+func NewFileHandler(store *file.Store, fileDB fileDB, idGen idGenerator, baseURL string, convMgr fileConvChecker, sysMsg fileSysMsgSender, userDB userGetter, tokenParser fileTokenParser) *FileHandler {
+	return &FileHandler{store: store, fileDB: fileDB, idGen: idGen, baseURL: baseURL, convMgr: convMgr, sysMsg: sysMsg, userDB: userDB, tokenParser: tokenParser}
 }
 
 type uploadResp struct {
@@ -78,6 +87,7 @@ type uploadResp struct {
 	Name         string `json:"name"`
 	Width        int    `json:"width,omitempty"`
 	Height       int    `json:"height,omitempty"`
+	Visibility   string `json:"visibility"`
 }
 
 // @Summary Upload a file
@@ -89,6 +99,7 @@ type uploadResp struct {
 // @Param file formData file true "File to upload"
 // @Param conv_id formData string false "Conversation ID"
 // @Param folder_path formData string false "Folder path (empty for root)"
+// @Param visibility formData string false "File visibility: public or private (default: private for conv files, public otherwise)"
 // @Param file_type formData string false "File type: 0=image, 1=file, 2=video, 3=audio" default(1)
 // @Success 200 {object} APIResponse
 // @Failure 400 {object} APIResponse
@@ -128,6 +139,21 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	convID := r.FormValue("conv_id")
 	folderPath := r.FormValue("folder_path") // "" = root
+
+	// Determine visibility: conv-scoped files default to private, standalone files default public.
+	visibility := r.FormValue("visibility")
+	if visibility == "" {
+		if convID != "" {
+			visibility = model.VisibilityPrivate
+		} else {
+			visibility = model.VisibilityPublic
+		}
+	}
+
+	// Verify the user is a member of the conversation before uploading
+	if convID != "" && !h.requireConvMember(w, r, convID) {
+		return
+	}
 
 	// Save file under conv's folder path
 	relPath := filepath.Join(convID, folderPath, fileID+ext)
@@ -173,6 +199,7 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		UploaderID:  userID,
 		ConvID:      convID,
 		FolderPath:  folderPath,
+		Visibility:  visibility,
 		CreatedAt:   now,
 	}
 	if err := h.fileDB.Insert(r.Context(), finfo); err != nil {
@@ -188,9 +215,40 @@ func (h *FileHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		URL:    fileURL,
 		Size:   finfo.Size,
 		Name:   finfo.Name,
-		Width:  width,
-		Height: height,
+		Width:      width,
+		Height:     height,
+		Visibility: visibility,
 	})
+}
+
+// @Summary Renew file access token
+// @Description Get or refresh a short-lived file access token for loading private files via <img> tags
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} APIResponse{data=object{token=string}}
+// @Failure 500 {object} APIResponse
+// @Router /files/token [post]
+func (h *FileHandler) RenewFileToken(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	if userID == "" {
+		Unauthorized(w, r)
+		return
+	}
+
+	var req struct {
+		Token string `json:"token"` // existing file token to refresh (optional)
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	token, err := h.tokenParser.RefreshFileToken(r.Context(), req.Token, userID)
+	if err != nil {
+		logger.Error("generate file token failed", "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
+	JSON(w, map[string]interface{}{"token": token})
 }
 
 // @Summary Get file info
@@ -211,6 +269,12 @@ func (h *FileHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 		NotFound(w, r)
 		return
 	}
+
+	// Verify membership for conversation-scoped private files
+	if finfo.ConvID != "" && finfo.Visibility == model.VisibilityPrivate && !h.requireConvMember(w, r, finfo.ConvID) {
+		return
+	}
+
 	JSON(w, uploadResp{
 		FileID:       finfo.FileID,
 		URL:          finfo.URL,
@@ -237,6 +301,11 @@ func (h *FileHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 // @Router /conversations/{conv_id}/files [get]
 func (h *FileHandler) ListConvFiles(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
+
+	if !h.requireConvMember(w, r, convID) {
+		return
+	}
+
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
 	if page < 1 {
@@ -275,6 +344,10 @@ func (h *FileHandler) DeleteConvFile(w http.ResponseWriter, r *http.Request) {
 	fileID := chi.URLParam(r, "file_id")
 	convID := chi.URLParam(r, "conv_id")
 
+	if !h.requireConvMember(w, r, convID) {
+		return
+	}
+
 	fileName := fileID
 	if finfo, err := h.fileDB.GetByID(r.Context(), fileID); err == nil && finfo != nil {
 		fileName = finfo.Name
@@ -302,6 +375,56 @@ func (h *FileHandler) DeleteConvFile(w http.ResponseWriter, r *http.Request) {
 
 func (h *FileHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 	filePath := chi.URLParam(r, "*")
+
+	// Extract fileID (last path segment without extension) for DB lookup.
+	filePathParts := strings.Split(filePath, "/")
+	lastPart := filePathParts[len(filePathParts)-1]
+	var fileID string
+	if idx := strings.LastIndex(lastPart, "."); idx > 0 {
+		fileID = lastPart[:idx]
+	} else {
+		fileID = lastPart
+	}
+
+	// Look up file metadata. If found and it's private, require auth + membership.
+	if finfo, err := h.fileDB.GetByID(r.Context(), fileID); err == nil && finfo != nil {
+		if finfo.Visibility == model.VisibilityPrivate {
+			// Extract convID from path (first component) or fall back to file metadata
+			parts := strings.SplitN(filePath, "/", 2)
+			convID := parts[0]
+			if len(parts) < 2 {
+				convID = finfo.ConvID
+			}
+			if convID == "" {
+				http.NotFound(w, r)
+				return
+			}
+			// Try Bearer header auth first, then file access token
+			userID, ok := h.authUserFromRequest(r)
+			if !ok {
+				fileToken := r.URL.Query().Get("token")
+				if fileToken == "" {
+					http.NotFound(w, r)
+					return
+				}
+				uid, err := h.tokenParser.ValidateFileToken(r.Context(), fileToken)
+				if err != nil {
+					http.NotFound(w, r)
+					return
+				}
+				userID = uid
+			}
+			if !h.checkServeFileAccess(r.Context(), convID, userID) {
+				http.NotFound(w, r)
+				return
+			}
+		}
+		// Public file or file without conv_id: no auth needed.
+	} else {
+		// File metadata not found — serve freely for backward compatibility.
+		// Private files are protected above when metadata exists.
+	}
+
 	rc, err := h.store.Open(r.Context(), filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -340,6 +463,63 @@ func (h *FileHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", contentTypeByExt(ext))
 	w.Header().Set("Cache-Control", "public, max-age=2592000")
 	_, _ = w.Write(data)
+}
+
+// checkServeFileAccess checks if the user is a member of the conversation.
+// Returns false if not; does NOT write an error response (caller should return 404).
+func (h *FileHandler) checkServeFileAccess(ctx context.Context, convID, userID string) bool {
+	if convID == "" {
+		return false
+	}
+	isMember, err := h.convMgr.IsMember(ctx, convID, userID)
+	return err == nil && isMember
+}
+
+// requireConvMember checks if the user (from auth context) is a member of the
+// given conversation. It writes a 403 error and returns false if not.
+// Must be called from routes already behind the auth middleware.
+func (h *FileHandler) requireConvMember(w http.ResponseWriter, r *http.Request, convID string) bool {
+	userID := auth.UserFromCtx(r.Context())
+	if userID == "" {
+		Error(w, r, http.StatusForbidden, model.ErrConvNotFound)
+		return false
+	}
+	isMember, err := h.convMgr.IsMember(r.Context(), convID, userID)
+	if err != nil || !isMember {
+		Error(w, r, http.StatusForbidden, model.ErrConvNotFound)
+		return false
+	}
+	return true
+}
+
+// authUserFromRequest extracts and validates the user from either:
+//   - Authorization: Bearer <JWT>    (JWT access token)
+//   - Authorization: Bearer <token>  (short-lived file access token, 48+ hex chars)
+// Returns the user ID and true on success; ("", false) on failure WITHOUT
+// writing any response. Callers must handle the error response themselves.
+func (h *FileHandler) authUserFromRequest(r *http.Request) (string, bool) {
+	authHdr := r.Header.Get("Authorization")
+	tokenStr, ok := strings.CutPrefix(authHdr, "Bearer ")
+	if !ok || tokenStr == "" {
+		return "", false
+	}
+
+	// Try JWT first (JWT contains dots, file tokens are pure hex)
+	if strings.Contains(tokenStr, ".") {
+		claims, err := h.tokenParser.ParseToken(tokenStr)
+		if err == nil {
+			return claims.UserID, true
+		}
+		// JWT parse failed, don't fall through to file token check for JWT-looking tokens
+		return "", false
+	}
+
+	// Try as file access token
+	uid, err := h.tokenParser.ValidateFileToken(r.Context(), tokenStr)
+	if err != nil {
+		return "", false
+	}
+	return uid, true
 }
 
 func contentTypeByExt(ext string) string {
@@ -465,6 +645,11 @@ func resizeImage(data []byte, tw, th int, ext string, noUpscale ...bool) ([]byte
 // @Router /conversations/{conv_id}/folders [post]
 func (h *FileHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
+
+	if !h.requireConvMember(w, r, convID) {
+		return
+	}
+
 	var req struct {
 		Name       string `json:"name"`
 		ParentPath string `json:"parent_path"` // "" = root
@@ -492,7 +677,7 @@ func (h *FileHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		fullPath += "/"
 	}
 	fullPath += req.Name
-	JSON(w, map[string]interface{}{"path": fullPath, "name": req.Name, "parent_path": req.ParentPath})
+	JSON(w, map[string]any{"path": fullPath, "name": req.Name, "parent_path": req.ParentPath})
 }
 
 // @Summary List folders
@@ -509,6 +694,11 @@ func (h *FileHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 // @Router /conversations/{conv_id}/folders [get]
 func (h *FileHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
+
+	if !h.requireConvMember(w, r, convID) {
+		return
+	}
+
 	parentPath := r.URL.Query().Get("parent_path")
 	if parentPath == "" && r.URL.Query().Get("parent_id") == "0" {
 		parentPath = "" // root
@@ -548,6 +738,11 @@ func (h *FileHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
 // @Router /conversations/{conv_id}/folders [delete]
 func (h *FileHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
+
+	if !h.requireConvMember(w, r, convID) {
+		return
+	}
+
 	folderPath := r.URL.Query().Get("path")
 	if folderPath == "" {
 		BadRequest(w, r, "path is required")
@@ -581,6 +776,11 @@ func (h *FileHandler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 // @Router /conversations/{conv_id}/folders/files [get]
 func (h *FileHandler) ListFolderFiles(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
+
+	if !h.requireConvMember(w, r, convID) {
+		return
+	}
+
 	folderPath := r.URL.Query().Get("path")
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
@@ -620,6 +820,11 @@ func (h *FileHandler) ListFolderFiles(w http.ResponseWriter, r *http.Request) {
 // @Router /conversations/{conv_id}/files/{file_id}/move [put]
 func (h *FileHandler) MoveFile(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
+
+	if !h.requireConvMember(w, r, convID) {
+		return
+	}
+
 	fileID := chi.URLParam(r, "file_id")
 	var req struct {
 		FolderPath string `json:"folder_path"`
@@ -675,6 +880,11 @@ func (h *FileHandler) MoveFile(w http.ResponseWriter, r *http.Request) {
 // @Router /conversations/{conv_id}/folders/move [put]
 func (h *FileHandler) MoveFolder(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
+
+	if !h.requireConvMember(w, r, convID) {
+		return
+	}
+
 	var req struct {
 		SrcPath   string `json:"src_path"`
 		DstParent string `json:"dst_parent"`
@@ -710,6 +920,11 @@ func (h *FileHandler) MoveFolder(w http.ResponseWriter, r *http.Request) {
 // @Router /conversations/{conv_id}/folders/rename [put]
 func (h *FileHandler) RenameFolder(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
+
+	if !h.requireConvMember(w, r, convID) {
+		return
+	}
+
 	var req struct {
 		OldPath string `json:"old_path"`
 		NewName string `json:"new_name"`

@@ -10,7 +10,7 @@
 
 > **演示地址**: [http://47.95.200.101:10011/](http://47.95.200.101:10011/)
 
-[中文](README.zh.md) | [English](README.md)
+[中文](README.zh.md) | [English](../README.md) | [日本語](README.ja.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [Español](README.es.md) | [한국어](README.ko.md) | [Русский](README.ru.md)
 
 即时通讯（IM）应用 — Go 后端驱动多端客户端。
 
@@ -300,6 +300,74 @@ make deploy-logs     # 查看服务日志
 │  client/                                         │
 └─────────────────────────────────────────────────┘
 ```
+
+---
+
+## 国际化 (i18n)
+
+Ziziphus 支持 **8 种语言**，覆盖前后端：
+
+| 代码 | 语言 | 后端常量 | 前端文件 |
+|------|------|----------|----------|
+| `zh` | 简体中文 | `LangZH` | `zh.json` |
+| `en` | 英语 | `LangEN` | `en.json` |
+| `ja` | 日语 | `LangJA` | `ja.json` |
+| `fr` | 法语 | `LangFR` | `fr.json` |
+| `de` | 德语 | `LangDE` | `de.json` |
+| `es` | 西班牙语 | `LangES` | `es.json` |
+| `ko` | 韩语 | `LangKO` | `ko.json` |
+| `ru` | 俄语 | `LangRU` | `ru.json` |
+
+### 前端
+
+使用 [i18next](https://www.i18next.com/) + [react-i18next](https://react.i18next.com/)。语言偏好存储在 `localStorage` 中，key 为 `ziziphus_language`。翻译文件位于 `server/web/src/i18n/{lang}.json`。非中文语言包按需懒加载，保持初始包体积最小。
+
+前端通过 `X-Language` HTTP 请求头将用户语言偏好发送给后端。
+
+### 后端
+
+`server/pkg/i18n/` 包提供：
+
+- **语言常量**（`LangZH`、`LangEN` 等）
+- **ParseLang()** — 将浏览器语言代码（如 `zh-CN`、`en-US`、`ja-JP`）标准化为支持的 Lang 常量
+- **DetectLanguage()** — 优先读取 `X-Language` 请求头（前端偏好），其次回退到 `Accept-Language` 请求头，最后默认 `LangZH`
+- **T() / TWithLang()** — 模板式字符串翻译，支持位置参数（`{0}`、`{1}`）
+- **HTTP 中间件** — 按请求检测语言并注入到请求上下文
+
+翻译消息按语言拆分到独立文件：
+```
+pkg/i18n/messages.go          # 消息键声明 + registerLang 辅助函数
+pkg/i18n/{zh,en,ja,fr,de,es,ko,ru}.go  # 各语言的翻译数据
+```
+
+### 邮件模板
+
+邮箱验证码和密码重置邮件模板同样支持全部 8 种语言。模板在编译时通过 `//go:embed` 嵌入，存放于：
+
+```
+internal/auth/email_templates/
+  verify_code_{lang}.html
+  reset_password_{lang}.html
+```
+
+### 新增语言
+
+**后端：**
+1. 在 `pkg/i18n/i18n.go` 中添加 `LangXX` 常量
+2. 在 `ParseLang()` 中添加区域映射
+3. 新建 `pkg/i18n/{lang}.go`，通过 `init() + registerLang()` 注册所有消息键
+4. 在 `internal/api/language.go` 中添加 `langToFrontendCode()` 映射
+
+**前端：**
+1. 创建 `server/web/src/i18n/{lang}.json`，包含完整的翻译键值对
+2. 在前端设置页和登录页的语言选择器中添加该语言选项
+3. 在 UI store 中更新 `Language` 类型和 `resolveAutoLang()` 方法
+
+**邮件模板：**
+1. 复制已有模板（如 `verify_code_en.html` → `verify_code_{lang}.html`）
+2. 翻译文本内容
+3. 在 `internal/auth/mailer.go` 中添加 `//go:embed` 指令并注册到 `emailTemplates` map
+4. 添加主题翻译
 
 ---
 

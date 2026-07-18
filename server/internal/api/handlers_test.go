@@ -997,8 +997,8 @@ func TestHandlers_DetectLanguage(t *testing.T) {
 		{name: "empty header returns zh", accept: "", want: "zh"},
 		{name: "accepts en", accept: "en-US,en;q=0.9", want: "en"},
 		{name: "accepts zh", accept: "zh-CN,zh;q=0.8", want: "zh"},
-		{name: "ja falls back to zh", accept: "ja-JP", want: "zh"},
-		{name: "fr falls back to zh", accept: "fr-FR", want: "zh"},
+		{name: "accepts ja", accept: "ja-JP", want: "ja"},
+		{name: "accepts fr", accept: "fr-FR", want: "fr"},
 		{name: "multiple with en first", accept: "en;q=0.1,zh;q=0.9", want: "en"},
 	}
 
@@ -3371,7 +3371,7 @@ func TestFileHandler_resizeImage_JPG(t *testing.T) {
 // =========================================================================
 
 func TestNewFileHandler(t *testing.T) {
-	h := NewFileHandler(nil, nil, nil, "http://example.com", nil, nil, nil)
+	h := NewFileHandler(nil, nil, nil, "http://example.com", nil, nil, nil, nil)
 	if h == nil {
 		t.Fatal("NewFileHandler returned nil")
 	}

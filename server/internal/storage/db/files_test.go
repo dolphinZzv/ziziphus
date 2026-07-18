@@ -41,12 +41,13 @@ func TestFileRepo_Insert(t *testing.T) {
 		Height:       600,
 		URL:          "/files/f1.jpg",
 		ThumbnailURL: "/files/f1_thumb.jpg",
+		Visibility:   model.VisibilityPublic,
 		CreatedAt:    time.Now().UnixMilli(),
 	}
 
-	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO files (file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, folder_path, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`)).
+	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO files (file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, folder_path, visibility, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`)).
 		WithArgs(f.FileID, f.UploaderID, f.Name, f.Size, f.ContentType,
-			f.Width, f.Height, f.URL, f.ThumbnailURL, f.ConvID, f.FolderPath, AnyTime{}).
+			f.Width, f.Height, f.URL, f.ThumbnailURL, f.ConvID, f.FolderPath, f.Visibility, AnyTime{}).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	err = repo.Insert(context.Background(), f)
@@ -68,7 +69,7 @@ func TestFileRepo_Insert_Error(t *testing.T) {
 	repo := NewFileRepo(mock)
 
 	mock.ExpectExec(`INSERT INTO files`).
-		WithArgs("", "", "", int64(0), 0, int32(0), int32(0), "", "", "", "", AnyTime{}).
+		WithArgs("", "", "", int64(0), 0, int32(0), int32(0), "", "", "", "", "", AnyTime{}).
 		WillReturnError(context.DeadlineExceeded)
 
 	err = repo.Insert(context.Background(), &model.FileInfo{})
@@ -87,10 +88,10 @@ func TestFileRepo_GetByID(t *testing.T) {
 	repo := NewFileRepo(mock)
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "COALESCE(folder_path,'')", "created_at"}).
-		AddRow("f1", "u1", "photo.jpg", int64(1024), 0, int32(800), int32(600), "/files/f1.jpg", "/files/f1_thumb.jpg", nil, "", now)
+	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "COALESCE(folder_path,'')", "COALESCE(visibility,'public')", "created_at"}).
+		AddRow("f1", "u1", "photo.jpg", int64(1024), 0, int32(800), int32(600), "/files/f1.jpg", "/files/f1_thumb.jpg", nil, "", "public", now)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, COALESCE(folder_path,''), created_at FROM files WHERE file_id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, COALESCE(folder_path,''), COALESCE(visibility,'public'), created_at FROM files WHERE file_id = $1`)).
 		WithArgs("f1").
 		WillReturnRows(rows)
 
@@ -103,6 +104,9 @@ func TestFileRepo_GetByID(t *testing.T) {
 	}
 	if got.Name != "photo.jpg" {
 		t.Errorf("Name = %q, want photo.jpg", got.Name)
+	}
+	if got.Visibility != "public" {
+		t.Errorf("Visibility = %q, want public", got.Visibility)
 	}
 	if got.CreatedAt != now.UnixMilli() {
 		t.Errorf("CreatedAt = %d, want %d", got.CreatedAt, now.UnixMilli())
@@ -126,11 +130,11 @@ func TestFileRepo_ListByConvID(t *testing.T) {
 		WithArgs("conv_1").
 		WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(2))
 
-	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "uploader_name", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "folder_path", "created_at"}).
-		AddRow("f1", "u1", "Alice", "photo.jpg", int64(1024), 0, int32(800), int32(600), "/files/f1.jpg", "/files/f1_thumb.jpg", nil, "", now).
-		AddRow("f2", "u2", "Bob", "doc.pdf", int64(2048), 1, int32(0), int32(0), "/files/f2.pdf", "", nil, "folder1", now)
+	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "uploader_name", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "folder_path", "visibility", "created_at"}).
+		AddRow("f1", "u1", "Alice", "photo.jpg", int64(1024), 0, int32(800), int32(600), "/files/f1.jpg", "/files/f1_thumb.jpg", nil, "", "private", now).
+		AddRow("f2", "u2", "Bob", "doc.pdf", int64(2048), 1, int32(0), int32(0), "/files/f2.pdf", "", nil, "folder1", "public", now)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT f.file_id, f.uploader_id, COALESCE(u.name, ''), f.name, f.size, f.content_type, f.width, f.height, f.path, f.thumbnail_path, f.conv_id, COALESCE(f.folder_path,''), f.created_at FROM files f LEFT JOIN users u ON u.id = f.uploader_id WHERE f.conv_id = $1 AND f.folder_path = '' ORDER BY f.created_at DESC LIMIT $2 OFFSET $3`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT f.file_id, f.uploader_id, COALESCE(u.name, ''), f.name, f.size, f.content_type, f.width, f.height, f.path, f.thumbnail_path, f.conv_id, COALESCE(f.folder_path,''), COALESCE(f.visibility,'public'), f.created_at FROM files f LEFT JOIN users u ON u.id = f.uploader_id WHERE f.conv_id = $1 AND f.folder_path = '' ORDER BY f.created_at DESC LIMIT $2 OFFSET $3`)).
 		WithArgs("conv_1", 10, 0).
 		WillReturnRows(rows)
 
@@ -149,6 +153,12 @@ func TestFileRepo_ListByConvID(t *testing.T) {
 	}
 	if files[0].UploaderName != "Alice" {
 		t.Errorf("files[0].UploaderName = %q, want Alice", files[0].UploaderName)
+	}
+	if files[0].Visibility != "private" {
+		t.Errorf("files[0].Visibility = %q, want private", files[0].Visibility)
+	}
+	if files[1].Visibility != "public" {
+		t.Errorf("files[1].Visibility = %q, want public", files[1].Visibility)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -169,7 +179,7 @@ func TestFileRepo_ListByConvID_Empty(t *testing.T) {
 		WithArgs("conv_empty").
 		WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(0))
 
-	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "uploader_name", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "folder_path", "created_at"})
+	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "uploader_name", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "folder_path", "visibility", "created_at"})
 	mock.ExpectQuery(`SELECT f.file_id, f.uploader_id, COALESCE\(u.name, ''\), f.name`).
 		WithArgs("conv_empty", 10, 0).
 		WillReturnRows(rows)
@@ -223,10 +233,10 @@ func TestFileRepo_ListFilesInFolder(t *testing.T) {
 		WithArgs("conv_1", "folder1").
 		WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(1))
 
-	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "uploader_name", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "folder_path", "created_at"}).
-		AddRow("f1", "u1", "Alice", "photo.jpg", int64(1024), 0, int32(800), int32(600), "/files/f1.jpg", "/files/f1_thumb.jpg", nil, "folder1", now)
+	rows := pgxmock.NewRows([]string{"file_id", "uploader_id", "uploader_name", "name", "size", "content_type", "width", "height", "path", "thumbnail_path", "conv_id", "folder_path", "visibility", "created_at"}).
+		AddRow("f1", "u1", "Alice", "photo.jpg", int64(1024), 0, int32(800), int32(600), "/files/f1.jpg", "/files/f1_thumb.jpg", nil, "folder1", "private", now)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT f.file_id, f.uploader_id, COALESCE(u.name,''), f.name, f.size, f.content_type, f.width, f.height, f.path, f.thumbnail_path, f.conv_id, COALESCE(f.folder_path,''), f.created_at FROM files f LEFT JOIN users u ON u.id = f.uploader_id WHERE f.conv_id = $1 AND f.folder_path = $2 ORDER BY f.created_at DESC LIMIT $3 OFFSET $4`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT f.file_id, f.uploader_id, COALESCE(u.name,''), f.name, f.size, f.content_type, f.width, f.height, f.path, f.thumbnail_path, f.conv_id, COALESCE(f.folder_path,''), COALESCE(f.visibility,'public'), f.created_at FROM files f LEFT JOIN users u ON u.id = f.uploader_id WHERE f.conv_id = $1 AND f.folder_path = $2 ORDER BY f.created_at DESC LIMIT $3 OFFSET $4`)).
 		WithArgs("conv_1", "folder1", 20, 0).
 		WillReturnRows(rows)
 
@@ -274,7 +284,7 @@ func TestFileRepo_GetByID_NotFound(t *testing.T) {
 
 	repo := NewFileRepo(mock)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, COALESCE(folder_path,''), created_at FROM files WHERE file_id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT file_id, uploader_id, name, size, content_type, width, height, path, thumbnail_path, conv_id, COALESCE(folder_path,''), COALESCE(visibility,'public'), created_at FROM files WHERE file_id = $1`)).
 		WithArgs("nonexistent").
 		WillReturnError(context.DeadlineExceeded)
 

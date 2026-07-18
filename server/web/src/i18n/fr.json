@@ -48,7 +48,8 @@
     "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
     "accountRequired": "Veuillez entrer votre compte",
     "nameRequired": "Veuillez entrer votre pseudo",
-    "passwordRequired": "Veuillez entrer votre mot de passe"
+    "passwordRequired": "Veuillez entrer votre mot de passe",
+    "hasAccount": "Vous avez déjà un compte ?"
   },
   "chat": {
     "inputPlaceholder": "Tapez un message...",
@@ -168,7 +169,9 @@
     "discoverable": "Découvrable",
     "discoverableHint": "Permettre aux utilisateurs de trouver ce groupe via la recherche",
     "webhookUsageExamples": "Exemples d'utilisation",
-    "webhookHeadersHint": "Un par ligne, format : Clé: Valeur"
+    "webhookHeadersHint": "Un par ligne, format : Clé: Valeur",
+    "bgImage": "Arrière-plan du chat",
+    "bgImageHint": "Taille recommandée 1080×1920"
   },
   "group": {
     "detail": "Infos du groupe",
@@ -207,7 +210,18 @@
     "name": "Nom",
     "headline": "Description",
     "disband": "Dissoudre le groupe",
-    "disbandConfirm": "Dissoudre ce groupe ? Tous les membres seront supprimés."
+    "disbandConfirm": "Dissoudre le groupe ? Tous les membres seront supprimés.",
+    "shareLink": "Partager le groupe",
+    "generateShareLink": "Générer un lien de partage",
+    "removeShareLink": "Désactiver le lien de partage",
+    "noShareLink": "Aucun lien de partage pour l'instant",
+    "removeShareConfirm": "Désactiver le lien de partage ?",
+    "cardNotFoundTitle": "Groupe introuvable",
+    "cardNotFoundDesc": "Ce lien de partage est invalide ou le groupe a été dissous",
+    "goToLogin": "Connexion",
+    "joinGroup": "Connectez-vous pour rejoindre le groupe",
+    "register": "Créer un compte",
+    "themeColor": "Couleur du thème"
   },
   "contact": {
     "title": "Contacts",
@@ -295,6 +309,7 @@
     "languageDE": "Deutsch",
     "languageES": "Español",
     "languageKO": "한국어",
+    "languageRU": "Русский",
     "bubbleColor": "Couleur des bulles",
     "deviceID": "ID de l'appareil",
     "sessionID": "ID de session",
@@ -340,7 +355,9 @@
     "desktop": "Ordinateur",
     "web": "Web",
     "tablet": "Tablette",
-    "noSessions": "Aucune autre session"
+    "noSessions": "Aucune autre session",
+    "deviceUnit": " appareil(s)",
+    "otherDevices": "{{count}} autre(s) appareil(s)"
   },
   "connection": {
     "connected": "Connecté",
@@ -355,7 +372,8 @@
     "unauthorized": "Non autorisé, veuillez vous reconnecter",
     "notFound": "Utilisateur introuvable",
     "timeoutRetry": "L'opération a expiré, veuillez réessayer",
-    "operationFailed": "Échec de l'opération, veuillez réessayer"
+    "operationFailed": "Échec de l'opération, veuillez réessayer",
+    "retry": "Réessayer"
   },
   "sidebar": {
     "newChat": "Nouvelle discussion",
@@ -389,7 +407,9 @@
     "edit": "Modifier",
     "remove": "Supprimer",
     "pin": "Épingler",
-    "unpin": "Détacher"
+    "unpin": "Détacher",
+    "details": "Détails",
+    "required": "Requis"
   },
   "time": {
     "justNow": "À l'instant",

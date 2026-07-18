@@ -48,7 +48,8 @@
     "passwordTooShort": "パスワードは8文字以上必要です",
     "accountRequired": "アカウントを入力してください",
     "nameRequired": "ニックネームを入力してください",
-    "passwordRequired": "パスワードを入力してください"
+    "passwordRequired": "パスワードを入力してください",
+    "hasAccount": "すでにアカウントをお持ちですか？"
   },
   "chat": {
     "inputPlaceholder": "メッセージを入力...",
@@ -168,7 +169,9 @@
     "discoverable": "検索可能",
     "discoverableHint": "ユーザーが検索でこのグループを見つけられるようにする",
     "webhookUsageExamples": "使用例",
-    "webhookHeadersHint": "1行につき1つ、形式: Key: Value"
+    "webhookHeadersHint": "1行につき1つ、形式: Key: Value",
+    "bgImage": "チャット背景",
+    "bgImageHint": "推奨サイズ 1080×1920"
   },
   "group": {
     "detail": "グループ情報",
@@ -207,7 +210,18 @@
     "name": "グループ名",
     "headline": "概要",
     "disband": "グループ解散",
-    "disbandConfirm": "グループを解散しますか？すべてのメンバーが削除されます。"
+    "disbandConfirm": "グループを解散しますか？すべてのメンバーが削除されます。",
+    "shareLink": "グループを共有",
+    "generateShareLink": "共有リンクを生成",
+    "removeShareLink": "共有リンクを無効化",
+    "noShareLink": "共有リンクはまだありません",
+    "removeShareConfirm": "共有リンクを無効にしますか？",
+    "cardNotFoundTitle": "グループが見つかりません",
+    "cardNotFoundDesc": "この共有リンクは無効か、グループは解散されました",
+    "goToLogin": "ログイン",
+    "joinGroup": "ログインしてグループに参加",
+    "register": "アカウント登録",
+    "themeColor": "テーマカラー"
   },
   "contact": {
     "title": "連絡先",
@@ -295,6 +309,7 @@
     "languageDE": "Deutsch",
     "languageES": "Español",
     "languageKO": "한국어",
+    "languageRU": "Русский",
     "bubbleColor": "バブルの色",
     "deviceID": "デバイス ID",
     "sessionID": "セッション ID",
@@ -340,7 +355,9 @@
     "desktop": "デスクトップ",
     "web": "ウェブ",
     "tablet": "タブレット",
-    "noSessions": "他のデバイスはありません"
+    "noSessions": "他のデバイスはありません",
+    "deviceUnit": "台のデバイス",
+    "otherDevices": "他 {{count}} 台のデバイス"
   },
   "connection": {
     "connected": "接続済み",
@@ -355,7 +372,8 @@
     "unauthorized": "認証されていません。再度ログインしてください。",
     "notFound": "ユーザーが見つかりません",
     "timeoutRetry": "操作がタイムアウトしました。再試行してください。",
-    "operationFailed": "操作に失敗しました。再試行してください。"
+    "operationFailed": "操作に失敗しました。再試行してください。",
+    "retry": "再試行"
   },
   "sidebar": {
     "newChat": "新しいチャット",
@@ -389,7 +407,9 @@
     "edit": "編集",
     "remove": "削除",
     "pin": "ピン留め",
-    "unpin": "ピン解除"
+    "unpin": "ピン解除",
+    "details": "詳細",
+    "required": "必須です"
   },
   "time": {
     "justNow": "たった今",

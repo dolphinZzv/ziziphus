@@ -192,7 +192,7 @@ func main() {
 	// File storage
 	fileFs := afero.NewOsFs()
 	fileStore := file.NewStore(fileFs, cfg.Storage.LocalPath)
-	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL, convMgr, ingest, userRepo)
+	fileHandler := api.NewFileHandler(fileStore, fileRepo, sf, cfg.Storage.BaseURL, convMgr, ingest, userRepo, authSvc)
 
 	// HTTP API handlers
 	passwordResetRepo := db.NewPasswordResetRepo(pool)

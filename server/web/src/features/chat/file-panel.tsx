@@ -3,6 +3,7 @@ import { fileService } from '@/services/file-service'
 import type { ConvFileInfo } from '@/services/file-service'
 import { api } from '@/services/api-client'
 import { formatTime } from '@/lib/time'
+import { withFileToken } from '@/lib/file-token'
 import { X, Upload, Download, FileText, Image, Film, Folder, FolderPlus, ChevronRight, MoreHorizontal, Info, Edit2 } from 'lucide-react'
 
 interface Props { convId: string; onClose: () => void; width?: number; onWidthChange?: (w: number) => void }
@@ -243,7 +244,7 @@ export default function FilePanel({ convId, onClose, width }: Props) {
                         <div className="fixed inset-0 z-10" onClick={() => setMenuFileId(null)} />
                         <div className="absolute right-0 top-7 w-36 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-lg z-20 py-1 shadow-lg text-xs"
                           style={{ boxShadow: 'var(--shadow-md)' }}>
-                          <a href={f.url} download={f.name}
+                          <a href={withFileToken(f.url)} download={f.name}
                             className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-[var(--color-surface-soft)] text-[var(--color-body)]">
                             <Download size={11} /> 下载
                           </a>

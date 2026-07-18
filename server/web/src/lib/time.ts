@@ -26,8 +26,10 @@ export function formatMessageTime(ts: number): string {
   const now = Date.now()
   const diff = now - d.getTime()
   const secs = Math.floor(diff / 1000)
-  if (secs < 60) return i18n.t('time.justNow')
-  if (secs < 3600) return i18n.t('time.minuteAgo', { n: Math.floor(secs / 60) })
+  // Negative diff = server clock was ahead when message was created (clock skew).
+  // Show the absolute time instead of "刚刚" to avoid misleading labels.
+  if (secs >= 0 && secs < 60) return i18n.t('time.justNow')
+  if (secs >= 60 && secs < 3600) return i18n.t('time.minuteAgo', { n: Math.floor(secs / 60) })
   if (secs < 86400) {
     const h = d.getHours().toString().padStart(2, '0')
     const m = d.getMinutes().toString().padStart(2, '0')

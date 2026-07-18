@@ -45,7 +45,15 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
             return
         }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            // Only attach auth token for requests to our own server
+            if let serverURL = URL(string: AppSettings.shared.serverURL),
+               url.host == serverURL.host {
+                if let token = AuthManager.shared.readToken() {
+                    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                }
+            }
+            let (data, _) = try await URLSession.shared.data(for: request)
             if let image = UIImage(data: data) {
                 ImageCache.shared.set(image, for: url)
                 loadedImage = image

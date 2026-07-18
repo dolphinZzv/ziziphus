@@ -20,12 +20,15 @@ const MemoBubble = memo(MessageBubble)
 export default function MessageList({ convId, messages, currentUserId, searchKeyword, matchIndex, searchMatches }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
-  const loadingMore = useRef(false)
   const prevLen = useRef(0)
-  const shouldAutoScroll = useRef(false) // true = user is at bottom, auto-follow
+  const prevFirstId = useRef(0)
+  const shouldAutoScroll = useRef(true)
+  const initialScrollDone = useRef(false)
+  const loadMoreState = useRef<'idle' | 'pending' | 'done'>('idle')
+  const loadMorePrevHeight = useRef(0)
   const matchRefs = useRef<(HTMLDivElement | null)[]>([])
 
-  // Batch-fetch sender info: collect unique sender IDs and call batch API
+  // Batch-fetch sender info
   const [senderMap, setSenderMap] = useState<Record<string, { avatar?: string; isAgent: boolean }>>({})
   useEffect(() => {
     const ids = new Set<string>()
@@ -36,10 +39,8 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
     }
     const idsArr = Array.from(ids)
     if (idsArr.length === 0) return
-    // Check if we already have all of them
     const missing = idsArr.filter(id => !senderMap[id])
     if (missing.length === 0) return
-
     userService.batchGet(missing).then(users => {
       setSenderMap(prev => {
         const next = { ...prev }
@@ -58,31 +59,43 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
     el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'instant' })
   }, [])
 
-  // Detect when user manually scrolls up — stop auto-follow
+  const lastLoadMoreTime = useRef(0)
+  const scrollBtnVisible = useRef(false)
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
-    if (!el || loadingMore.current) return
-    // Load more when near top
-    if (el.scrollTop < 120) {
-      loadingMore.current = true
-      const prevHeight = el.scrollHeight
-      chatStore.loadMore(convId)
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const el2 = scrollRef.current
-          if (el2) el2.scrollTop = el2.scrollHeight - prevHeight
-          loadingMore.current = false
-        })
-      })
-    }
-    // If user is within 50px of bottom → auto-follow; otherwise stop
+    if (!el) return
+    if (loadMoreState.current !== 'idle') return
+
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-    shouldAutoScroll.current = distFromBottom < 50
-    setShowScrollBtn(distFromBottom > 300)
+
+    // Load more at top (500ms cooldown)
+    if (initialScrollDone.current && el.scrollTop < 120 && Date.now() - lastLoadMoreTime.current > 500) {
+      lastLoadMoreTime.current = Date.now()
+      loadMorePrevHeight.current = el.scrollHeight
+      loadMoreState.current = 'pending'
+      chatStore.loadMore(convId)
+      // Safety: reset to idle after 5s even if loadMore doesn't change messages
+      setTimeout(() => {
+        if (loadMoreState.current === 'pending') loadMoreState.current = 'idle'
+      }, 5000)
+    }
+
+    // Auto-scroll hysteresis: easy to exit, hard to re-enter
+    if (shouldAutoScroll.current) {
+      if (distFromBottom > 100) shouldAutoScroll.current = false
+    } else {
+      if (distFromBottom < 5) shouldAutoScroll.current = true
+    }
+
+    // Throttled scroll button
+    const newBtnVisible = distFromBottom > 300
+    if (newBtnVisible !== scrollBtnVisible.current) {
+      scrollBtnVisible.current = newBtnVisible
+      setShowScrollBtn(newBtnVisible)
+    }
   }, [convId])
 
-  // ResizeObserver on inner content wrapper — fires when messages are added or
-  // images load, keeping scroll pinned to bottom when auto-follow is on.
+  // ResizeObserver — auto-scroll when content grows while user is at bottom
   useEffect(() => {
     const el = contentRef.current
     if (!el) return
@@ -93,21 +106,47 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
     return () => ro.disconnect()
   }, [scrollToEnd])
 
-  // Reset auto-scroll and scroll to end on conversation change
+  // Reset on conversation change
   useLayoutEffect(() => {
     shouldAutoScroll.current = true
+    initialScrollDone.current = false
+    loadMoreState.current = 'idle'
     scrollToEnd()
     prevLen.current = messages.length
+    prevFirstId.current = messages[0]?.msg_id || 0
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        initialScrollDone.current = true
+      })
+    })
   }, [convId])
 
-  // New messages arrived — auto-scroll if user was already at bottom
+  // Handle message changes: prepend (loadMore) or append (new message)
   useLayoutEffect(() => {
-    if (loadingMore.current) return
-    if (messages.length > prevLen.current) {
-      if (shouldAutoScroll.current) scrollToEnd()
+    if (messages.length === prevLen.current) return
+
+    const firstMsg = messages[0]
+    const firstId = firstMsg?.msg_id || 0
+
+    if (firstId > 0 && firstId !== prevFirstId.current && loadMoreState.current !== 'idle') {
+      // Messages were prepended (loadMore completed).
+      // Adjust scroll position to keep visual content stable — no flicker.
+      const el = scrollRef.current
+      if (el && loadMorePrevHeight.current > 0) {
+        const heightDiff = el.scrollHeight - loadMorePrevHeight.current
+        if (heightDiff > 0) {
+          el.scrollTop += heightDiff
+        }
+      }
+      loadMoreState.current = 'idle'
+    } else if (messages.length > prevLen.current && shouldAutoScroll.current) {
+      // New messages appended at the end
+      scrollToEnd()
     }
+
     prevLen.current = messages.length
-  }, [messages.length])
+    if (firstId > 0) prevFirstId.current = firstId
+  })
 
   // Scroll to current search match
   useEffect(() => {
@@ -129,10 +168,8 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
       rows.push(<DateSeparator key={`date-${msg.timestamp}`} timestamp={msg.timestamp} />)
       lastDate = msg.timestamp
     }
-
     const isMatch = searchMatches?.includes(i) ?? false
     const isCurrentMatch = matchIndex !== undefined && searchMatches?.[matchIndex] === i
-
     rows.push(
       <div key={msg.msg_id > 0 ? `msg-${msg.msg_id}` : `local-${msg.client_seq}`}
         id={`msg-${msg.msg_id}`}

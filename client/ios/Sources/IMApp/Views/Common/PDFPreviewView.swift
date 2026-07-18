@@ -2,12 +2,16 @@ import SwiftUI
 import PDFKit
 import IMCore
 
-struct PDFPreviewView: View {
+/// PDF preview that loads the document via an authenticated URLSession
+/// using the Bearer token from AuthManager. Falls back to the remote URL
+/// when no token is available (public files).
+struct AuthPDFPreviewView: View {
     let url: URL
     let filename: String
 
     @State private var showPreview = false
     @State private var scaleFactor: CGFloat = 1.0
+    @State private var document: PDFDocument?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -15,6 +19,7 @@ struct PDFPreviewView: View {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     showPreview.toggle()
                     if !showPreview { scaleFactor = 1.0 }
+                    if showPreview, document == nil { loadDocument() }
                 }
             } label: {
                 HStack(spacing: 4) {
@@ -46,16 +51,6 @@ struct PDFPreviewView: View {
                         }
 
                         Spacer()
-
-                        Button { UIApplication.shared.open(url) } label: {
-                            HStack(spacing: 2) {
-                                Image(systemName: "arrow.up.forward.app")
-                                    .font(.caption2)
-                                Text(loc("common.open"))
-                                    .font(.caption2)
-                            }
-                            .foregroundColor(.accentColor)
-                        }
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -63,8 +58,13 @@ struct PDFPreviewView: View {
                     .overlay(Divider(), alignment: .bottom)
 
                     // PDF content
-                    PDFKitView(url: url, scaleFactor: $scaleFactor)
-                        .frame(height: 360)
+                    if let doc = document {
+                        PDFKitView(doc: doc, scaleFactor: $scaleFactor)
+                            .frame(height: 360)
+                    } else {
+                        ProgressView()
+                            .frame(height: 360)
+                    }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
@@ -74,10 +74,22 @@ struct PDFPreviewView: View {
             }
         }
     }
+
+    private func loadDocument() {
+        Task {
+            var request = URLRequest(url: url)
+            if let token = AuthManager.shared.readToken() {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            guard let (data, _) = try? await URLSession.shared.data(for: request),
+                  let doc = PDFDocument(data: data) else { return }
+            await MainActor.run { document = doc }
+        }
+    }
 }
 
 struct PDFKitView: UIViewRepresentable {
-    let url: URL
+    let doc: PDFDocument
     @Binding var scaleFactor: CGFloat
 
     func makeUIView(context: Context) -> PDFView {
@@ -85,14 +97,12 @@ struct PDFKitView: UIViewRepresentable {
         pdfView.autoScales = true
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
-        pdfView.document = PDFDocument(url: url)
+        pdfView.document = doc
         return pdfView
     }
 
     func updateUIView(_ pdfView: PDFView, context: Context) {
-        if let doc = pdfView.document, doc.documentURL != url {
-            pdfView.document = PDFDocument(url: url)
-        }
+        pdfView.document = doc
         pdfView.scaleFactor = pdfView.scaleFactorForSizeToFit * scaleFactor
     }
 }

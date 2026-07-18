@@ -48,7 +48,8 @@
     "passwordTooShort": "密码至少8位",
     "accountRequired": "请填写账号",
     "nameRequired": "请填写昵称",
-    "passwordRequired": "请填写密码"
+    "passwordRequired": "请填写密码",
+    "hasAccount": "已有账号？"
   },
   "chat": {
     "inputPlaceholder": "输入消息...",
@@ -168,7 +169,9 @@
     "discoverable": "可被搜索",
     "discoverableHint": "允许用户通过搜索找到该群组",
     "webhookUsageExamples": "使用示例",
-    "webhookHeadersHint": "每行一个，格式：Key: Value"
+    "webhookHeadersHint": "每行一个，格式：Key: Value",
+    "bgImage": "聊天背景",
+    "bgImageHint": "建议尺寸 1080×1920"
   },
   "group": {
     "detail": "群组信息",
@@ -217,7 +220,8 @@
     "cardNotFoundDesc": "该分享链接无效或群组已解散",
     "goToLogin": "去登录",
     "joinGroup": "登录后加入群组",
-    "register": "注册账号"
+    "register": "注册账号",
+    "themeColor": "主题色"
   },
   "contact": {
     "title": "联系人",
@@ -305,6 +309,7 @@
     "languageDE": "Deutsch",
     "languageES": "Español",
     "languageKO": "한국어",
+    "languageRU": "Русский",
     "bubbleColor": "气泡颜色",
     "deviceID": "设备 ID",
     "sessionID": "会话 ID",
@@ -350,7 +355,9 @@
     "desktop": "电脑",
     "web": "网页",
     "tablet": "平板",
-    "noSessions": "暂无其他设备"
+    "noSessions": "暂无其他设备",
+    "deviceUnit": "台设备",
+    "otherDevices": "共 {{count}} 台其他设备"
   },
   "connection": {
     "connected": "已连接",
@@ -365,7 +372,8 @@
     "unauthorized": "未授权，请重新登录",
     "notFound": "用户不存在",
     "timeoutRetry": "操作超时，请重试",
-    "operationFailed": "操作失败，请重试"
+    "operationFailed": "操作失败，请重试",
+    "retry": "重试"
   },
   "sidebar": {
     "newChat": "新建聊天",
@@ -399,7 +407,9 @@
     "edit": "编辑",
     "remove": "移除",
     "pin": "置顶",
-    "unpin": "取消置顶"
+    "unpin": "取消置顶",
+    "details": "详情",
+    "required": "请填写"
   },
   "time": {
     "justNow": "刚刚",

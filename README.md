@@ -10,7 +10,7 @@
 
 > **Demo**: [http://47.95.200.101:10011/](http://47.95.200.101:10011/)
 
-[English](README.md) | [中文](README.zh.md)
+[English](README.md) | [中文](docs/README.zh.md) | [日本語](docs/README.ja.md) | [Français](docs/README.fr.md) | [Deutsch](docs/README.de.md) | [Español](docs/README.es.md) | [한국어](docs/README.ko.md) | [Русский](docs/README.ru.md)
 
 An instant messaging (IM) application — Go backend powering multiple frontends.
 
@@ -299,6 +299,74 @@ make deploy-logs     # View service logs
 │  client/                                         │
 └─────────────────────────────────────────────────┘
 ```
+
+---
+
+## Internationalization (i18n)
+
+Ziziphus supports **8 languages** across frontend and backend:
+
+| Code | Language | Backend Constant | Frontend File |
+|------|----------|-----------------|---------------|
+| `zh` | Chinese (Simplified) | `LangZH` | `zh.json` |
+| `en` | English | `LangEN` | `en.json` |
+| `ja` | Japanese | `LangJA` | `ja.json` |
+| `fr` | French | `LangFR` | `fr.json` |
+| `de` | German | `LangDE` | `de.json` |
+| `es` | Spanish | `LangES` | `es.json` |
+| `ko` | Korean | `LangKO` | `ko.json` |
+| `ru` | Russian | `LangRU` | `ru.json` |
+
+### Frontend
+
+Uses [i18next](https://www.i18next.com/) with [react-i18next](https://react.i18next.com/). Language preference is stored in `localStorage` under key `ziziphus_language`. Translation files live in `server/web/src/i18n/{lang}.json`. Non-Chinese bundles are lazy-loaded on demand to keep the initial bundle small.
+
+The frontend sends the selected language to the backend via the `X-Language` HTTP header on every request.
+
+### Backend
+
+The `server/pkg/i18n/` package provides:
+
+- **Language constants** (`LangZH`, `LangEN`, ...)
+- **ParseLang()** — Accepts browser locale codes (e.g. `zh-CN`, `en-US`, `ja-JP`) and normalizes to a supported Lang constant
+- **DetectLanguage()** — Reads `X-Language` header (frontend preference) with fallback to `Accept-Language` header, then to `LangZH`
+- **T() / TWithLang()** — Template-style string translation with positional parameters (`{0}`, `{1}`)
+- **HTTP Middleware** — Detects language per-request and stores it in the request context
+
+Translation messages are split per language file:
+```
+pkg/i18n/messages.go          # Message key declarations + registerLang helper
+pkg/i18n/{zh,en,ja,fr,de,es,ko,ru}.go  # Each language's translations
+```
+
+### Email Templates
+
+Email verification and password reset templates support all 8 languages as well. Templates are embedded at compile time via `//go:embed` and live in:
+
+```
+internal/auth/email_templates/
+  verify_code_{lang}.html
+  reset_password_{lang}.html
+```
+
+### Adding a New Language
+
+**Backend:**
+1. Add a new `LangXX` constant in `pkg/i18n/i18n.go`
+2. Add locale mapping in `ParseLang()`
+3. Create a new file `pkg/i18n/{lang}.go` with `init() + registerLang()` for all message keys
+4. Add `langToFrontendCode()` mapping in `internal/api/language.go`
+
+**Frontend:**
+1. Create `server/web/src/i18n/{lang}.json` with translated key-value pairs
+2. Add the language option to the frontend settings/auth language selector
+3. Update `Language` type and `resolveAutoLang()` in the UI store
+
+**Email Templates:**
+1. Copy an existing template (e.g., `verify_code_en.html` → `verify_code_{lang}.html`)
+2. Translate the text content
+3. Add `//go:embed` directive and register in `emailTemplates` map in `internal/auth/mailer.go`
+4. Add subject translations
 
 ---
 
