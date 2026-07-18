@@ -2,13 +2,23 @@ package db
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"ziziphus/pkg/logger"
 )
+
+// Bootstrap migration — creates the tracking table. Always executed first.
+const bootstrapMigration = `CREATE TABLE IF NOT EXISTS schema_migrations (
+    filename    VARCHAR(255) PRIMARY KEY,
+    applied_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    checksum    VARCHAR(64) NOT NULL DEFAULT ''
+);`
 
 func NewPgPool(ctx context.Context, dsn string, maxConns int) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
@@ -28,6 +38,7 @@ func NewPgPool(ctx context.Context, dsn string, maxConns int) (*pgxpool.Pool, er
 }
 
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool, dir string) error {
+	// 1. Read migration files first (fail fast on bad dir)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return fmt.Errorf("read migrations dir: %w", err)
@@ -35,18 +46,65 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, dir string) error {
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].Name() < entries[j].Name()
 	})
+
+	// 2. Bootstrap: ensure schema_migrations table exists
+	if _, err := pool.Exec(ctx, bootstrapMigration); err != nil {
+		return fmt.Errorf("bootstrap schema_migrations: %w", err)
+	}
+
+	// 3. Read applied migration set
+	applied := make(map[string]bool)
+	rows, err := pool.Query(ctx, `SELECT filename FROM schema_migrations ORDER BY filename`)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err == nil {
+				applied[name] = true
+			}
+		}
+	}
+	// If table was just created, Query returns zero rows — not an error.
+
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".sql" {
 			continue
 		}
-		path := filepath.Join(dir, entry.Name())
+		name := entry.Name()
+
+		// Skip 000 bootstrap — already done above
+		if name == "000_schema_migrations.sql" {
+			continue
+		}
+
+		// Skip already-applied migrations
+		if applied[name] {
+			logger.Debug("migration already applied, skipping", "name", name)
+			continue
+		}
+
+		// 4. Read and apply
+		path := filepath.Join(dir, name)
 		data, err := os.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("read migration %s: %w", entry.Name(), err)
+			return fmt.Errorf("read migration %s: %w", name, err)
 		}
+
 		if _, err := pool.Exec(ctx, string(data)); err != nil {
-			return fmt.Errorf("run migration %s: %w", entry.Name(), err)
+			return fmt.Errorf("run migration %s: %w", name, err)
 		}
+
+		// 5. Record
+		checksum := sha256.Sum256(data)
+		cs := hex.EncodeToString(checksum[:])
+		if _, err := pool.Exec(ctx,
+			`INSERT INTO schema_migrations (filename, checksum) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+			name, cs); err != nil {
+			logger.Error("record migration failed", "name", name, "error", err)
+		}
+
+		logger.Info("migration applied", "name", name)
 	}
+
 	return nil
 }
