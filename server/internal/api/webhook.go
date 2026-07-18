@@ -580,19 +580,19 @@ type webhookReceiveReq struct {
 func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) {
 	ip := callerIP(r)
 	if !h.rateLmt.Allow(ip) {
-		writeJSONError(w, http.StatusTooManyRequests, 429, "too many requests")
+		Error(w, r, http.StatusTooManyRequests, &model.AppError{Code: model.ErrRateLimited.Code, Message: "too many requests"})
 		return
 	}
 
 	providedKey := extractBearerToken(r)
 	if providedKey == "" {
-		writeJSONError(w, http.StatusUnauthorized, 401, "missing api key")
+		Error(w, r, http.StatusUnauthorized, &model.AppError{Code: model.ErrNoPermission, Message: "missing api key"})
 		return
 	}
 
 	wh, err := h.webhookDB.GetByAPIKey(r.Context(), providedKey)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, 404, "not found")
+		Error(w, r, http.StatusNotFound, &model.AppError{Code: model.ErrNotFound, Message: "not found"})
 		return
 	}
 
@@ -603,15 +603,15 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 
 	var req webhookReceiveReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, 400, "invalid json")
+		Error(w, r, http.StatusBadRequest, &model.AppError{Code: model.ErrBadMsgContent.Code, Message: "invalid json"})
 		return
 	}
 	if req.Body == "" {
-		writeJSONError(w, http.StatusBadRequest, 400, "body is required")
+		Error(w, r, http.StatusBadRequest, &model.AppError{Code: model.ErrBadMsgContent.Code, Message: "body is required"})
 		return
 	}
 	if len(req.Body) > 65536 {
-		writeJSONError(w, http.StatusRequestEntityTooLarge, 413, "body too large")
+		Error(w, r, http.StatusRequestEntityTooLarge, &model.AppError{Code: model.ErrMsgTooLarge.Code, Message: "body too large"})
 		return
 	}
 
@@ -620,7 +620,7 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 	convSeq, err := h.seqCache.GetAndIncrementConvSeq(r.Context(), wh.ConvID)
 	if err != nil {
 		logger.Error("get conv seq failed", "conv_id", wh.ConvID, "error", err)
-		writeJSONError(w, http.StatusInternalServerError, 500, "server error")
+		Error(w, r, http.StatusInternalServerError, &model.AppError{Code: model.ErrInternalServer.Code, Message: "server error"})
 		return
 	}
 
@@ -642,7 +642,7 @@ func (h *WebhookHandler) ReceiveMessage(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.store.Insert(r.Context(), msg); err != nil {
 		logger.Error("persist webhook message failed", "error", err)
-		http.Error(w, `{"code":500,"msg":"server error"}`, http.StatusInternalServerError)
+		Error(w, r, http.StatusInternalServerError, &model.AppError{Code: model.ErrInternalServer.Code, Message: "server error"})
 		return
 	}
 
@@ -715,10 +715,4 @@ func ExtractMentions(body string) map[string]bool {
 		}
 	}
 	return result
-}
-
-func writeJSONError(w http.ResponseWriter, httpStatus, code int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpStatus)
-	json.NewEncoder(w).Encode(map[string]any{"code": code, "msg": msg, "data": nil})
 }

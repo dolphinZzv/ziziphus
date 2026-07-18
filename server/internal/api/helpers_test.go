@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"ziziphus/pkg/model"
 )
 
 func TestIsValidRelPath(t *testing.T) {
@@ -124,9 +126,10 @@ func TestExtractBearerToken(t *testing.T) {
 	}
 }
 
-func TestWriteJSONError(t *testing.T) {
+func TestErrorResponse(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeJSONError(w, http.StatusTooManyRequests, 429, "too many requests")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	Error(w, r, http.StatusTooManyRequests, model.ErrRateLimited)
 
 	if w.Code != http.StatusTooManyRequests {
 		t.Errorf("status = %d, want %d", w.Code, http.StatusTooManyRequests)
@@ -136,11 +139,8 @@ func TestWriteJSONError(t *testing.T) {
 	}
 
 	resp := decodeResponse(t, w)
-	if resp.Code != 429 {
-		t.Errorf("code = %d, want 429", resp.Code)
-	}
-	if resp.Msg != "too many requests" {
-		t.Errorf("msg = %q, want %q", resp.Msg, "too many requests")
+	if resp.Code != model.ErrRateLimited.Code {
+		t.Errorf("code = %d, want %d", resp.Code, model.ErrRateLimited.Code)
 	}
 }
 
