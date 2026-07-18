@@ -125,7 +125,7 @@ public class ConversationService {
 
     // MARK: - Mark Read
     public func markRead(convID: String, msgID: Int64) async throws {
-        let _: [String: String] = try await api.request(
+        let _: MarkReadResponse = try await api.request(
             "/api/v1/conversations/\(convID)/read",
             method: .post,
             body: MarkReadReq(msgID: msgID)
@@ -208,6 +208,16 @@ public class ConversationService {
         let msgID: Int64
 
         enum CodingKeys: String, CodingKey {
+            case msgID = "msg_id"
+        }
+    }
+
+    private struct MarkReadResponse: Codable, Sendable {
+        let convID: String
+        let msgID: Int64
+
+        enum CodingKeys: String, CodingKey {
+            case convID = "conv_id"
             case msgID = "msg_id"
         }
     }

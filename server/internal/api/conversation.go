@@ -746,7 +746,11 @@ func (h *ConvHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.readMarker != nil {
-		_ = h.readMarker.MarkRead(r.Context(), userID, convID, req.MsgID)
+		if err := h.readMarker.MarkRead(r.Context(), userID, convID, req.MsgID); err != nil {
+			logger.Error("mark read failed", "conv_id", convID, "user_id", userID, "msg_id", req.MsgID, "error", err)
+		}
+	} else {
+		logger.Error("readMarker is nil, mark read skipped", "conv_id", convID, "user_id", userID, "msg_id", req.MsgID)
 	}
 
 	JSON(w, map[string]interface{}{"conv_id": convID, "msg_id": req.MsgID})

@@ -108,7 +108,6 @@ public class ChatViewModel: ObservableObject {
         }
 
         loadInitialMessages()
-        markAsReadIfActive()
     }
 
     deinit {
@@ -141,6 +140,8 @@ public class ChatViewModel: ObservableObject {
                 logToFile("[ChatVM] load history error: \(error)")
                 errorMessage = error.localizedDescription
             }
+            // Mark as read AFTER messages are loaded, not before (race condition fix)
+            self.markAsReadIfActive()
             loadSenderInfo()
         }
     }
@@ -277,7 +278,11 @@ public class ChatViewModel: ObservableObject {
     public func markAsReadIfActive() {
         guard let last = messages.last(where: { $0.senderID != AuthManager.shared.currentUser?.userID }) else { return }
         Task {
-            try? await convService.markRead(convID: convID, msgID: last.msgID)
+            do {
+                try await convService.markRead(convID: convID, msgID: last.msgID)
+            } catch {
+                logToFile("[ChatVM] markRead failed: \(error)")
+            }
             NotificationCenter.default.post(name: .init("didMarkRead"), object: nil)
         }
     }
