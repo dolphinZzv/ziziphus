@@ -18,6 +18,7 @@ import GroupSettings from '@/features/group/group-settings'
 import WebhookPanel from '@/features/group/webhook-panel'
 import MemberListView from '@/features/group/member-list-view'
 import AddMemberView from '@/features/group/add-member-view'
+import UserCard from '@/components/user-card'
 import HistoryView from '@/features/history/history-view'
 import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X, Trash2, UserPlus, ArrowLeft, Pin, PinOff, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -53,6 +54,8 @@ export default function ChatView() {
   // Chat panel sub-route — derived from URL
   const activePanel = (() => {
     const m = location.pathname.match(/^\/(?:chat|conversations)\/([^/]+)\/(info|settings|webhooks|add-member|members|detail|history)$/)
+    const userM = location.pathname.match(/^\/(?:chat|conversations)\/([^/]+)\/user\/([^/]+)$/)
+    if (userM && userM[1] === convId) return 'user'
     return m && m[1] === convId ? m[2] : null
   })()
 
@@ -493,6 +496,13 @@ export default function ChatView() {
 
       {/* History modal */}
       {activePanel === 'history' && <HistoryView convId={convId} onClose={closePanel} />}
+      {activePanel === 'user' && (
+        <div className="fixed inset-0 z-50 flex sm:hidden items-center justify-center bg-black/30" onClick={closePanel}>
+          <div onClick={e => e.stopPropagation()}>
+            <UserCard userId={location.pathname.split('/').pop() || ''} onClose={closePanel} />
+          </div>
+        </div>
+      )}
       </div>
       {/* Zero-width drag handle wrapper — sits between chat area and file panel */}
       <div className="relative flex-shrink-0" style={{ width: 0 }}>

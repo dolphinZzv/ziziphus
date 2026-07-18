@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import type { Message } from '@/types/message'
 import { ContentType, MsgStatus } from '@/types/message'
 import { chatStore } from '@/stores/chat-store'
@@ -33,6 +34,8 @@ interface Props {
 
 export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, highlight, isSearchMatch, isCurrentSearchMatch }: Props) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const convId = message.conv_id
   // For own messages, use local user info directly — no API call needed
   const myInfo = isOwn ? authStore.state.user : null
   const _senderInfo = myInfo ? { avatar: myInfo.avatar || undefined, isAgent: myInfo.type === 1 } : (senderInfo || { avatar: undefined, isAgent: false })
@@ -167,12 +170,18 @@ export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, h
   const senderInitials = message.sender_name?.charAt(0)?.toUpperCase() || '?'
   const myInitials = me?.name?.charAt(0)?.toUpperCase() || '?'
 
+  const handleUserClick = (userId: string) => {
+    navigate(`/conversations/${convId}/user/${userId}`)
+  }
+
   const AvatarDot = ({ name, avatar, userId: _userId, clickable, isAgent }: { name: string; avatar?: string; userId: string; clickable: boolean; isAgent?: boolean }) => (
     clickable ? (
       <button
         ref={avatarRef}
-        onMouseEnter={() => { const r = avatarRef.current?.getBoundingClientRect(); if (r) handleShowUserCard({ x: r.left, y: r.bottom + 4 }); else handleMouseEnter() }}
-        onMouseLeave={handleMouseLeave} className="flex-shrink-0 self-start mt-1">
+        onClick={() => handleUserClick(_userId)}
+        onMouseEnter={() => { if (window.innerWidth >= 640) { const r = avatarRef.current?.getBoundingClientRect(); if (r) handleShowUserCard({ x: r.left, y: r.bottom + 4 }); else handleMouseEnter() } }}
+        onMouseLeave={() => { if (window.innerWidth >= 640) handleMouseLeave() }}
+        className="flex-shrink-0 self-start mt-1">
         <div className="relative">
           {avatar ? (
             <img src={avatarUrl(avatar)} alt="" className="w-8 h-8 rounded-full object-cover hover:ring-2 hover:ring-[var(--color-primary)]/30 transition-all" />

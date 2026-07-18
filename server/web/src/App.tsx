@@ -21,6 +21,11 @@ function LazyChatView() {
   return <Suspense fallback={<PageFallback />}><ChatView /></Suspense>
 }
 
+/** Minimal backdrop for sheet routes — empty canvas with no sidebar */
+function SheetBackdrop() {
+  return <div className="h-full w-full bg-[var(--color-surface-soft)]" />
+}
+
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useSyncExternalStore(authStore.subscribe, () => authStore.state.isLoggedIn)
   if (!isLoggedIn) return <Navigate to="/login" replace />
@@ -64,17 +69,18 @@ export default function App() {
           <Route path="conversations/:convId/add-member" element={<LazyChatView />} />
           <Route path="conversations/:convId/detail" element={<LazyChatView />} />
           <Route path="conversations/:convId/history" element={<LazyChatView />} />
-          <Route path="profile" element={<ConversationsPage />} />
-          <Route path="profile/edit" element={<ConversationsPage />} />
-          <Route path="profile/agents" element={<ConversationsPage />} />
-          <Route path="profile/privacy" element={<ConversationsPage />} />
-          <Route path="profile/sessions" element={<ConversationsPage />} />
-          <Route path="profile/settings" element={<ConversationsPage />} />
-          <Route path="contacts" element={<ConversationsPage />} />
-          <Route path="new-chat" element={<ConversationsPage />} />
-          <Route path="add-contact" element={<ConversationsPage />} />
-          <Route path="create-group" element={<ConversationsPage />} />
-          <Route path="join-group" element={<ConversationsPage />} />
+          <Route path="conversations/:convId/user/:userId" element={<LazyChatView />} />
+          <Route path="profile" element={<SheetBackdrop />} />
+          <Route path="profile/edit" element={<SheetBackdrop />} />
+          <Route path="profile/agents" element={<SheetBackdrop />} />
+          <Route path="profile/privacy" element={<SheetBackdrop />} />
+          <Route path="profile/sessions" element={<SheetBackdrop />} />
+          <Route path="profile/settings" element={<SheetBackdrop />} />
+          <Route path="contacts" element={<SheetBackdrop />} />
+          <Route path="new-chat" element={<SheetBackdrop />} />
+          <Route path="add-contact" element={<SheetBackdrop />} />
+          <Route path="create-group" element={<SheetBackdrop />} />
+          <Route path="join-group" element={<SheetBackdrop />} />
         </Route>
         <Route path="/group-card/:shareToken" element={<Suspense fallback={<PageFallback />}><GroupCardPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/conversations" replace />} />
