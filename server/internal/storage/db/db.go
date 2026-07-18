@@ -48,7 +48,8 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, dir string) error {
 	})
 
 	// 2. Bootstrap: ensure schema_migrations table exists
-	if _, err := pool.Exec(ctx, bootstrapMigration); err != nil {
+	_, err = pool.Exec(ctx, bootstrapMigration)
+	if err != nil {
 		return fmt.Errorf("bootstrap schema_migrations: %w", err)
 	}
 
@@ -64,7 +65,33 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, dir string) error {
 			}
 		}
 	}
-	// If table was just created, Query returns zero rows — not an error.
+
+	// 4. Migration table was just created and DB already has data →
+	//    mark all existing migrations as applied to avoid re-running
+	//    non-idempotent migrations on upgrade from the old runner.
+	if len(applied) == 0 {
+		// Only query if the table was likely just created
+		var tableExists bool
+		_ = pool.QueryRow(ctx,
+			`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'conversations')`,
+		).Scan(&tableExists)
+		if tableExists {
+			logger.Info("migration table empty but DB has data — marking all migrations as applied")
+			for _, entry := range entries {
+				if entry.IsDir() || filepath.Ext(entry.Name()) != ".sql" {
+					continue
+				}
+				if entry.Name() == "000_schema_migrations.sql" {
+					continue
+				}
+				applied[entry.Name()] = true
+				_, _ = pool.Exec(ctx,
+					`INSERT INTO schema_migrations (filename, checksum) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+					entry.Name(), "migrated")
+			}
+			logger.Info("migration tracking initialized", "count", len(applied))
+		}
+	}
 
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".sql" {
