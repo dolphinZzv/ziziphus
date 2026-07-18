@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { conversationService } from '@/services/conversation-service'
@@ -16,7 +16,10 @@ export default function GroupCardPage() {
   const [error, setError] = useState(false)
   const [joining, setJoining] = useState(false)
   const [joinState, setJoinState] = useState<'idle' | 'confirm' | 'sent' | 'already'>('idle')
-  const isLoggedIn = !!authStore.state.token
+  const isLoggedIn = useSyncExternalStore(
+    authStore.subscribe,
+    () => !!authStore.state.token
+  )
 
   useEffect(() => {
     if (!shareToken) {
@@ -39,11 +42,15 @@ export default function GroupCardPage() {
     if (!card) return
     setJoining(true)
     try {
-      await conversationService.requestJoin(card.conv_id)
-      setJoinState('sent')
+      const result = await conversationService.requestJoin(card.conv_id)
+      if (result.joined) {
+        navigate(`/chat/${card.conv_id}`)
+      } else {
+        setJoinState('sent')
+      }
     } catch (e: any) {
       if ((e as any)?.key === 'err.already_member') {
-        setJoinState('already')
+        navigate(`/chat/${card.conv_id}`)
       } else {
         setJoinState('idle')
       }

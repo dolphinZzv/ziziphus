@@ -246,33 +246,43 @@ struct AgentManageView: View {
             }
 
             ForEach(agents) { agent in
-                Button {
-                    editingAgent = agent
-                } label: {
-                    HStack(spacing: 12) {
-                        AvatarView(name: agent.name, url: agent.avatar, size: 40)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(agent.name)
-                                .fontWeight(.medium)
-                            Text(loc("agent.type_label"))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                HStack(spacing: 12) {
+                    Button {
+                        editingAgent = agent
+                    } label: {
+                        HStack(spacing: 12) {
+                            AvatarView(name: agent.name, url: agent.avatar, size: 40)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(agent.name)
+                                    .fontWeight(.medium)
+                                Text(loc("agent.type_label"))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            if !agent.apiKey.isEmpty {
+                                Image(systemName: "key.fill")
+                                    .font(.caption2)
+                                    .foregroundColor(.green)
+                            }
                         }
-                        Spacer()
-                        if !agent.apiKey.isEmpty {
-                            Image(systemName: "key.fill")
-                                .font(.caption2)
-                                .foregroundColor(.green)
-                        }
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
-                    .padding(.vertical, 4)
+                    .buttonStyle(.plain)
                 }
-            }
-            .onDelete { indexSet in
-                for idx in indexSet { deleteAgent(agents[idx]) }
+                .padding(.vertical, 4)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        deleteAgent(agent)
+                    } label: {
+                        Label(loc("common.delete"), systemImage: "trash")
+                    }
+                    Button {
+                        editingAgent = agent
+                    } label: {
+                        Label(loc("common.edit"), systemImage: "pencil")
+                    }
+                    .tint(.orange)
+                }
             }
 
             if agents.count < 10 && !isLoading {

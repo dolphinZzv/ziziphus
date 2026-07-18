@@ -76,7 +76,7 @@ export const conversationService = {
   },
 
   requestJoin(convId: string) {
-    return api.request<null>(`/api/v1/conversations/${convId}/join-requests`, {
+    return api.request<{ conv_id: string; joined: boolean }>(`/api/v1/conversations/${convId}/join-requests`, {
       method: 'POST',
     })
   },
