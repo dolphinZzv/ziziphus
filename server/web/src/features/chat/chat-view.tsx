@@ -171,8 +171,16 @@ export default function ChatView() {
     conversationService.getDetail(convId).then(d => {
       setGroupNotice(d.type === ConvType.Group && d.notice ? d.notice : '')
       setConvColor(d.primary_color || '')
-      setDetailName(d.name || '')
-      setDetailAvatar(d.avatar || '')
+      // For P2P conversations, resolve peer name/avatar from members
+      if (d.type === ConvType.P2P) {
+        const peer = d.members?.find(m => m.user_id !== user?.user_id)
+        setDetailName(peer?.name || d.name || '')
+        setDetailAvatar(peer?.avatar || d.avatar || '')
+        setConvColor(peer?.primary_color || d.primary_color || '')
+      } else {
+        setDetailName(d.name || '')
+        setDetailAvatar(d.avatar || '')
+      }
       const me = d.members?.find(m => m.user_id === user?.user_id)
       setIsOwner(me?.role === ConvRole.Owner)
     }).catch(() => { setGroupNotice(''); setConvColor(''); setDetailName(''); setDetailAvatar(''); setIsOwner(false) })
