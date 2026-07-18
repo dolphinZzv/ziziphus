@@ -8,7 +8,6 @@ import { fileService } from '@/services/file-service'
 import { UserType } from '@/types/user'
 import { X, ArrowLeft, Edit, LogOut, Settings, Bot, Camera, Smartphone, Copy, Check, Shield } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-breakpoint'
-import ProfileEditView from './profile-edit-view'
 
 interface Props { onClose?: () => void; variant?: 'modal' | 'page' }
 
@@ -16,7 +15,6 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const user = useSyncExternalStore(authStore.subscribe, () => authStore.state.user)
-  const [showEdit, setShowEdit] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -64,7 +62,7 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
           </button>
         </div>
         <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
-          <button onClick={() => setShowEdit(true)} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
+          <button onClick={() => navigate('/profile/edit')} className="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white">
             <Edit size={15} />
           </button>
           {onClose && !isMobile && (
@@ -154,7 +152,6 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
         {content}
       </div>
     </div>
-    {showEdit && <ProfileEditView onClose={() => setShowEdit(false)} />}
     </>
   )
 }

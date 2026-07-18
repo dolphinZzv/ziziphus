@@ -10,9 +10,10 @@ const PrivacyView = lazy(() => import('@/features/settings/privacy-view'))
 const AgentList = lazy(() => import('@/features/agents/agent-list'))
 const SessionList = lazy(() => import('@/features/sessions/session-list'))
 const ShortcutsView = lazy(() => import('@/features/settings/shortcuts-view'))
-const MemberListView = lazy(() => import('@/features/group/member-list-view'))
 const ContactList = lazy(() => import('@/features/contacts/contact-list'))
 const AddContactDialog = lazy(() => import('@/features/conversation-list/add-contact-dialog'))
+
+const ProfileEditView = lazy(() => import('@/features/profile/profile-edit-view'))
 
 const SheetFallback = () => {
   const { t } = useTranslation()
@@ -45,6 +46,7 @@ export function SheetWrapper({ name, activeSheet, onClose }: SheetWrapperProps) 
       {name === 'addContact' && <AddContactDialog onClose={onClose} />}
       {name === 'userSettings' && <PrivacyView onClose={onClose} />}
       {name === 'shortcuts' && <ShortcutsView onClose={onClose} />}
+      {name === 'editProfile' && <ProfileEditView onClose={onClose} />}
     </Suspense>
   )
 }

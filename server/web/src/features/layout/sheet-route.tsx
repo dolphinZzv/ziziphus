@@ -5,6 +5,7 @@ import { uiStore } from '@/stores/ui-store'
 /** Maps routes to sheet names */
 const routeToSheet: Record<string, string> = {
   '/profile': 'profile',
+  '/profile/edit': 'editProfile',
   '/profile/agents': 'agents',
   '/profile/privacy': 'userSettings',
   '/profile/sessions': 'sessions',

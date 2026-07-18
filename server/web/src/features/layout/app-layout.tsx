@@ -146,7 +146,7 @@ export default function AppLayout() {
       </div>
 
       {/* Lazy-loaded sheets (rendered at root level, outside sidebar) */}
-      {['newChat','addContact','createGroup','joinGroup','profile','settings','userSettings','agents','sessions','contacts','shortcuts'].map(name => (
+      {['newChat','addContact','createGroup','joinGroup','profile','editProfile','settings','userSettings','agents','sessions','contacts','shortcuts'].map(name => (
         <SheetWrapper key={name} name={name} activeSheet={activeSheet} onClose={() => uiStore.closeSheet()} />
       ))}
 
