@@ -178,7 +178,7 @@ func (m *Manager) CreateGroup(ctx context.Context, name, headline, ownerID strin
 
 	convID := model.GenerateGroupConvID(idGen)
 	now := time.Now().UnixMilli()
-	maxMembers := 200
+	maxMembers := 100
 	if len(uniqueMembers)+1 > maxMembers {
 		return nil, &model.AppError{Code: model.ErrTooLarge, Message: "group member limit reached", Key: "err.group_full"}
 	}
