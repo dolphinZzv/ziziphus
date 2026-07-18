@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
-import { uiStore } from '@/stores/ui-store'
 import type { ConvListItem } from '@/types/conversation'
 import { X, Search } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -22,7 +21,7 @@ export default function JoinGroupDialog({ onClose }: Props) {
   }
 
   const handleJoin = async (convId: string) => {
-    try { await conversationService.requestJoin(convId); uiStore.closeSheet(); navigate(`/conversations/${convId}`) } catch (e) { console.error(e) }
+    try { await conversationService.requestJoin(convId); onClose(); navigate('/conversations') } catch (e) { console.error(e) }
   }
 
   const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'

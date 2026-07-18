@@ -51,10 +51,9 @@ export default function SheetRouteSync() {
         }
       }
 
-      // Sheet closed → go back
+      // Sheet closed → return to conversation list
       if (!sheet && prev && sheetToRoute[prev]) {
-        if (location.pathname.startsWith('/profile') || location.pathname === '/new-chat' || location.pathname === '/add-contact' || location.pathname === '/create-group' || location.pathname === '/join-group') {
-          navigate(-1)
+        navigate('/conversations')
         }
       }
     })

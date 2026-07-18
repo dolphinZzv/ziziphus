@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { conversationService } from '@/services/conversation-service'
 import { contactStore } from '@/stores/contact-store'
-import { uiStore } from '@/stores/ui-store'
 import { useSyncExternalStore } from 'react'
 import { X, Search, MessageCircle } from 'lucide-react'
 import { avatarUrl } from '@/lib/file'
@@ -21,7 +20,7 @@ export default function NewChatDialog({ onClose }: Props) {
   })
 
   const handleCreate = async (userId: string) => {
-    try { const r = await conversationService.createP2P(userId); uiStore.closeSheet(); navigate(`/conversations/${r.conv_id}`) } catch (e) { console.error(e) }
+    try { await conversationService.createP2P(userId); onClose(); navigate('/conversations') } catch (e) { console.error(e) }
   }
 
   const inputClass = 'w-full h-[42px] px-3.5 rounded-xl bg-[var(--color-surface-card)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-muted-soft)] border border-[var(--color-hairline)] hover:border-[var(--color-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10'
