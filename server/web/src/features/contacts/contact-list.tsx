@@ -76,7 +76,6 @@ export default function ContactList({ onClose, inline }: Props) { const isMobile
               <div className="flex-1 min-w-0">
                 <div className="text-sm text-[var(--color-ink)]">{displayName}</div>
                 {contact.headline && <div className="text-[11px] text-[var(--color-muted)] truncate">{contact.headline}</div>}
-                <div className="text-[11px] text-[var(--color-muted)]">{isOnline ? t('contact.online') : t('contact.offline')}</div>
               </div>
               <button onClick={() => handleChat(contact.user_id)}
                 className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] opacity-0 group-hover:opacity-100 text-[var(--color-muted)] transition-all"><MessageCircle size={16} /></button>
