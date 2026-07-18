@@ -61,18 +61,18 @@ export default function GroupCardPage() {
       <div className="w-full max-w-sm bg-[var(--color-surface-card)] rounded-2xl overflow-hidden shadow-xl border border-[var(--color-hairline)]"
         style={{ boxShadow: 'var(--shadow-lg)' }}>
 
-        {/* Cover image */}
-        <div className="h-40 relative"
+        {/* Cover image — extends behind avatar */}
+        <div className="h-48 relative"
           style={{
             background: card.cover
-              ? `url(${card.cover}?w=600&h=320) center/cover`
+              ? `url(${card.cover}?w=600&h=420) center/cover`
               : `linear-gradient(135deg, ${primaryColor}, ${primaryColor}88)`,
           }}>
           {card.cover && <div className="absolute inset-0 bg-black/20" />}
         </div>
 
-        {/* Avatar — overlaps cover */}
-        <div className="flex justify-center -mt-12 mb-3">
+        {/* Avatar — sits on cover bottom edge */}
+        <div className="flex justify-center -mt-14 mb-3">
           <div className="w-24 h-24 rounded-full border-4 border-[var(--color-surface-card)] overflow-hidden bg-[var(--color-surface-soft)]">
             {card.avatar ? (
               <img src={avatarUrl(card.avatar, 192)} alt={card.name} className="w-full h-full object-cover" />
@@ -109,14 +109,6 @@ export default function GroupCardPage() {
           <div className="text-xs text-[var(--color-muted-soft)] mb-5">
             {t('group.owner') || '群主'}：{card.owner_name}
           </div>
-
-          {/* Notice/description */}
-          {card.notice && (
-            <div className="mb-6 p-4 rounded-xl bg-[var(--color-warning)]/5 border border-[var(--color-warning)]/10 text-left">
-              <p className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wider mb-1.5">{t('group.notice') || '公告'}</p>
-              <p className="text-sm text-[var(--color-body)] leading-relaxed whitespace-pre-wrap">{card.notice}</p>
-            </div>
-          )}
 
           {/* CTA buttons */}
           <div className="space-y-2">
