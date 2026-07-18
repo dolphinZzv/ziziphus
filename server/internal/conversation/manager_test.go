@@ -345,8 +345,8 @@ func TestCreateGroup_CreatesGroupWithOwnerAndMembers(t *testing.T) {
 	if got.OwnerID != ownerID {
 		t.Fatalf("expected owner %q, got %q", ownerID, got.OwnerID)
 	}
-	if got.MaxMembers != 200 {
-		t.Fatalf("expected MaxMembers 200, got %d", got.MaxMembers)
+	if got.MaxMembers != 100 {
+		t.Fatalf("expected MaxMembers 100, got %d", got.MaxMembers)
 	}
 
 	// Verify owner role

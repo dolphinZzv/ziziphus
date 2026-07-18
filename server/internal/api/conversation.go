@@ -739,7 +739,7 @@ func (h *ConvHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	if !isMember {
+	if !isMember && !model.IsSystemConvID(convID) {
 		Error(w, r, http.StatusForbidden, &model.AppError{Code: model.ErrNoPermission, Message: i18n.T(r.Context(), "err.not_in_conv_specific")})
 		return
 	}
