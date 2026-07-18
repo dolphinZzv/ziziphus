@@ -221,7 +221,11 @@
     "goToLogin": "Log In",
     "joinGroup": "Log in to join this group",
     "register": "Create Account",
-    "themeColor": "Theme Color"
+    "themeColor": "Theme Color",
+    "joinConfirm": "Join this group?",
+    "joinRequestSent": "Join request sent",
+    "joinRequestSentHint": "Awaiting admin approval",
+    "alreadyMember": "Already a member"
   },
   "contact": {
     "title": "Contacts",

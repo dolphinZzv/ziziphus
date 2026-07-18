@@ -4,7 +4,7 @@ import { conversationService } from '@/services/conversation-service'
 import { fileService } from '@/services/file-service'
 import { avatarUrl } from '@/lib/file'
 import { getConvSettings, toggleConvSetting, subscribe as settingsSubscribe } from '@/stores/conversation-settings-store'
-import { X, EyeOff, FileUp, Search, ArrowLeft, Image, Trash2 } from 'lucide-react'
+import { X, EyeOff, FileUp, Search, ArrowLeft, Image, Trash2, UserPlus } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { convId: string; onClose: () => void }
@@ -22,6 +22,7 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
 
   const [fileChangeNotify, setFileChangeNotify] = useState(false)
   const [discoverable, setDiscoverable] = useState(true)
+  const [allowDirectJoin, setAllowDirectJoin] = useState(false)
   const [bgImage, setBgImage] = useState('')
   const [uploadingBg, setUploadingBg] = useState(false)
   const bgInputRef = useRef<HTMLInputElement>(null)
@@ -29,6 +30,7 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
     conversationService.getSettings(convId).then(res => {
       if (res.settings?.fileChangeNotify) setFileChangeNotify(true)
       setDiscoverable(res.settings?.discoverable !== false)
+      if (res.settings?.allow_direct_join) setAllowDirectJoin(true)
       if (res.settings?.background_image) setBgImage(res.settings.background_image as string)
     }).catch(() => {})
   }, [convId])
@@ -50,6 +52,16 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
       await conversationService.updateSettings(convId, { discoverable: newVal })
     } catch {
       setDiscoverable(!newVal)
+    }
+  }
+
+  const handleDirectJoinToggle = async () => {
+    const newVal = !allowDirectJoin
+    setAllowDirectJoin(newVal)
+    try {
+      await conversationService.updateSettings(convId, { allow_direct_join: newVal })
+    } catch {
+      setAllowDirectJoin(!newVal)
     }
   }
 
@@ -79,6 +91,13 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
     await updateSetting('background_image', '')
   }
 
+  const toggleBtn = (on: boolean, handler: () => void) => (
+    <button onClick={handler}
+      className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ml-3 ${on ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-hairline)]'}`}>
+      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${on ? 'left-[18px]' : 'left-0.5'}`} />
+    </button>
+  )
+
   return (
     <div className="fixed inset-0 z-50 flex sm:items-center sm:justify-center bg-black/30" onClick={onClose}>
       <div className="w-full sm:w-[360px] h-full sm:h-auto bg-[var(--color-surface-card)] rounded-none sm:rounded-xl overflow-hidden"
@@ -100,10 +119,7 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
                 <div className="text-xs text-[var(--color-muted-soft)]">{t('conversation.agentDisplayHint')}</div>
               </div>
             </div>
-            <button onClick={() => toggleConvSetting(convId, 'showAgentResponseOnly')}
-              className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ml-3 ${showAgentResponseOnly ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-hairline)]'}`}>
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${showAgentResponseOnly ? 'left-[18px]' : 'left-0.5'}`} />
-            </button>
+            {toggleBtn(showAgentResponseOnly, () => toggleConvSetting(convId, 'showAgentResponseOnly'))}
           </label>
 
           {/* File change notification settings */}
@@ -115,10 +131,7 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
                 <div className="text-xs text-[var(--color-muted-soft)]">{t('conversation.fileChangeNotifyHint')}</div>
               </div>
             </div>
-            <button onClick={handleFileChangeNotifyToggle}
-              className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ml-3 ${fileChangeNotify ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-hairline)]'}`}>
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${fileChangeNotify ? 'left-[18px]' : 'left-0.5'}`} />
-            </button>
+            {toggleBtn(fileChangeNotify, handleFileChangeNotifyToggle)}
           </label>
 
           {/* Discoverable settings */}
@@ -130,10 +143,19 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
                 <div className="text-xs text-[var(--color-muted-soft)]">{t('conversation.discoverableHint')}</div>
               </div>
             </div>
-            <button onClick={handleDiscoverableToggle}
-              className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ml-3 ${discoverable ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-hairline)]'}`}>
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${discoverable ? 'left-[18px]' : 'left-0.5'}`} />
-            </button>
+            {toggleBtn(discoverable, handleDiscoverableToggle)}
+          </label>
+
+          {/* Allow direct join */}
+          <label className="flex items-center justify-between cursor-pointer">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <UserPlus size={16} className="text-[var(--color-muted)] flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium text-[var(--color-ink)]">{t('conversation.allowDirectJoin') || '允许任何人加入'}</div>
+                <div className="text-xs text-[var(--color-muted-soft)]">{t('conversation.allowDirectJoinHint') || '开启后用户可直接加入群组，无需审核'}</div>
+              </div>
+            </div>
+            {toggleBtn(allowDirectJoin, handleDirectJoinToggle)}
           </label>
 
           {/* Background image */}

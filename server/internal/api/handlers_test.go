@@ -245,7 +245,7 @@ type mockConvManager struct {
 	leaveFunc              func(ctx context.Context, convID, userID string) error
 	getMembersFunc         func(ctx context.Context, convID string) ([]*model.ConvMember, error)
 	isMemberFunc           func(ctx context.Context, convID, userID string) (bool, error)
-	requestJoinFunc        func(ctx context.Context, convID, userID string) error
+	requestJoinFunc        func(ctx context.Context, convID, userID string) (bool, error)
 	listJoinRequestsFunc   func(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error)
 	approveJoinRequestFunc func(ctx context.Context, convID, userID, operatorID string) error
 	rejectJoinRequestFunc  func(ctx context.Context, convID, userID, operatorID string) error
@@ -309,11 +309,11 @@ func (m *mockConvManager) IsMember(ctx context.Context, convID, userID string) (
 	return false, nil
 }
 
-func (m *mockConvManager) RequestJoin(ctx context.Context, convID, userID string) error {
+func (m *mockConvManager) RequestJoin(ctx context.Context, convID, userID string) (bool, error) {
 	if m.requestJoinFunc != nil {
 		return m.requestJoinFunc(ctx, convID, userID)
 	}
-	return nil
+	return false, nil
 }
 
 func (m *mockConvManager) ListJoinRequests(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error) {
@@ -2395,8 +2395,8 @@ func TestContactHandler_UpdateNickname(t *testing.T) {
 func TestConvHandler_RequestJoin(t *testing.T) {
 	handler := &ConvHandler{
 		convMgr: &mockConvManager{
-			requestJoinFunc: func(_ context.Context, convID, userID string) error {
-				return nil
+			requestJoinFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return false, nil
 			},
 		},
 	}
@@ -2420,8 +2420,8 @@ func TestConvHandler_RequestJoin(t *testing.T) {
 func TestConvHandler_RequestJoin_Error(t *testing.T) {
 	handler := &ConvHandler{
 		convMgr: &mockConvManager{
-			requestJoinFunc: func(_ context.Context, convID, userID string) error {
-				return &model.AppError{Code: model.ErrBadMessage, Message: "join error", Key: "err.already_member"}
+			requestJoinFunc: func(_ context.Context, convID, userID string) (bool, error) {
+				return false, &model.AppError{Code: model.ErrBadMessage, Message: "join error", Key: "err.already_member"}
 			},
 		},
 	}

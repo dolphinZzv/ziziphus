@@ -221,7 +221,11 @@
     "goToLogin": "Iniciar sesión",
     "joinGroup": "Inicia sesión para unirte al grupo",
     "register": "Crear cuenta",
-    "themeColor": "Color del tema"
+    "themeColor": "Color del tema",
+    "joinConfirm": "¿Unirse a este grupo?",
+    "joinRequestSent": "Solicitud de unión enviada",
+    "joinRequestSentHint": "Esperando la aprobación del administrador",
+    "alreadyMember": "Ya eres miembro"
   },
   "contact": {
     "title": "Contactos",

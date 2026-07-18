@@ -301,32 +301,46 @@ func (m *Manager) GetMemberRole(ctx context.Context, convID, userID string) (mod
 	return m.convRepo.GetMemberRole(ctx, convID, userID)
 }
 
-func (m *Manager) RequestJoin(ctx context.Context, convID, userID string) error {
+func (m *Manager) RequestJoin(ctx context.Context, convID, userID string) (joined bool, err error) {
 	conv, err := m.convRepo.Get(ctx, convID)
 	if err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
+		return false, &model.AppError{Code: model.ErrNotFound, Message: "conversation not found", Key: "err.conv_not_found_mgr"}
 	}
 	if conv.Type != model.ConvGroup {
-		return &model.AppError{Code: model.ErrBadMessage, Message: "groups only", Key: "err.group_only"}
+		return false, &model.AppError{Code: model.ErrBadMessage, Message: "groups only", Key: "err.group_only"}
 	}
 	if _, err := m.userRepo.GetByID(ctx, userID); err != nil {
-		return &model.AppError{Code: model.ErrNotFound, Message: "user not found", Key: "err.user_not_found"}
+		return false, &model.AppError{Code: model.ErrNotFound, Message: "user not found", Key: "err.user_not_found"}
 	}
 	isMember, err := m.convRepo.IsMember(ctx, convID, userID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if isMember {
-		return model.ErrAlreadyMember
+		return false, model.ErrAlreadyMember
 	}
+
+	// If the group allows direct join, add the user directly instead of creating a join request.
+	if allow, _ := conv.Settings["allow_direct_join"].(bool); allow {
+		// Check member limit
+		members, err := m.convRepo.GetMembers(ctx, convID)
+		if err != nil {
+			return false, err
+		}
+		if conv.MaxMembers > 0 && len(members) >= conv.MaxMembers {
+			return false, &model.AppError{Code: model.ErrTooLarge, Message: "group member limit reached", Key: "err.group_full"}
+		}
+		return true, m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleMember)
+	}
+
 	exists, err := m.joinRequestRepo.ExistsPending(ctx, convID, userID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if exists {
-		return model.ErrDuplicateRequest
+		return false, model.ErrDuplicateRequest
 	}
-	return m.joinRequestRepo.Create(ctx, convID, userID)
+	return false, m.joinRequestRepo.Create(ctx, convID, userID)
 }
 
 func (m *Manager) ListJoinRequests(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error) {

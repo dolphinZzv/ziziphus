@@ -221,7 +221,11 @@
     "goToLogin": "로그인",
     "joinGroup": "로그인 후 그룹 참여",
     "register": "회원가입",
-    "themeColor": "테마 색상"
+    "themeColor": "테마 색상",
+    "joinConfirm": "이 그룹에 가입하시겠습니까?",
+    "joinRequestSent": "가입 요청을 보냈습니다",
+    "joinRequestSentHint": "관리자 승인을 기다리는 중",
+    "alreadyMember": "이미 멤버입니다"
   },
   "contact": {
     "title": "연락처",

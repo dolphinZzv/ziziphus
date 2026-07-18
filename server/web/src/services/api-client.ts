@@ -113,7 +113,9 @@ async function request<T>(
   }
 
   if (json.code !== 0) {
-    throw new APIError(json.code, json.msg || 'Request failed')
+    const err = new APIError(json.code, json.msg || 'Request failed')
+    ;(err as any).key = (json as any).key || ''
+    throw err
   }
   return json.data as T
 }

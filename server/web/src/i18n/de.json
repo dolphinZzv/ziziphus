@@ -221,7 +221,11 @@
     "goToLogin": "Anmelden",
     "joinGroup": "Anmelden, um der Gruppe beizutreten",
     "register": "Konto erstellen",
-    "themeColor": "Designfarbe"
+    "themeColor": "Designfarbe",
+    "joinConfirm": "Dieser Gruppe beitreten?",
+    "joinRequestSent": "Beitrittsanfrage gesendet",
+    "joinRequestSentHint": "Warten auf Admin-Genehmigung",
+    "alreadyMember": "Bereits Mitglied"
   },
   "contact": {
     "title": "Kontakte",

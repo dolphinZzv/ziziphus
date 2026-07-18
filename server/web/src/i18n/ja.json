@@ -221,7 +221,11 @@
     "goToLogin": "ログイン",
     "joinGroup": "ログインしてグループに参加",
     "register": "アカウント登録",
-    "themeColor": "テーマカラー"
+    "themeColor": "テーマカラー",
+    "joinConfirm": "このグループに参加しますか？",
+    "joinRequestSent": "参加リクエストを送信しました",
+    "joinRequestSentHint": "管理者の承認をお待ちください",
+    "alreadyMember": "すでにメンバーです"
   },
   "contact": {
     "title": "連絡先",

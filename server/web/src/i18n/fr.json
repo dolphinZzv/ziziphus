@@ -221,7 +221,11 @@
     "goToLogin": "Connexion",
     "joinGroup": "Connectez-vous pour rejoindre le groupe",
     "register": "Créer un compte",
-    "themeColor": "Couleur du thème"
+    "themeColor": "Couleur du thème",
+    "joinConfirm": "Rejoindre ce groupe ?",
+    "joinRequestSent": "Demande d'adhésion envoyée",
+    "joinRequestSentHint": "En attente de l'approbation de l'administrateur",
+    "alreadyMember": "Déjà membre"
   },
   "contact": {
     "title": "Contacts",

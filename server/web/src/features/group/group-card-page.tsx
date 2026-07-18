@@ -3,8 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { conversationService } from '@/services/conversation-service'
 import { avatarUrl } from '@/lib/file'
+import { authStore } from '@/stores/auth-store'
 import type { GroupCardInfo } from '@/services/conversation-service'
-import { Users, Calendar, ArrowRight } from 'lucide-react'
+import { Users, Calendar, ArrowRight, Loader } from 'lucide-react'
 
 export default function GroupCardPage() {
   const { shareToken } = useParams<{ shareToken: string }>()
@@ -13,6 +14,9 @@ export default function GroupCardPage() {
   const [card, setCard] = useState<GroupCardInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [joining, setJoining] = useState(false)
+  const [joinState, setJoinState] = useState<'idle' | 'confirm' | 'sent' | 'already'>('idle')
+  const isLoggedIn = !!authStore.state.token
 
   useEffect(() => {
     if (!shareToken) {
@@ -30,6 +34,22 @@ export default function GroupCardPage() {
         setLoading(false)
       })
   }, [shareToken])
+
+  const handleJoin = async () => {
+    if (!card) return
+    setJoining(true)
+    try {
+      await conversationService.requestJoin(card.conv_id)
+      setJoinState('sent')
+    } catch (e: any) {
+      if ((e as any)?.key === 'err.already_member') {
+        setJoinState('already')
+      } else {
+        setJoinState('idle')
+      }
+    }
+    setJoining(false)
+  }
 
   if (loading) {
     return (
@@ -61,18 +81,18 @@ export default function GroupCardPage() {
       <div className="w-full max-w-sm bg-[var(--color-surface-card)] rounded-2xl overflow-hidden shadow-xl border border-[var(--color-hairline)]"
         style={{ boxShadow: 'var(--shadow-lg)' }}>
 
-        {/* Cover image — extends behind avatar */}
-        <div className="h-48 relative"
+        {/* Cover — background behind avatar */}
+        <div className="h-56 relative z-0"
           style={{
             background: card.cover
-              ? `url(${card.cover}?w=600&h=420) center/cover`
+              ? `url(${card.cover}?w=600&h=480) center/cover`
               : `linear-gradient(135deg, ${primaryColor}, ${primaryColor}88)`,
           }}>
           {card.cover && <div className="absolute inset-0 bg-black/20" />}
         </div>
 
-        {/* Avatar — sits on cover bottom edge */}
-        <div className="flex justify-center -mt-14 mb-3">
+        {/* Avatar — sits on cover */}
+        <div className="flex justify-center -mt-16 mb-3 relative z-10">
           <div className="w-24 h-24 rounded-full border-4 border-[var(--color-surface-card)] overflow-hidden bg-[var(--color-surface-soft)]">
             {card.avatar ? (
               <img src={avatarUrl(card.avatar, 192)} alt={card.name} className="w-full h-full object-cover" />
@@ -111,17 +131,50 @@ export default function GroupCardPage() {
           </div>
 
           {/* CTA buttons */}
-          <div className="space-y-2">
-            <button onClick={() => navigate('/login')}
-              className="w-full h-11 rounded-xl text-white text-sm font-medium hover:opacity-90 transition-opacity"
-              style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)` }}>
-              {t('group.joinGroup') || '登录后加入群组'}
-            </button>
-            <button onClick={() => navigate('/register')}
-              className="w-full h-11 rounded-xl border border-[var(--color-hairline)] text-sm text-[var(--color-body)] hover:bg-[var(--color-surface-soft)] transition-colors">
-              {t('group.register') || '注册账号'}
-            </button>
-          </div>
+          {joinState === 'sent' ? (
+            <div className="py-3 rounded-xl bg-[var(--color-success)]/5 border border-[var(--color-success)]/10 text-center">
+              <p className="text-sm font-medium text-[var(--color-success)]">{t('group.joinRequestSent') || '已发送加入请求'}</p>
+              <p className="text-xs text-[var(--color-muted)] mt-1">{t('group.joinRequestSentHint') || '请等待群主审核'}</p>
+            </div>
+          ) : joinState === 'already' ? (
+            <div className="py-3 rounded-xl bg-[var(--color-surface-soft)] border border-[var(--color-hairline)] text-center">
+              <p className="text-sm font-medium text-[var(--color-muted)]">{t('group.alreadyMember') || '已是群成员'}</p>
+            </div>
+          ) : joinState === 'confirm' ? (
+            <div className="space-y-2">
+              <p className="text-sm text-[var(--color-body)] text-center">{t('group.joinConfirm') || '确认加入该群组？'}</p>
+              <button onClick={handleJoin} disabled={joining}
+                className="w-full h-11 rounded-xl text-white text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)` }}>
+                {joining ? <Loader size={16} className="animate-spin" /> : null}
+                {t('common.confirm') || '确定'}
+              </button>
+              <button onClick={() => setJoinState('idle')}
+                className="w-full h-11 rounded-xl border border-[var(--color-hairline)] text-sm text-[var(--color-body)] hover:bg-[var(--color-surface-soft)] transition-colors">
+                {t('common.cancel') || '取消'}
+              </button>
+            </div>
+          ) : isLoggedIn ? (
+            <div className="space-y-2">
+              <button onClick={() => setJoinState('confirm')}
+                className="w-full h-11 rounded-xl text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)` }}>
+                {t('conversation.joinGroup') || '加入群组'}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <button onClick={() => navigate('/login')}
+                className="w-full h-11 rounded-xl text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)` }}>
+                {t('group.joinGroup') || '登录后加入群组'}
+              </button>
+              <button onClick={() => navigate('/register')}
+                className="w-full h-11 rounded-xl border border-[var(--color-hairline)] text-sm text-[var(--color-body)] hover:bg-[var(--color-surface-soft)] transition-colors">
+                {t('group.register') || '注册账号'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

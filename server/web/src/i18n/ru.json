@@ -221,7 +221,11 @@
     "goToLogin": "Войти",
     "joinGroup": "Войдите, чтобы присоединиться к этой группе",
     "register": "Создать аккаунт",
-    "themeColor": "Цвет темы"
+    "themeColor": "Цвет темы",
+    "joinConfirm": "Присоединиться к группе?",
+    "joinRequestSent": "Запрос на вступление отправлен",
+    "joinRequestSentHint": "Ожидание одобрения администратора",
+    "alreadyMember": "Уже участник"
   },
   "contact": {
     "title": "Контакты",

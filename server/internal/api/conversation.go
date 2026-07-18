@@ -67,7 +67,7 @@ type convManager interface {
 	GetMembers(ctx context.Context, convID string) ([]*model.ConvMember, error)
 	IsMember(ctx context.Context, convID, userID string) (bool, error)
 	GetMemberRole(ctx context.Context, convID, userID string) (model.ConvRole, error)
-	RequestJoin(ctx context.Context, convID, userID string) error
+	RequestJoin(ctx context.Context, convID, userID string) (bool, error)
 	ListJoinRequests(ctx context.Context, convID, operatorID string) ([]*model.JoinRequest, error)
 	ApproveJoinRequest(ctx context.Context, convID, userID, operatorID string) error
 	RejectJoinRequest(ctx context.Context, convID, userID, operatorID string) error
@@ -556,7 +556,8 @@ func (h *ConvHandler) RequestJoin(w http.ResponseWriter, r *http.Request) {
 	convID := chi.URLParam(r, "conv_id")
 	userID := auth.UserFromCtx(r.Context())
 
-	if err := h.convMgr.RequestJoin(r.Context(), convID, userID); err != nil {
+	joined, err := h.convMgr.RequestJoin(r.Context(), convID, userID)
+	if err != nil {
 		if appErr, ok := err.(*model.AppError); ok {
 			Error(w, r, http.StatusForbidden, appErr)
 			return
@@ -564,7 +565,7 @@ func (h *ConvHandler) RequestJoin(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	JSON(w, map[string]interface{}{"conv_id": convID})
+	JSON(w, map[string]interface{}{"conv_id": convID, "joined": joined})
 }
 
 // @Summary List join requests

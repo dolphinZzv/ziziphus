@@ -11,6 +11,7 @@ import (
 type APIResponse struct {
 	Code int         `json:"code"`
 	Msg  string      `json:"msg"`
+	Key  string      `json:"key,omitempty"`
 	Data interface{} `json:"data"`
 }
 
@@ -34,7 +35,7 @@ func Error(w http.ResponseWriter, r *http.Request, httpStatus int, appErr *model
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
-	resp := APIResponse{Code: appErr.Code, Msg: appErr.Message, Data: nil}
+	resp := APIResponse{Code: appErr.Code, Msg: appErr.Message, Key: appErr.Key, Data: nil}
 	json.NewEncoder(w).Encode(resp)
 }
 

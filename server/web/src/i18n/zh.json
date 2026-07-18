@@ -221,7 +221,11 @@
     "goToLogin": "去登录",
     "joinGroup": "登录后加入群组",
     "register": "注册账号",
-    "themeColor": "主题色"
+    "themeColor": "主题色",
+    "joinConfirm": "确认加入该群组？",
+    "joinRequestSent": "已发送加入请求",
+    "joinRequestSentHint": "请等待群主审核",
+    "alreadyMember": "已是群成员"
   },
   "contact": {
     "title": "联系人",

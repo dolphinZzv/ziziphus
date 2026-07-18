@@ -875,7 +875,7 @@ func TestRequestJoin_Success(t *testing.T) {
 	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
 	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleOwner)
 
-	err := mgr.RequestJoin(ctx, "g1", "bob")
+	_, err := mgr.RequestJoin(ctx, "g1", "bob")
 	if err != nil {
 		t.Fatalf("RequestJoin failed: %v", err)
 	}
@@ -891,7 +891,7 @@ func TestRequestJoin_ConvNotFound(t *testing.T) {
 	ctx := context.Background()
 	userRepo.addUser("alice")
 
-	err := mgr.RequestJoin(ctx, "nonexistent", "alice")
+	_, err := mgr.RequestJoin(ctx, "nonexistent", "alice")
 	if err == nil {
 		t.Fatal("expected error for nonexistent conversation")
 	}
@@ -908,7 +908,7 @@ func TestRequestJoin_NotGroup(t *testing.T) {
 	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "p1", Type: model.ConvP2P})
 	_ = convRepo.AddMember(ctx, "p1", "alice", model.ConvRoleOwner)
 
-	err := mgr.RequestJoin(ctx, "p1", "bob")
+	_, err := mgr.RequestJoin(ctx, "p1", "bob")
 	if err == nil {
 		t.Fatal("expected error for P2P conversation")
 	}
@@ -922,7 +922,7 @@ func TestRequestJoin_UserNotFound(t *testing.T) {
 	ctx := context.Background()
 	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
 
-	err := mgr.RequestJoin(ctx, "g1", "nonexistent")
+	_, err := mgr.RequestJoin(ctx, "g1", "nonexistent")
 	if err == nil {
 		t.Fatal("expected error for nonexistent user")
 	}
@@ -938,7 +938,7 @@ func TestRequestJoin_AlreadyMember(t *testing.T) {
 	_ = convRepo.Create(ctx, &model.Conversation{ConvID: "g1", Type: model.ConvGroup})
 	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleOwner)
 
-	err := mgr.RequestJoin(ctx, "g1", "alice")
+	_, err := mgr.RequestJoin(ctx, "g1", "alice")
 	if err != model.ErrAlreadyMember {
 		t.Errorf("expected ErrAlreadyMember, got %v", err)
 	}
@@ -953,11 +953,11 @@ func TestRequestJoin_DuplicateRequest(t *testing.T) {
 	_ = convRepo.AddMember(ctx, "g1", "alice", model.ConvRoleOwner)
 
 	// first request should succeed
-	if err := mgr.RequestJoin(ctx, "g1", "bob"); err != nil {
+	if _, err := mgr.RequestJoin(ctx, "g1", "bob"); err != nil {
 		t.Fatalf("first request failed: %v", err)
 	}
 	// duplicate should fail
-	err := mgr.RequestJoin(ctx, "g1", "bob")
+	_, err := mgr.RequestJoin(ctx, "g1", "bob")
 	if err != model.ErrDuplicateRequest {
 		t.Errorf("expected ErrDuplicateRequest, got %v", err)
 	}
