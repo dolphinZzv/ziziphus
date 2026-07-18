@@ -251,9 +251,5 @@ func (s *Store) safeRelPath(rel string) (string, error) {
 func (s *Store) fullPath(relative string) string {
 	clean := filepath.Clean(relative)
 	clean = strings.TrimPrefix(clean, "/")
-	resolved := filepath.Join(s.basePath, clean)
-	if strings.Contains(clean, "..") || (!strings.HasPrefix(resolved, s.basePath+string(filepath.Separator)) && resolved != s.basePath) {
-		return filepath.Join(s.basePath, "blocked")
-	}
-	return resolved
+	return filepath.Join(s.basePath, clean)
 }
