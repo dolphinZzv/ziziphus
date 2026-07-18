@@ -1,5 +1,6 @@
 import { getItem, setItem, removeItem } from '@/lib/secure-storage'
 import { api, __setLogoutHandler } from '@/services/api-client'
+import i18n from '@/i18n'
 import { wsClient } from '@/services/websocket-client'
 import type { User } from '@/types/user'
 
@@ -127,7 +128,7 @@ export const authStore = {
       // Ensure file token for private file access
       if (!result.file_token) this.ensureFileToken()
     } catch (e: unknown) {
-      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : 'Login failed' }; emit()
+      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : i18n.t('auth.loginError') }; emit()
       throw e
     }
   },
@@ -164,7 +165,7 @@ export const authStore = {
       this.refreshUserProfile()
       state = { ...state, mfaChallenge: null }; emit()
     } catch (e: unknown) {
-      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : '验证失败' }; emit()
+      state = { ...state, isLoading: false, error: e instanceof Error ? e.message : i18n.t('auth.loginError') }; emit()
       throw e
     }
   },

@@ -28,7 +28,7 @@ var upgrader = websocket.Upgrader{
 		}
 		// Validate Origin matches the Host to prevent CSWSH attacks
 		originHost := extractHost(origin)
-		host := r.Host
+		host := extractHost(r.Host)
 		if originHost == host {
 			return true
 		}

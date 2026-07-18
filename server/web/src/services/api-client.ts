@@ -1,5 +1,6 @@
 import { getItem as getSecureItem, setItem as setSecureItem } from '@/lib/secure-storage'
 import { getServerUrl, getItem } from '@/lib/storage'
+import i18n from '@/i18n'
 import type { APIResponse } from '@/types/api'
 
 let _logout: (() => void) | null = null
@@ -97,7 +98,7 @@ async function request<T>(
     }
     // Refresh failed or retry failed — logout
     _logout?.()
-    throw new APIError(401, 'Unauthorized, please login again')
+    throw new APIError(401, i18n.t('error.unauthorized'))
   }
 
   // Handle non-2xx that aren't JSON
