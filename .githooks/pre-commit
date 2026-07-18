@@ -1,0 +1,68 @@
+#!/bin/bash
+# Pre-commit hook — run lint on staged files before committing.
+# Only checks files that are actually staged (git add'ed).
+#
+# Install: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SERVER_DIR="$ROOT_DIR/server"
+WEB_DIR="$SERVER_DIR/web"
+
+# Get staged files
+STAGED_GO=$(git diff --cached --name-only --diff-filter=ACMR -- 'server/**/*.go' 2>/dev/null || true)
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR -- 'server/web/**/*.ts' 'server/web/**/*.tsx' 2>/dev/null || true)
+STAGED_GO=$(echo "$STAGED_GO" | sed '/^$/d')
+STAGED_TS=$(echo "$STAGED_TS" | sed '/^$/d')
+
+if [ -z "$STAGED_GO" ] && [ -z "$STAGED_TS" ]; then
+    exit 0
+fi
+
+echo "🔍 Running pre-commit lint checks..."
+HAS_ERRORS=0
+
+# --- Go lint ---
+if [ -n "$STAGED_GO" ]; then
+    GO_FILES=$(echo "$STAGED_GO" | sed "s|^server/||")
+
+    # gofmt on staged files
+    cd "$SERVER_DIR"
+    UNFORMATTED=$(gofmt -l $GO_FILES 2>/dev/null || true)
+    if [ -n "$UNFORMATTED" ]; then
+        echo "  ✖ gofmt errors — run 'gofmt -w' on:"
+        echo "$UNFORMATTED" | sed 's/^/    /'
+        HAS_ERRORS=1
+    fi
+fi
+
+# --- Frontend lint ---
+if [ -n "$STAGED_TS" ]; then
+    OXLINT=""
+    if command -v oxlint &>/dev/null; then
+        OXLINT="oxlint"
+    elif [ -x "$WEB_DIR/node_modules/.bin/oxlint" ]; then
+        OXLINT="$WEB_DIR/node_modules/.bin/oxlint"
+    fi
+
+    if [ -n "$OXLINT" ]; then
+        cd "$WEB_DIR"
+        TS_FILES=$(echo "$STAGED_TS" | sed "s|^server/web/||")
+        if echo "$TS_FILES" | grep -q .; then
+            if ! $OXLINT --deny-warnings $TS_FILES >&2 2>/dev/null; then
+                echo "  ✖ Frontend lint errors found. Fix them before committing."
+                HAS_ERRORS=1
+            fi
+        fi
+    else
+        echo "  ⚠ oxlint not found, skipping frontend lint."
+    fi
+fi
+
+if [ "$HAS_ERRORS" -ne 0 ]; then
+    echo "❌ Pre-commit checks failed. Commit aborted." >&2
+    exit 1
+fi
+
+echo "✅ Pre-commit lint checks passed."
