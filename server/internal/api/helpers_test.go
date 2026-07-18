@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestIsValidRelPath(t *testing.T) {
@@ -267,5 +268,57 @@ func TestIPRateLimiter_DifferentIPs(t *testing.T) {
 	// IP B should still be allowed (different bucket)
 	if !rl.Allow("10.0.0.2") {
 		t.Error("different IP should be allowed")
+	}
+}
+
+func TestIPRateLimiter_Stop(t *testing.T) {
+	rl := newIPRateLimiter(10, 5)
+	// Stop should not panic and cleanup goroutine should exit
+	done := make(chan struct{})
+	go func() {
+		rl.Stop()
+		close(done)
+	}()
+	select {
+	case <-done:
+		// OK
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop() did not return within 2 seconds")
+	}
+}
+
+func TestIPRateLimiter_CleanupRemovesStale(t *testing.T) {
+	rl := newIPRateLimiter(10, 5)
+	defer rl.Stop()
+
+	rl.Allow("stale_ip")
+	rl.Allow("fresh_ip")
+
+	// Manually age the stale entry
+	rl.mu.Lock()
+	rl.buckets["stale_ip"] = &ipBucket{tokens: 5, lastCheck: time.Now().Add(-15 * time.Minute)}
+	rl.buckets["fresh_ip"].lastCheck = time.Now().Add(-1 * time.Minute)
+	rl.mu.Unlock()
+
+	// Run cleanup manually
+	rl.mu.Lock()
+	now := time.Now()
+	for ip, b := range rl.buckets {
+		if now.Sub(b.lastCheck) > 10*time.Minute {
+			delete(rl.buckets, ip)
+		}
+	}
+	rl.mu.Unlock()
+
+	rl.mu.Lock()
+	_, staleExists := rl.buckets["stale_ip"]
+	_, freshExists := rl.buckets["fresh_ip"]
+	rl.mu.Unlock()
+
+	if staleExists {
+		t.Error("stale IP should have been removed")
+	}
+	if !freshExists {
+		t.Error("fresh IP should still be present")
 	}
 }

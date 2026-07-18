@@ -60,6 +60,7 @@ type ipRateLimiter struct {
 	buckets map[string]*ipBucket
 	rate    int
 	burst   int
+	stopped chan struct{}
 }
 
 type ipBucket struct {
@@ -68,10 +69,38 @@ type ipBucket struct {
 }
 
 func newIPRateLimiter(rate, burst int) *ipRateLimiter {
-	return &ipRateLimiter{
+	rl := &ipRateLimiter{
 		buckets: make(map[string]*ipBucket),
 		rate:    rate,
 		burst:   burst,
+		stopped: make(chan struct{}),
+	}
+	go rl.cleanupLoop()
+	return rl
+}
+
+func (rl *ipRateLimiter) Stop() {
+	close(rl.stopped)
+}
+
+func (rl *ipRateLimiter) cleanupLoop() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			rl.mu.Lock()
+			now := time.Now()
+			for ip, b := range rl.buckets {
+				// Remove entries idle for more than cleanup interval * 2
+				if now.Sub(b.lastCheck) > 10*time.Minute {
+					delete(rl.buckets, ip)
+				}
+			}
+			rl.mu.Unlock()
+		case <-rl.stopped:
+			return
+		}
 	}
 }
 
@@ -527,8 +556,7 @@ func (h *WebhookHandler) RegenerateKey(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
-	wh.APIKeyPlain = apiKey
-	if err := h.webhookDB.Update(r.Context(), wh); err != nil {
+	if err := h.webhookDB.UpdateAPIKeyPlain(r.Context(), webhookID, apiKey); err != nil {
 		logger.Error("update api_key_plain failed", "id", webhookID, "error", err)
 	}
 	JSON(w, map[string]string{"api_key": apiKey})

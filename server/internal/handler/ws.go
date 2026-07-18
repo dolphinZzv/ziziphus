@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,9 +22,19 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  4096,
 	WriteBufferSize: 4096,
 	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true // non-browser clients
+		}
+		// Validate Origin matches the Host to prevent CSWSH attacks
+		originHost := extractHost(origin)
+		host := r.Host
+		if originHost == host {
+			return true
+		}
+		logger.Warn("ws origin mismatch", "origin", origin, "host", host)
+		return false
+	}}
 
 type msgEditor interface {
 	Get(ctx context.Context, msgID int64) (*model.Message, error)
@@ -342,4 +353,16 @@ func (h *WSHandler) broadcastSessionEvent(ctx context.Context, userID, sessionID
 func writeWSError(conn *websocket.Conn, code int, msg string) {
 	payload, _ := json.Marshal(protocol.ErrorPayload{Code: code, Message: msg})
 	_ = conn.WriteJSON(protocol.Frame{Type: protocol.Error, Payload: payload})
+}
+
+func extractHost(origin string) string {
+	if strings.HasPrefix(origin, "https://") {
+		origin = origin[8:]
+	} else if strings.HasPrefix(origin, "http://") {
+		origin = origin[7:]
+	}
+	if idx := strings.Index(origin, ":"); idx >= 0 {
+		return origin[:idx]
+	}
+	return origin
 }

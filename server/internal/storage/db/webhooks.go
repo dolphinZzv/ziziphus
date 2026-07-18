@@ -22,6 +22,7 @@ type ConvWebhookDB interface {
 
 	GetAPIKeyHash(ctx context.Context, id int64) (string, error)
 	UpdateAPIKeyHash(ctx context.Context, id int64, hash string) error
+	UpdateAPIKeyPlain(ctx context.Context, id int64, plain string) error
 }
 
 var _ ConvWebhookDB = (*WebhookRepo)(nil)
@@ -138,6 +139,11 @@ func (r *WebhookRepo) GetAPIKeyHash(ctx context.Context, id int64) (string, erro
 
 func (r *WebhookRepo) UpdateAPIKeyHash(ctx context.Context, id int64, hash string) error {
 	_, err := r.pool.Exec(ctx, `UPDATE conv_webhooks SET api_key_hash = $1 WHERE id = $2`, hash, id)
+	return err
+}
+
+func (r *WebhookRepo) UpdateAPIKeyPlain(ctx context.Context, id int64, plain string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE conv_webhooks SET api_key_plain = $1 WHERE id = $2`, plain, id)
 	return err
 }
 
