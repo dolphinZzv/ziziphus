@@ -70,11 +70,13 @@ func textToHTML(text string) string {
 		if trimmed == "" {
 			html.WriteString("<br>")
 		} else if strings.HasPrefix(trimmed, "- ") {
-			html.WriteString(fmt.Sprintf("<li>%s</li>\n", strings.TrimPrefix(trimmed, "- ")))
+			fmt.Fprintf(&html, "<li>%s</li>\n", strings.TrimPrefix(trimmed, "- "))
 		} else if strings.HasPrefix(trimmed, "# ") {
-			html.WriteString(fmt.Sprintf("<h1>%s</h1>\n", strings.TrimPrefix(trimmed, "# ")))
+			fmt.Fprintf(&html, "<h1>%s</h1>\n", strings.TrimPrefix(trimmed, "# "))
+		} else if strings.HasPrefix(trimmed, "# ") {
+			fmt.Fprintf(&html, "<h1>%s</h1>\n", strings.TrimPrefix(trimmed, "# "))
 		} else if strings.HasPrefix(trimmed, "## ") {
-			html.WriteString(fmt.Sprintf("<h2>%s</h2>\n", strings.TrimPrefix(trimmed, "## ")))
+			fmt.Fprintf(&html, "<h2>%s</h2>\n", strings.TrimPrefix(trimmed, "## "))
 		} else if strings.HasPrefix(trimmed, "1. ") ||
 			strings.HasPrefix(trimmed, "2. ") ||
 			strings.HasPrefix(trimmed, "3. ") ||
@@ -84,12 +86,12 @@ func textToHTML(text string) string {
 			strings.HasPrefix(trimmed, "7. ") {
 			parts := strings.SplitN(trimmed, ". ", 2)
 			if len(parts) == 2 {
-				html.WriteString(fmt.Sprintf("<h2>%s. %s</h2>\n", parts[0], parts[1]))
+				fmt.Fprintf(&html, "<h2>%s. %s</h2>\n", parts[0], parts[1])
 			} else {
-				html.WriteString(fmt.Sprintf("<p>%s</p>\n", line))
+				fmt.Fprintf(&html, "<p>%s</p>\n", line)
 			}
 		} else {
-			html.WriteString(fmt.Sprintf("<p>%s</p>\n", line))
+			fmt.Fprintf(&html, "<p>%s</p>\n", line)
 		}
 	}
 	return html.String()
@@ -105,7 +107,7 @@ func LegalPage(title, contentZh, contentEn string) http.HandlerFunc {
 		body := textToHTML(content)
 		html := legalHTML(title, body)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(html))
+		_, _ = w.Write([]byte(html))
 	}
 }
 
