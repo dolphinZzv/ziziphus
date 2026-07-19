@@ -391,6 +391,12 @@ export default function AuthPage() {
         </div>
       </div>
 
+      <div className="flex items-center justify-center gap-3 text-xs text-[var(--color-muted-soft)]">
+        <a href="/privacy" target="_blank" className="hover:text-[var(--color-primary)] transition-colors">{t('auth.privacy', 'Privacy')}</a>
+        <span className="text-[var(--color-hairline)]">·</span>
+        <a href="/terms" target="_blank" className="hover:text-[var(--color-primary)] transition-colors">{t('auth.terms', 'Terms')}</a>
+      </div>
+
       <AuthFooter />
     </PageLayout>
   )
