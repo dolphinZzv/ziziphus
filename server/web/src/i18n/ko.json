@@ -49,7 +49,14 @@
     "accountRequired": "계정을 입력해주세요",
     "nameRequired": "닉네임을 입력해주세요",
     "passwordRequired": "비밀번호를 입력해주세요",
-    "hasAccount": "이미 계정이 있으신가요?"
+    "hasAccount": "이미 계정이 있으신가요?",
+    "or": "또는",
+    "oauthGithub": "GitHub로 로그인",
+    "oauthGoogle": "Google로 로그인",
+    "agreeTerms": "동의합니다",
+    "agreeRequired": "개인정보처리방침 및 서비스 약관에 동의해주세요",
+    "privacy": "개인정보처리방침",
+    "terms": "서비스 약관"
   },
   "chat": {
     "inputPlaceholder": "메시지 입력...",
@@ -293,7 +300,9 @@
     "deleteAccountConfirm": "계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다. 모든 데이터가 지워집니다.",
     "deleteAccountConfirm2": "다시 확인: 연락처, 메시지, 대화 등 모든 정보가 영구 삭제됩니다.",
     "headlinePlaceholder": "상태 메시지",
-    "editTitle": "프로필 편집"
+    "editTitle": "프로필 편집",
+    "privacy": "개인정보",
+    "terms": "약관"
   },
   "settings": {
     "title": "앱 설정",
@@ -415,7 +424,8 @@
     "pin": "고정",
     "unpin": "고정 해제",
     "details": "상세",
-    "required": "필수 입력"
+    "required": "필수 입력",
+    "and": "및"
   },
   "time": {
     "justNow": "방금",

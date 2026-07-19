@@ -49,7 +49,14 @@
     "accountRequired": "アカウントを入力してください",
     "nameRequired": "ニックネームを入力してください",
     "passwordRequired": "パスワードを入力してください",
-    "hasAccount": "すでにアカウントをお持ちですか？"
+    "hasAccount": "すでにアカウントをお持ちですか？",
+    "or": "または",
+    "oauthGithub": "GitHub でログイン",
+    "oauthGoogle": "Google でログイン",
+    "agreeTerms": "同意します",
+    "agreeRequired": "プライバシーポリシーと利用規約に同意してください",
+    "privacy": "プライバシーポリシー",
+    "terms": "利用規約"
   },
   "chat": {
     "inputPlaceholder": "メッセージを入力...",
@@ -293,7 +300,9 @@
     "deleteAccountConfirm": "アカウントを削除しますか？この操作は元に戻せません。すべてのデータが消去されます。",
     "deleteAccountConfirm2": "再度確認: 連絡先、メッセージ履歴、会話などすべての情報が完全に削除されます。",
     "headlinePlaceholder": "ひとこと",
-    "editTitle": "プロフィール編集"
+    "editTitle": "プロフィール編集",
+    "privacy": "プライバシー",
+    "terms": "利用規約"
   },
   "settings": {
     "title": "アプリ設定",
@@ -415,7 +424,8 @@
     "pin": "ピン留め",
     "unpin": "ピン解除",
     "details": "詳細",
-    "required": "必須です"
+    "required": "必須です",
+    "and": "と"
   },
   "time": {
     "justNow": "たった今",

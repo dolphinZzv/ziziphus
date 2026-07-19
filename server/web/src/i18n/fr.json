@@ -49,7 +49,14 @@
     "accountRequired": "Veuillez entrer votre compte",
     "nameRequired": "Veuillez entrer votre pseudo",
     "passwordRequired": "Veuillez entrer votre mot de passe",
-    "hasAccount": "Vous avez déjà un compte ?"
+    "hasAccount": "Vous avez déjà un compte ?",
+    "or": "ou",
+    "oauthGithub": "Se connecter avec GitHub",
+    "oauthGoogle": "Se connecter avec Google",
+    "agreeTerms": "J'accepte les",
+    "agreeRequired": "Veuillez accepter la politique de confidentialité et les conditions d'utilisation",
+    "privacy": "Politique de confidentialité",
+    "terms": "Conditions d'utilisation"
   },
   "chat": {
     "inputPlaceholder": "Tapez un message...",
@@ -293,7 +300,9 @@
     "deleteAccountConfirm": "Supprimer votre compte ? Cette action est irréversible. Toutes les données seront effacées.",
     "deleteAccountConfirm2": "Confirmer : Cela supprimera définitivement tous vos contacts, messages et conversations.",
     "headlinePlaceholder": "Signature",
-    "editTitle": "Modifier le profil"
+    "editTitle": "Modifier le profil",
+    "privacy": "Confidentialité",
+    "terms": "Conditions"
   },
   "settings": {
     "title": "Paramètres de l'application",
@@ -415,7 +424,8 @@
     "pin": "Épingler",
     "unpin": "Détacher",
     "details": "Détails",
-    "required": "Requis"
+    "required": "Requis",
+    "and": "et"
   },
   "time": {
     "justNow": "À l'instant",
