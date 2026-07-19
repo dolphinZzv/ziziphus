@@ -20,7 +20,7 @@ import MemberListView from '@/features/group/member-list-view'
 import AddMemberView from '@/features/group/add-member-view'
 import UserCard from '@/components/user-card'
 import HistoryView from '@/features/history/history-view'
-import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, ChevronUp, ChevronDown, X, Trash2, UserPlus, ArrowLeft, Pin, PinOff, MessageCircle } from 'lucide-react'
+import { MoreVertical, Clock, Copy, Check, Info, Users, LogOut, Folder, Search, Trash2, UserPlus, ArrowLeft, Pin, PinOff, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useIsMobile } from '@/hooks/use-breakpoint'
@@ -76,43 +76,6 @@ export default function ChatView() {
   const [detailAvatar, setDetailAvatar] = useState('')
   const lastMarkedRef = useRef<Map<string, number>>(new Map())
 
-  // --- Feature 1: In-chat search ---
-  const [showSearch, setShowSearch] = useState(false)
-  const [searchKeyword, setSearchKeyword] = useState('')
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  // Compute matches from text-based messages
-  const searchMatches = searchKeyword.trim()
-    ? messages.reduce<number[]>((acc, m, i) => {
-        if ((m.content_type === ContentType.Text || m.content_type === ContentType.Edit) &&
-            m.body.toLowerCase().includes(searchKeyword.toLowerCase())) {
-          acc.push(i)
-        }
-        return acc
-      }, [])
-    : []
-
-  const handleSearchPrev = () => {
-    setCurrentMatchIndex(i => (i > 0 ? i - 1 : searchMatches.length - 1))
-  }
-  const handleSearchNext = () => {
-    setCurrentMatchIndex(i => (i < searchMatches.length - 1 ? i + 1 : 0))
-  }
-  const handleSearchClose = () => {
-    setShowSearch(false)
-    setSearchKeyword('')
-    setCurrentMatchIndex(0)
-  }
-
-  // Scroll to current match
-  useEffect(() => {
-    if (searchMatches.length === 0) return
-    const targetId = `msg-${messages[searchMatches[currentMatchIndex]]?.msg_id}`
-    const el = document.getElementById(targetId)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [currentMatchIndex, searchMatches])
-
   // --- Drag-drop handled by InputBar ---
 
   // --- End drag-drop ---
@@ -131,7 +94,7 @@ export default function ChatView() {
       meta.content = color
       document.head.appendChild(meta)
     }
-  }, [convColor, user?.primary_color])
+  }, [convColor, conv?.primary_color, user?.primary_color])
 
   const handleClone = async () => {
     if (!convId || !isGroup) return
@@ -207,7 +170,7 @@ export default function ChatView() {
       if (rn.conv_id === convId) chatStore.handleReadNotify(rn)
     })
     return () => { u1?.(); u2?.(); u3?.(); u4?.() }
-  }, [convId])
+  }, [convId, user?.user_id])
 
   // Mark as read whenever messages change (handles new push messages too)
   useEffect(() => {
@@ -235,12 +198,12 @@ export default function ChatView() {
     <div
       className="flex h-full"
     >
-      <div ref={containerRef} className={'flex-1 flex flex-col min-w-0' + (bgImage ? ' relative' : '')}
+      <div className={'flex-1 flex flex-col min-w-0' + (bgImage ? ' relative' : '')}
         style={bgImage ? { backgroundImage: 'url(' + bgImage + ')', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } as React.CSSProperties : undefined}>
       {/* Chat toolbar */}
       <div className="h-12 flex items-center px-4 flex-shrink-0 gap-3">
         {/* Avatar */}
-        {!showSearch ? (
+        
           <>
           {/* Mobile back button — goes to conversation list */}
           {isMobile && (
@@ -296,65 +259,14 @@ export default function ChatView() {
             )}
           </div>
           </>
-        ) : (
-          <>
-          <div className="flex-1 flex items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={searchKeyword}
-                onChange={e => { setSearchKeyword(e.target.value); setCurrentMatchIndex(0) }}
-                placeholder={t('chat.searchPlaceholder')}
-                className="w-full h-8 pl-3 pr-8 rounded-xl bg-[var(--color-surface-soft)] text-sm border border-[var(--color-hairline)] focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-ink)]"
-                autoFocus
-                onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSearchNext(); if (e.key === 'Escape') handleSearchClose() }}
-              />
-              {searchKeyword.trim() && (
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[11px] text-[var(--color-muted)]">
-                  <span>{searchMatches.length > 0 ? `${currentMatchIndex + 1}/${searchMatches.length}` : '0'}</span>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={handleSearchPrev}
-              disabled={searchMatches.length === 0}
-              className="p-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] disabled:opacity-30 transition-colors"
-            >
-              <ChevronUp size={16} />
-            </button>
-            <button
-              onClick={handleSearchNext}
-              disabled={searchMatches.length === 0}
-              className="p-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] disabled:opacity-30 transition-colors"
-            >
-              <ChevronDown size={16} />
-            </button>
-            <button
-              onClick={handleSearchClose}
-              className="p-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          <div className="flex items-center gap-1">
-            {searchMatches.length > 0 && (
-              <span className="text-[11px] text-[var(--color-muted)]">
-                {searchMatches.length} 条结果
-              </span>
-            )}
-          </div>
-          </>
-        )}
 
         {!isSystem && (
           <>
-          {!showSearch && (
-            <button onClick={() => setShowSearch(true)}
-              className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
-              title={t('chat.search')}>
-              <Search size={17} />
-            </button>
-          )}
+          <button onClick={() => openPanel('history')}
+            className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
+            title={t('chat.search')}>
+            <Search size={17} />
+          </button>
           <button onClick={() => conv?.pinned ? conversationStore.unpin(convId) : conversationStore.pin(convId)}
             className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-muted)] hover:text-[var(--color-ink)] transition-colors"
             title={conv?.pinned ? t('common.unpin') : t('common.pin')}>
@@ -486,9 +398,6 @@ export default function ChatView() {
           convId={convId}
           messages={messages}
           currentUserId={user?.user_id || ''}
-          searchKeyword={searchKeyword}
-          matchIndex={currentMatchIndex}
-          searchMatches={searchMatches}
         />
       </div>
 

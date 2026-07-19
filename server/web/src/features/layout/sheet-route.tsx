@@ -54,7 +54,6 @@ export default function SheetRouteSync() {
       // Sheet closed → return to conversation list
       if (!sheet && prev && sheetToRoute[prev]) {
         navigate('/conversations')
-        }
       }
     })
   }, [location.pathname, navigate])
