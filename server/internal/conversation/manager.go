@@ -43,6 +43,8 @@ type msgRepo interface {
 
 type seqCache interface {
 	InitConvSeq(ctx context.Context, convID string, seq int64) error
+	GetConvSeq(ctx context.Context, convID string) (int64, error)
+	SetUserSeq(ctx context.Context, userID, convID string, seq int64) error
 }
 
 type joinRequestRepo interface {
@@ -244,7 +246,20 @@ func (m *Manager) AddMember(ctx context.Context, convID, userID string, operator
 	if conv.MaxMembers > 0 && len(members) >= conv.MaxMembers {
 		return &model.AppError{Code: model.ErrTooLarge, Message: "group member limit reached", Key: "err.group_full"}
 	}
-	return m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleMember)
+	if err := m.convRepo.AddMember(ctx, convID, userID, model.ConvRoleMember); err != nil {
+		return err
+	}
+	// Initialize user_seq to current conv_seq so old messages don't count as unread
+	m.initUserConvSeq(ctx, convID, userID)
+	return nil
+}
+
+func (m *Manager) initUserConvSeq(ctx context.Context, convID, userID string) {
+	seq, err := m.seqCache.GetConvSeq(ctx, convID)
+	if err != nil || seq <= 0 {
+		return
+	}
+	_ = m.seqCache.SetUserSeq(ctx, userID, convID, seq)
 }
 
 func (m *Manager) RemoveMember(ctx context.Context, convID, userID, operatorID string) error {

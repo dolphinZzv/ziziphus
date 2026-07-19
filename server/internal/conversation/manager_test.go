@@ -207,6 +207,16 @@ func (s *mockSeqCache) InitConvSeq(_ context.Context, convID string, seq int64) 
 	return nil
 }
 
+func (s *mockSeqCache) GetConvSeq(_ context.Context, convID string) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.seqs[convID], nil
+}
+
+func (s *mockSeqCache) SetUserSeq(_ context.Context, userID, convID string, seq int64) error {
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------
