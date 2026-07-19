@@ -74,6 +74,52 @@ func (r *testAuthUserRepo) GetByEmail(_ context.Context, email string) (*model.U
 	return nil, fmt.Errorf("user not found")
 }
 
+func (r *testAuthUserRepo) GetByGithubID(_ context.Context, githubID string) (*model.User, error) {
+	for _, u := range r.users {
+		if u.GithubID == githubID {
+			return u, nil
+		}
+	}
+	return nil, fmt.Errorf("user not found")
+}
+
+func (r *testAuthUserRepo) GetByGoogleID(_ context.Context, googleID string) (*model.User, error) {
+	for _, u := range r.users {
+		if u.GoogleID == googleID {
+			return u, nil
+		}
+	}
+	return nil, fmt.Errorf("user not found")
+}
+
+func (r *testAuthUserRepo) UpdateOAuthID(_ context.Context, userID, provider, oauthID string) error {
+	u, ok := r.users[userID]
+	if !ok {
+		return fmt.Errorf("user not found")
+	}
+	switch provider {
+	case "github":
+		u.GithubID = oauthID
+	case "google":
+		u.GoogleID = oauthID
+	}
+	return nil
+}
+
+func (r *testAuthUserRepo) ClearOAuthID(_ context.Context, userID, provider string) error {
+	u, ok := r.users[userID]
+	if !ok {
+		return fmt.Errorf("user not found")
+	}
+	switch provider {
+	case "github":
+		u.GithubID = ""
+	case "google":
+		u.GoogleID = ""
+	}
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // Mock: userRepo (for UserHandler)
 // ---------------------------------------------------------------------------
@@ -95,6 +141,10 @@ type mockUserRepo struct {
 	getByEmailFunc        func(ctx context.Context, email string) (*model.User, error)
 	updatePasswordFunc    func(ctx context.Context, userID, password string) error
 	getByAccountFunc      func(ctx context.Context, account string) (*model.User, error)
+	getByGithubIDFunc     func(ctx context.Context, githubID string) (*model.User, error)
+	getByGoogleIDFunc     func(ctx context.Context, googleID string) (*model.User, error)
+	updateOAuthIDFunc     func(ctx context.Context, userID, provider, oauthID string) error
+	clearOAuthIDFunc      func(ctx context.Context, userID, provider string) error
 }
 
 func (m *mockUserRepo) Create(ctx context.Context, u *model.User) error {
@@ -198,6 +248,34 @@ func (m *mockUserRepo) GetByEmail(ctx context.Context, email string) (*model.Use
 func (m *mockUserRepo) UpdatePassword(ctx context.Context, userID, password string) error {
 	if m.updatePasswordFunc != nil {
 		return m.updatePasswordFunc(ctx, userID, password)
+	}
+	return nil
+}
+
+func (m *mockUserRepo) GetByGithubID(ctx context.Context, githubID string) (*model.User, error) {
+	if m.getByGithubIDFunc != nil {
+		return m.getByGithubIDFunc(ctx, githubID)
+	}
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (m *mockUserRepo) GetByGoogleID(ctx context.Context, googleID string) (*model.User, error) {
+	if m.getByGoogleIDFunc != nil {
+		return m.getByGoogleIDFunc(ctx, googleID)
+	}
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (m *mockUserRepo) UpdateOAuthID(ctx context.Context, userID, provider, oauthID string) error {
+	if m.updateOAuthIDFunc != nil {
+		return m.updateOAuthIDFunc(ctx, userID, provider, oauthID)
+	}
+	return nil
+}
+
+func (m *mockUserRepo) ClearOAuthID(ctx context.Context, userID, provider string) error {
+	if m.clearOAuthIDFunc != nil {
+		return m.clearOAuthIDFunc(ctx, userID, provider)
 	}
 	return nil
 }

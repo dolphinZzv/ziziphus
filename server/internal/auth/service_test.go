@@ -64,6 +64,52 @@ func (m *mockUserRepo) GetByAccount(_ context.Context, account string) (*model.U
 	return nil, errors.New("user not found")
 }
 
+func (m *mockUserRepo) GetByGithubID(_ context.Context, githubID string) (*model.User, error) {
+	for _, u := range m.users {
+		if u.GithubID == githubID {
+			return u, nil
+		}
+	}
+	return nil, errors.New("user not found")
+}
+
+func (m *mockUserRepo) GetByGoogleID(_ context.Context, googleID string) (*model.User, error) {
+	for _, u := range m.users {
+		if u.GoogleID == googleID {
+			return u, nil
+		}
+	}
+	return nil, errors.New("user not found")
+}
+
+func (m *mockUserRepo) UpdateOAuthID(_ context.Context, userID, provider, oauthID string) error {
+	u, ok := m.users[userID]
+	if !ok {
+		return errors.New("user not found")
+	}
+	switch provider {
+	case "github":
+		u.GithubID = oauthID
+	case "google":
+		u.GoogleID = oauthID
+	}
+	return nil
+}
+
+func (m *mockUserRepo) ClearOAuthID(_ context.Context, userID, provider string) error {
+	u, ok := m.users[userID]
+	if !ok {
+		return errors.New("user not found")
+	}
+	switch provider {
+	case "github":
+		u.GithubID = ""
+	case "google":
+		u.GoogleID = ""
+	}
+	return nil
+}
+
 // setupService creates a Service backed by a fresh mock repository.
 func setupService(t *testing.T) (*Service, *mockUserRepo, string) {
 	t.Helper()

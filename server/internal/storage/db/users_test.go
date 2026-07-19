@@ -48,7 +48,7 @@ func userColumnOrder() []string {
 		"banned",
 		"created_at", "account", "primary_color", "secondary_color",
 		"uid", "wake_mode", "api_key", "discoverable", "allow_direct_chat", "headline", "language",
-		"conv_limit",
+		"conv_limit", "github_id", "google_id",
 	}
 }
 
@@ -62,12 +62,12 @@ func TestUserRepo_Create(t *testing.T) {
 	repo := NewUserRepo(mock)
 	u := userTestUser()
 
-	cols := `INSERT INTO users \(id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language\) VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9, \$10, \$11, \$12, \$13, \$14, \$15, \$16, \$17, \$18, \$19, \$20, \$21\)`
+	cols := `INSERT INTO users \(id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, github_id, google_id\) VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9, \$10, \$11, \$12, \$13, \$14, \$15, \$16, \$17, \$18, \$19, \$20, \$21, \$22, \$23\)`
 	mock.ExpectExec(cols).
 		WithArgs(u.ID, u.Type, u.Name, u.Email, u.Avatar, u.Cover, u.Status, u.Banned,
 			u.Password, u.ExtMeta, AnyTime{}, u.Account,
 			u.PrimaryColor, u.SecondaryColor, u.UID, u.WakeMode,
-			u.APIKey, u.Discoverable, u.AllowDirectChat, u.Headline, u.Language).
+			u.APIKey, u.Discoverable, u.AllowDirectChat, u.Headline, u.Language, u.GithubID, u.GoogleID).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	err = repo.Create(context.Background(), u)
@@ -93,7 +93,7 @@ func TestUserRepo_Create_Error(t *testing.T) {
 		WithArgs(u.ID, u.Type, u.Name, u.Email, u.Avatar, u.Cover, u.Status, u.Banned,
 			u.Password, u.ExtMeta, AnyTime{}, u.Account,
 			u.PrimaryColor, u.SecondaryColor, u.UID, u.WakeMode,
-			u.APIKey, u.Discoverable, u.AllowDirectChat, u.Headline, u.Language).
+			u.APIKey, u.Discoverable, u.AllowDirectChat, u.Headline, u.Language, u.GithubID, u.GoogleID).
 		WillReturnError(context.DeadlineExceeded)
 
 	err = repo.Create(context.Background(), u)
@@ -109,7 +109,7 @@ func fullUserCols() []string {
 		"password", "ext_meta",
 		"created_at", "account", "primary_color", "secondary_color",
 		"uid", "wake_mode", "api_key", "discoverable", "allow_direct_chat", "headline", "language",
-		"conv_limit",
+		"conv_limit", "github_id", "google_id",
 	}
 }
 
@@ -128,9 +128,9 @@ func TestUserRepo_GetByID(t *testing.T) {
 			false,
 			"pwd_hash", map[string]any{},
 			now, "alice", "#f00", "#0f0",
-			"", 0, "", true, true, "", "zh-Hans", 100)
+			"", 0, "", true, true, "", "zh-Hans", 100, "", "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100) FROM users WHERE id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id FROM users WHERE id = $1`)).
 		WithArgs("u1").
 		WillReturnRows(rows)
 
@@ -170,7 +170,7 @@ func TestUserRepo_GetByID_NotFound(t *testing.T) {
 
 	repo := NewUserRepo(mock)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100) FROM users WHERE id = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id FROM users WHERE id = $1`)).
 		WithArgs("nonexistent").
 		WillReturnError(context.DeadlineExceeded)
 
@@ -193,12 +193,12 @@ func TestUserRepo_GetByIDs(t *testing.T) {
 	rows := pgxmock.NewRows(userColumnOrder()).
 		AddRow("u1", model.UserHuman, "Alice", "", "av1.jpg", "cover1", 1,
 			false, now, "alice", "", "",
-			"", 0, "", true, false, "", "zh-Hans", 100).
+			"", 0, "", true, false, "", "zh-Hans", 100, "", "").
 		AddRow("u2", model.UserHuman, "Bob", "", "av2.jpg", "cover2", 1,
 			false, now, "bob", "", "",
-			"", 0, "", false, true, "", "zh-Hans", 100)
+			"", 0, "", false, true, "", "zh-Hans", 100, "", "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100) FROM users WHERE id = ANY($1)`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id FROM users WHERE id = ANY($1)`)).
 		WithArgs([]string{"u1", "u2"}).
 		WillReturnRows(rows)
 
@@ -239,12 +239,12 @@ func TestUserRepo_Search(t *testing.T) {
 	rows := pgxmock.NewRows(userColumnOrder()).
 		AddRow("u1", model.UserHuman, "Alice", "", "av.jpg", "cv.jpg", 1,
 			false, now, "alice", "", "",
-			"", 0, "", false, false, "", "zh-Hans", 100).
+			"", 0, "", false, false, "", "zh-Hans", 100, "", "").
 		AddRow("u3", model.UserHuman, "Alicia", "", "av3.jpg", "cv3.jpg", 1,
 			false, now, "alicia", "", "",
-			"", 0, "", false, false, "", "zh-Hans", 100)
+			"", 0, "", false, false, "", "zh-Hans", 100, "", "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100) FROM users WHERE name ILIKE $1 AND NOT banned ORDER BY created_at DESC LIMIT $2 OFFSET $3`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id FROM users WHERE name ILIKE $1 AND NOT banned ORDER BY created_at DESC LIMIT $2 OFFSET $3`)).
 		WithArgs("%ali%", 10, 0).
 		WillReturnRows(rows)
 
@@ -277,7 +277,7 @@ func TestUserRepo_Search_Empty(t *testing.T) {
 		WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(0))
 
 	rows := pgxmock.NewRows(userColumnOrder())
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100) FROM users WHERE name ILIKE $1 AND NOT banned ORDER BY created_at DESC LIMIT $2 OFFSET $3`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id FROM users WHERE name ILIKE $1 AND NOT banned ORDER BY created_at DESC LIMIT $2 OFFSET $3`)).
 		WithArgs("%zzz%", 10, 0).
 		WillReturnRows(rows)
 
@@ -308,9 +308,9 @@ func TestUserRepo_GetByAccount(t *testing.T) {
 			false,
 			"pwd", map[string]any{},
 			now, "alice", "", "",
-			"", 0, "", false, false, "", "zh-Hans", 100)
+			"", 0, "", false, false, "", "zh-Hans", 100, "", "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100) FROM users WHERE account = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id FROM users WHERE account = $1`)).
 		WithArgs("alice").
 		WillReturnRows(rows)
 
@@ -390,12 +390,12 @@ func TestUserRepo_ListAgents(t *testing.T) {
 	rows := pgxmock.NewRows(userColumnOrder()).
 		AddRow("agent_1", model.UserAgent, "Bot1", "", "", "", 0,
 			false, now, "", "", "",
-			"owner_1", 0, "", false, false, "", "zh-Hans", 100).
+			"owner_1", 0, "", false, false, "", "zh-Hans", 100, "", "").
 		AddRow("agent_2", model.UserAgent, "Bot2", "", "a.jpg", "c.jpg", 0,
 			false, now, "", "", "",
-			"owner_1", 0, "key_2", false, false, "", "zh-Hans", 100)
+			"owner_1", 0, "key_2", false, false, "", "zh-Hans", 100, "", "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100) FROM users WHERE type = $1 AND uid = $2 ORDER BY created_at ASC`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id FROM users WHERE type = $1 AND uid = $2 ORDER BY created_at ASC`)).
 		WithArgs(model.UserAgent, "owner_1").
 		WillReturnRows(rows)
 
@@ -474,9 +474,9 @@ func TestUserRepo_GetByAPIKey(t *testing.T) {
 	rows := pgxmock.NewRows(userColumnOrder()).
 		AddRow("agent_1", model.UserAgent, "Bot", "", "", "", 0,
 			false, now, "", "", "",
-			"owner_1", 0, "sk-test-123", false, false, "", "zh-Hans", 100)
+			"owner_1", 0, "sk-test-123", false, false, "", "zh-Hans", 100, "", "")
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100) FROM users WHERE api_key = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id FROM users WHERE api_key = $1`)).
 		WithArgs("sk-test-123").
 		WillReturnRows(rows)
 
@@ -504,7 +504,7 @@ func TestUserRepo_GetByAPIKey_NotFound(t *testing.T) {
 
 	repo := NewUserRepo(mock)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100) FROM users WHERE api_key = $1`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id FROM users WHERE api_key = $1`)).
 		WithArgs("invalid-key").
 		WillReturnError(context.DeadlineExceeded)
 
