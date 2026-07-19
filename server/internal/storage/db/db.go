@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"ziziphus/pkg/logger"
 )
@@ -20,12 +21,18 @@ const bootstrapMigration = `CREATE TABLE IF NOT EXISTS schema_migrations (
     checksum    VARCHAR(64) NOT NULL DEFAULT ''
 );`
 
+// NewPgPool creates a pgx connection pool with OTel tracing instrumentation.
 func NewPgPool(ctx context.Context, dsn string, maxConns int) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("parse dsn: %w", err)
 	}
 	cfg.MaxConns = int32(maxConns)
+
+	// Instrument with OpenTelemetry tracing so every SQL query produces a
+	// child span under the parent request's trace.
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer()
+
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("create pool: %w", err)

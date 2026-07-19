@@ -279,6 +279,8 @@
     "all": "All"
   },
   "profile": {
+    "exportData": "Export My Data",
+    "exportSubmitted": "Data export request submitted, the file will be sent to your email",
     "title": "Profile",
     "edit": "Edit",
     "save": "Save",

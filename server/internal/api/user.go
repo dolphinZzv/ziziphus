@@ -24,6 +24,14 @@ type mfaStorage interface {
 	Disable(ctx context.Context, userID string) error
 }
 
+type userRegisteredEnqueuer interface {
+	Enqueue(userID, lang, email string) error
+}
+
+type dataExporter interface {
+	Enqueue(userID, lang, email string) error
+}
+
 type UserHandler struct {
 	authSvc           *auth.Service
 	userRepo          userRepo
@@ -37,6 +45,8 @@ type UserHandler struct {
 	allowRegistration bool
 	appName           string
 	appEnv            string
+	userRegisteredEnqueuer userRegisteredEnqueuer
+	dataExporter           dataExporter
 }
 
 type exportMsgRepo interface {
@@ -82,8 +92,8 @@ type emailSender interface {
 	SendPasswordResetCode(to, code string) error
 }
 
-func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender, passwordResetRepo passwordResetStore, msgRepo exportMsgRepo, allowRegistration bool, appName string, appEnv string) *UserHandler {
-	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen, mfaRepo: mfaRepo, emailVerifyRepo: emailVerifyRepo, mailer: mailer, passwordResetRepo: passwordResetRepo, msgRepo: msgRepo, allowRegistration: allowRegistration, appName: appName, appEnv: appEnv}
+func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender, passwordResetRepo passwordResetStore, msgRepo exportMsgRepo, allowRegistration bool, appName string, appEnv string, userRegisteredEnqueuer userRegisteredEnqueuer, dataExporter dataExporter) *UserHandler {
+	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen, mfaRepo: mfaRepo, emailVerifyRepo: emailVerifyRepo, mailer: mailer, passwordResetRepo: passwordResetRepo, msgRepo: msgRepo, allowRegistration: allowRegistration, appName: appName, appEnv: appEnv, userRegisteredEnqueuer: userRegisteredEnqueuer, dataExporter: dataExporter}
 }
 
 type registerReq struct {
@@ -129,6 +139,14 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
 		return
 	}
+	// Enqueue user_registered event for async processing (auto-join group, etc.).
+	if h.userRegisteredEnqueuer != nil {
+		if err := h.userRegisteredEnqueuer.Enqueue(user.ID, lang, user.Email); err != nil {
+			logger.Warn("register: failed to enqueue user_registered event",
+				"user", user.ID, "error", err)
+		}
+	}
+
 	fileToken, _ := h.authSvc.GenerateFileToken(r.Context(), user.ID)
 	JSON(w, map[string]any{
 		"user_id":       user.ID,
@@ -1202,12 +1220,13 @@ func (h *UserHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 // ExportData godoc
 //
 //	@summary		Export all user data (GDPR data portability)
+//	@description	Submits an export job asynchronously. The exported data is sent to the user's email.
 //	@tags			users
 //	@produce		json
 //	@security		Bearer
-//	@success		200	{object}	object
+//	@success		202	{object}	APIResponse{data=object{message=string}}
 //	@failure		401	{object}	APIResponse
-//	@router			/users/me/export [get]
+//	@router			/users/me/export [post]
 func (h *UserHandler) ExportData(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserFromCtx(r.Context())
 	user, err := h.userRepo.GetByID(r.Context(), userID)
@@ -1215,31 +1234,21 @@ func (h *UserHandler) ExportData(w http.ResponseWriter, r *http.Request) {
 		NotFound(w, r)
 		return
 	}
-	user.Password = ""
 
-	// Collect all messages by this user
-	var allMessages []*model.Message
-	offset := 0
-	limit := 200
-	for {
-		msgs, err := h.msgRepo.GetMessagesBySender(r.Context(), userID, limit, offset)
-		if err != nil {
-			logger.Error("export messages failed", "user_id", userID, "error", err)
-			break
-		}
-		if len(msgs) == 0 {
-			break
-		}
-		allMessages = append(allMessages, msgs...)
-		offset += limit
+	if h.dataExporter == nil {
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
 	}
 
-	// Get session IDs
-	sessionIDs := h.sessMgr.GetUserSessionIDs(r.Context(), userID)
+	lang := string(i18n.LangFromCtx(r.Context()))
+
+	if err := h.dataExporter.Enqueue(userID, lang, user.Email); err != nil {
+		logger.Error("export data: enqueue failed", "user_id", userID, "error", err)
+		Error(w, r, http.StatusInternalServerError, model.ErrInternalServer)
+		return
+	}
 
 	JSON(w, map[string]any{
-		"user":        user,
-		"messages":    allMessages,
-		"session_ids": sessionIDs,
+		"message": i18n.T(r.Context(), "auth.export_submitted", "数据导出请求已提交，导出文件将发送至你的邮箱"),
 	})
 }

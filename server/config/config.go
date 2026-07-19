@@ -16,6 +16,8 @@ type Config struct {
 	Announcement AnnouncementConfig `mapstructure:"announcement"`
 	OAuth        OAuthConfig        `mapstructure:"oauth"`
 	Log          LogConfig          `mapstructure:"log"`
+	OTel         OTelConfig         `mapstructure:"otel"`
+	Seed         SeedConfig         `mapstructure:"seed"`
 }
 
 type OAuthConfig struct {
@@ -103,6 +105,22 @@ type LogConfig struct {
 	MaxAge     int    `mapstructure:"max_age"`
 	MaxBackups int    `mapstructure:"max_backups"`
 	Compress   bool   `mapstructure:"compress"`
+}
+
+// OTelConfig holds OpenTelemetry distributed tracing configuration.
+type OTelConfig struct {
+	Enabled     bool    `mapstructure:"enabled"`
+	Endpoint    string  `mapstructure:"endpoint"`
+	Protocol    string  `mapstructure:"protocol"`
+	ServiceName string  `mapstructure:"service_name"`
+	SampleRate  float64 `mapstructure:"sample_rate"`
+	Insecure    bool    `mapstructure:"insecure"`
+}
+
+// SeedConfig holds seed data configuration for development/demo environments.
+type SeedConfig struct {
+	Enabled       bool     `mapstructure:"enabled"`
+	AutoJoinGroup string   `mapstructure:"auto_join_group"`
 }
 
 type RateLimitConfig struct {
@@ -231,5 +249,17 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.Log.MaxBackups == 0 {
 		cfg.Log.MaxBackups = 10
+	}
+	if cfg.OTel.Endpoint == "" {
+		cfg.OTel.Endpoint = "localhost:4317"
+	}
+	if cfg.OTel.Protocol == "" {
+		cfg.OTel.Protocol = "grpc"
+	}
+	if cfg.OTel.ServiceName == "" {
+		cfg.OTel.ServiceName = "ziziphus"
+	}
+	if cfg.OTel.SampleRate <= 0 || cfg.OTel.SampleRate > 1 {
+		cfg.OTel.SampleRate = 1.0
 	}
 }

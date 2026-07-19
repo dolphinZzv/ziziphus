@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/hibiken/asynq"
+	"go.opentelemetry.io/otel/trace"
 	"ziziphus/internal/auth"
 	"ziziphus/pkg/logger"
 )
@@ -20,10 +21,14 @@ func NewMailHandler(mailer *auth.Mailer) *MailHandler {
 }
 
 func (h *MailHandler) ProcessTask(ctx context.Context, task *asynq.Task) error {
+	traceID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	switch task.Type() {
 	case TypeEmailVerification:
+		logger.Debug("processing email verification", "trace_id", traceID)
 		return h.handleVerification(task)
 	case TypePasswordReset:
+		logger.Debug("processing password reset email", "trace_id", traceID)
 		return h.handlePasswordReset(task)
 	default:
 		logger.Warn("unknown task type", "type", task.Type())

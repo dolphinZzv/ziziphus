@@ -294,7 +294,7 @@ func TestDispatch_Ping(t *testing.T) {
 	h := defaultHandler()
 	gwConn := gateway.NewConnection("conn1", "user1", "sess1", int(model.DeviceDesktop), serverConn)
 
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.Ping, ID: "ping-1"}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.Ping, ID: "ping-1"}, gwConn)
 	if err != nil {
 		t.Fatalf("dispatch returned error: %v", err)
 	}
@@ -337,7 +337,7 @@ func TestDispatch_MsgSend_Success(t *testing.T) {
 	payload, _ := json.Marshal(protocol.MsgSendPayload{
 		ConvID: "conv-a", ContentType: 1, Body: "hello world", ClientSeq: 99,
 	})
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.MsgSend, ID: "msg-1", Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.MsgSend, ID: "msg-1", Payload: payload}, gwConn)
 	if err != nil {
 		t.Fatalf("dispatch returned error: %v", err)
 	}
@@ -383,7 +383,7 @@ func TestDispatch_MsgSend_AppError(t *testing.T) {
 	gwConn := gateway.NewConnection("conn1", "user1", "sess1", int(model.DeviceDesktop), serverConn)
 
 	payload, _ := json.Marshal(protocol.MsgSendPayload{ConvID: "conv-a", Body: "x"})
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.MsgSend, ID: "err-1", Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.MsgSend, ID: "err-1", Payload: payload}, gwConn)
 	if err != nil {
 		t.Fatalf("dispatch should return nil after sending error frame, got: %v", err)
 	}
@@ -425,7 +425,7 @@ func TestDispatch_MsgSend_GenericError(t *testing.T) {
 	gwConn := gateway.NewConnection("conn1", "user1", "sess1", int(model.DeviceDesktop), serverConn)
 
 	payload, _ := json.Marshal(protocol.MsgSendPayload{ConvID: "conv-a", Body: "x"})
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.MsgSend, ID: "err-2", Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.MsgSend, ID: "err-2", Payload: payload}, gwConn)
 	if err != nil {
 		t.Fatalf("dispatch should return nil after sending error frame, got: %v", err)
 	}
@@ -452,7 +452,7 @@ func TestDispatch_MsgSend_InvalidPayload(t *testing.T) {
 	h := defaultHandler()
 	gwConn := gateway.NewConnection("conn1", "user1", "sess1", int(model.DeviceDesktop), nil)
 
-	err := h.dispatch("user1", "sess1", protocol.Frame{
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{
 		Type:    protocol.MsgSend,
 		ID:      "bad",
 		Payload: json.RawMessage(`{bad json}`),
@@ -490,7 +490,7 @@ func TestDispatch_SyncReq_Success(t *testing.T) {
 	gwConn := gateway.NewConnection("conn1", "user1", "sess1", int(model.DeviceDesktop), serverConn)
 
 	payload, _ := json.Marshal(protocol.SyncReqPayload{ConvID: "conv-x", LastConvSeq: 5, Limit: 20})
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.SyncReq, ID: "sync-1", Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.SyncReq, ID: "sync-1", Payload: payload}, gwConn)
 	if err != nil {
 		t.Fatalf("dispatch returned error: %v", err)
 	}
@@ -536,7 +536,7 @@ func TestDispatch_SyncReq_AppError(t *testing.T) {
 	gwConn := gateway.NewConnection("conn1", "user1", "sess1", int(model.DeviceDesktop), serverConn)
 
 	payload, _ := json.Marshal(protocol.SyncReqPayload{ConvID: "conv-x"})
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.SyncReq, ID: "err-sync", Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.SyncReq, ID: "err-sync", Payload: payload}, gwConn)
 	if err != nil {
 		t.Fatalf("dispatch should return nil after sending error frame, got: %v", err)
 	}
@@ -575,7 +575,7 @@ func TestDispatch_SyncReq_GenericError(t *testing.T) {
 	gwConn := gateway.NewConnection("conn1", "user1", "sess1", int(model.DeviceDesktop), serverConn)
 
 	payload, _ := json.Marshal(protocol.SyncReqPayload{ConvID: "conv-x"})
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.SyncReq, ID: "err-sync2", Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.SyncReq, ID: "err-sync2", Payload: payload}, gwConn)
 	if err != nil {
 		t.Fatalf("dispatch should return nil after sending error frame, got: %v", err)
 	}
@@ -598,7 +598,7 @@ func TestDispatch_SyncReq_InvalidPayload(t *testing.T) {
 	h := defaultHandler()
 	gwConn := gateway.NewConnection("conn1", "user1", "sess1", int(model.DeviceDesktop), nil)
 
-	err := h.dispatch("user1", "sess1", protocol.Frame{
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{
 		Type:    protocol.SyncReq,
 		ID:      "bad",
 		Payload: json.RawMessage(`not-json`),
@@ -627,7 +627,7 @@ func TestDispatch_MsgReadNotify_Success(t *testing.T) {
 	payload, _ := json.Marshal(protocol.MsgReadNotifyPayload{
 		ConvID: "conv-r", UserID: "user1", MsgID: 77,
 	})
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.MsgReadNotify, Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.MsgReadNotify, Payload: payload}, gwConn)
 	if err != nil {
 		t.Fatalf("dispatch returned error: %v", err)
 	}
@@ -664,7 +664,7 @@ func TestDispatch_MsgReadNotify_Error(t *testing.T) {
 	payload, _ := json.Marshal(protocol.MsgReadNotifyPayload{
 		ConvID: "conv-r", UserID: "user1", MsgID: 99,
 	})
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.MsgReadNotify, Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.MsgReadNotify, Payload: payload}, gwConn)
 	if err == nil {
 		t.Fatal("expected error from MarkRead, got nil")
 	}
@@ -679,7 +679,7 @@ func TestDispatch_MsgReadNotify_InvalidPayload(t *testing.T) {
 		&mockReadReceiptHandler{},
 	)
 
-	err := h.dispatch("user1", "sess1", protocol.Frame{
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{
 		Type:    protocol.MsgReadNotify,
 		Payload: json.RawMessage(`{{bad}}`),
 	}, nil)
@@ -709,7 +709,7 @@ func TestDispatch_SessionRecover(t *testing.T) {
 	gwConn := gateway.NewConnection("conn-recover", "user1", "", int(model.DeviceDesktop), serverConn)
 
 	payload, _ := json.Marshal(protocol.SessionRecoverPayload{SessionID: "sess-recover"})
-	err := h.dispatch("user1", "", protocol.Frame{Type: protocol.SessionRecover, ID: "rec-1", Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "", protocol.Frame{Type: protocol.SessionRecover, ID: "rec-1", Payload: payload}, gwConn)
 	if err != nil {
 		t.Fatalf("dispatch returned error: %v", err)
 	}
@@ -749,7 +749,7 @@ func TestDispatch_SessionRecover(t *testing.T) {
 func TestDispatch_SessionRecover_InvalidPayload(t *testing.T) {
 	h := defaultHandler()
 
-	err := h.dispatch("user1", "", protocol.Frame{
+	err := h.dispatch(context.Background(), "user1", "", protocol.Frame{
 		Type:    protocol.SessionRecover,
 		Payload: json.RawMessage(`{bad}`),
 	}, nil)
@@ -767,7 +767,7 @@ func TestDispatch_UnknownFrameType(t *testing.T) {
 	gwConn := gateway.NewConnection("conn1", "user1", "sess1", int(model.DeviceDesktop), nil)
 
 	// Frame type 999 is not handled.
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: 999, Payload: json.RawMessage(`{"a":1}`)}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: 999, Payload: json.RawMessage(`{"a":1}`)}, gwConn)
 	if err != nil {
 		t.Fatalf("unknown frame type should return nil, got: %v", err)
 	}
@@ -784,7 +784,7 @@ func TestDispatch_Typing(t *testing.T) {
 	payload, _ := json.Marshal(protocol.TypingPayload{
 		ConvID: "conv-t", UserID: "user1", SessionID: "sess1",
 	})
-	err := h.dispatch("user1", "sess1", protocol.Frame{Type: protocol.Typing, Payload: payload}, gwConn)
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{Type: protocol.Typing, Payload: payload}, gwConn)
 	if err != nil {
 		t.Fatalf("typing frame should return nil, got: %v", err)
 	}
@@ -793,7 +793,7 @@ func TestDispatch_Typing(t *testing.T) {
 func TestDispatch_Typing_InvalidPayload(t *testing.T) {
 	h := defaultHandler()
 
-	err := h.dispatch("user1", "sess1", protocol.Frame{
+	err := h.dispatch(context.Background(), "user1", "sess1", protocol.Frame{
 		Type:    protocol.Typing,
 		Payload: json.RawMessage(`bad`),
 	}, nil)

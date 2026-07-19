@@ -43,6 +43,11 @@ func (h *WebhookHandler) ProcessTask(ctx context.Context, task *asynq.Task) erro
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", payload.AppName+"-Webhook/1.0")
 	req.Header.Set("X-Signature", computeSignature([]byte(payload.APIKeyHash), raw))
+	// Propagate the OTel trace context to downstream webhook receivers
+	// via the W3C traceparent header so they can continue the distributed trace.
+	if payload.TraceID != "" {
+		req.Header.Set("traceparent", "00-"+payload.TraceID+"-0000000000000001-01")
+	}
 	for _, hdr := range payload.Headers {
 		req.Header.Set(hdr.Key, hdr.Value)
 	}
@@ -65,7 +70,7 @@ func (h *WebhookHandler) ProcessTask(ctx context.Context, task *asynq.Task) erro
 }
 
 func buildWebhookBody(p *WebhookForwardPayload) map[string]any {
-	return map[string]any{
+	body := map[string]any{
 		"event":      "message.created",
 		"webhook_id": p.WhID,
 		"conv_id":    p.ConvID,
@@ -79,6 +84,10 @@ func buildWebhookBody(p *WebhookForwardPayload) map[string]any {
 			"timestamp":    p.Timestamp,
 		},
 	}
+	if p.TraceID != "" {
+		body["trace_id"] = p.TraceID
+	}
+	return body
 }
 
 func computeSignature(secret, body []byte) string {

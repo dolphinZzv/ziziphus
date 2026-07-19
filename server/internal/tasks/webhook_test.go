@@ -31,7 +31,7 @@ func TestNewWebhookForwardTask(t *testing.T) {
 		Timestamp:   1000,
 	}
 
-	payload, err := NewWebhookForwardTask(wh, "TestApp", msg)
+	payload, err := NewWebhookForwardTask(wh, "TestApp", msg, "")
 	if err != nil {
 		t.Fatalf("NewWebhookForwardTask: %v", err)
 	}

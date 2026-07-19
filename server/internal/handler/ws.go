@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"context"
 	"encoding/json"
 	"net"
@@ -10,6 +11,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"ziziphus/internal/auth"
 	"ziziphus/internal/gateway"
 	"ziziphus/pkg/i18n"
@@ -35,6 +39,8 @@ var upgrader = websocket.Upgrader{
 		logger.Warn("ws origin mismatch", "origin", origin, "host", host)
 		return false
 	}}
+
+var wsTracer = otel.Tracer("ziziphus.ws")
 
 type msgEditor interface {
 	Get(ctx context.Context, msgID int64) (*model.Message, error)
@@ -165,6 +171,16 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("ws connected", "user_id", userID, "session_id", sess.SessionID, "conn_id", connID)
 
+	// Start a span for the WebSocket connection lifecycle
+	ctx, wsSpan := wsTracer.Start(ctx, "ws.connect",
+		trace.WithAttributes(
+			attribute.String("user_id", userID),
+			attribute.String("session_id", sess.SessionID),
+			attribute.String("conn_id", connID),
+			attribute.Int("device_type", int(deviceType)),
+		),
+	)
+
 	// notify other online users
 	h.broadcastSessionEvent(ctx, userID, sess.SessionID, int(deviceType), protocol.SessionOnline)
 
@@ -179,6 +195,8 @@ func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// read loop (blocks until disconnect)
 	h.readLoop(ctx, gwConn, userID, sess.SessionID)
+
+	wsSpan.End()
 
 	// cleanup on disconnect
 	logger.Info("ws disconnected", "user_id", userID, "session_id", sess.SessionID, "conn_id", connID)
@@ -198,17 +216,41 @@ func (h *WSHandler) readLoop(ctx context.Context, gwConn *gateway.Connection, us
 			return
 		}
 
-		if err := h.dispatch(userID, sessionID, frame, gwConn); err != nil {
+		if err := h.dispatch(ctx, userID, sessionID, frame, gwConn); err != nil {
 			logger.Warn("ws dispatch error", "user_id", userID, "session_id", sessionID, "type", frame.Type, "error", err)
 		}
 	}
 }
 
-func (h *WSHandler) dispatch(userID, sessionID string, frame protocol.Frame, conn *gateway.Connection) error {
-	// Use a 30-second timeout context for all dispatching paths.
-	// When the WebSocket connection drops, operations like DB queries
-	// and message pushing are cancelled promptly rather than hanging.
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+func (h *WSHandler) dispatch(ctx context.Context, userID, sessionID string, frame protocol.Frame, conn *gateway.Connection) error {
+	// Create a child span scoped to this frame dispatch
+	ctx, span := wsTracer.Start(ctx, "ws."+fmt.Sprint(frame.Type),
+		trace.WithAttributes(
+			attribute.String("user_id", userID),
+			attribute.String("session_id", sessionID),
+			attribute.Int("frame_type", int(frame.Type)),
+			attribute.String("frame_id", frame.ID),
+		),
+	)
+	defer span.End()
+
+	// Log the OTel trace ID so operators can correlate this message across
+	// all downstream operations (DB queries, Redis, pushes, etc.) by searching
+	// the trace ID in the observability backend.
+	sc := span.SpanContext()
+	if sc.HasTraceID() {
+		logger.Debug("ws.dispatch",
+			"trace_id", sc.TraceID().String(),
+			"user_id", userID,
+			"session_id", sessionID,
+			"frame_type", frame.Type,
+			"frame_id", frame.ID,
+		)
+	}
+
+	// Use a 30-second timeout context derived from the trace context,
+	// so spans are properly propagated through all downstream operations.
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	switch frame.Type {

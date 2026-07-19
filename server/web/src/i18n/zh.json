@@ -279,6 +279,8 @@
     "all": "全部"
   },
   "profile": {
+    "exportData": "导出数据",
+    "exportSubmitted": "数据导出请求已提交，文件将发送至你的邮箱",
     "title": "个人信息",
     "edit": "编辑",
     "save": "保存",

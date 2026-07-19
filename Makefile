@@ -113,10 +113,8 @@ deploy:
 	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "mkdir -p $(DEPLOY_PATH)/internal/storage/db/migrations"
 	scp -P $(SSH_PORT) /tmp/ziziphus-linux $(DEPLOY_USER)@$(SSH_HOST):$(DEPLOY_PATH)/ziziphus
 	ssh -p $(SSH_PORT) $(DEPLOY_USER)@$(SSH_HOST) "chmod +x $(DEPLOY_PATH)/ziziphus"
-	sed 's/^  port:.*/  port: $(DEPLOY_PORT)/; s|^  dsn:.*|  dsn: "$(DEPLOY_DSN)"|' server/config/config.yaml > /tmp/ziziphus-config.yaml
-	scp -P $(SSH_PORT) /tmp/ziziphus-config.yaml $(DEPLOY_USER)@$(SSH_HOST):$(DEPLOY_PATH)/config.yaml
 	scp -P $(SSH_PORT) server/internal/storage/db/migrations/*.sql $(DEPLOY_USER)@$(SSH_HOST):$(DEPLOY_PATH)/internal/storage/db/migrations/
-	rm -f /tmp/ziziphus-linux /tmp/ziziphus-config.yaml
+	rm -f /tmp/ziziphus-linux
 	printf '%s\n' '[Unit]' 'Description=Ziziphus Server' 'After=network.target' '' '[Service]' 'Type=simple' 'WorkingDirectory=$(DEPLOY_PATH)' 'ExecStart=$(DEPLOY_PATH)/ziziphus -c $(DEPLOY_PATH)/config.yaml' 'Restart=always' 'RestartSec=5' '' '[Install]' 'WantedBy=multi-user.target' > /tmp/ziziphus.service
 	scp -P $(SSH_PORT) /tmp/ziziphus.service $(DEPLOY_USER)@$(SSH_HOST):/etc/systemd/system/ziziphus.service
 	rm -f /tmp/ziziphus.service

@@ -278,6 +278,8 @@
     "all": "전체"
   },
   "profile": {
+    "exportData": "Export My Data",
+    "exportSubmitted": "Data export request submitted, the file will be sent to your email",
     "title": "프로필",
     "edit": "편집",
     "save": "저장",

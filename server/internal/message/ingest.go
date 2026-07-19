@@ -10,6 +10,7 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
+	"go.opentelemetry.io/otel/trace"
 	"ziziphus/internal/metrics"
 	"ziziphus/internal/tasks"
 	"ziziphus/pkg/i18n"
@@ -181,6 +182,18 @@ func (in *Ingest) Ingest(ctx context.Context, senderID, sessionID string, payloa
 		return nil, err
 	}
 	metrics.MessagesSentTotal.Inc()
+
+	// Log trace ID so this message can be correlated across all downstream
+	// operations (DB, Redis, push, webhooks) using the observability backend.
+	if sc := trace.SpanFromContext(ctx).SpanContext(); sc.HasTraceID() {
+		logger.Debug("message ingested",
+			"trace_id", sc.TraceID().String(),
+			"msg_id", msgID,
+			"conv_id", payload.ConvID,
+			"sender", senderID,
+			"conv_seq", convSeq,
+		)
+	}
 
 	// 6. set sender's user_seq so self-messages don't count as unread
 	_ = in.seqCache.SetUserSeq(ctx, senderID, payload.ConvID, convSeq)
@@ -400,17 +413,31 @@ func (in *Ingest) handleFormResponse(ctx context.Context, senderID string, sessi
 		logger.Warn("update contact request status failed", "request_id", req.ID, "error", err)
 	}
 
-	responderName := senderID
-	if resp.ResponderName != "" {
-		responderName = resp.ResponderName
+	// Build responder name (the user who approved/rejected).
+	responderName := resp.ResponderName
+	if responderName == "" {
+		if u, err := in.userDB.GetByID(ctx, senderID); err == nil && u != nil {
+			responderName = u.Name
+		} else {
+			responderName = senderID
+		}
 	}
-	initiatorName := req.FromUserID
+
+	// Build initiator name (the user who sent the original contact request).
+	initiatorName := ""
 	if resp.FormMsgID > 0 {
 		if formMsg, err := in.store.Get(ctx, resp.FormMsgID); err == nil && formMsg != nil {
 			var formBody model.FormDefinitionBody
 			if json.Unmarshal([]byte(formMsg.Body), &formBody) == nil && formBody.FromUserName != "" {
 				initiatorName = formBody.FromUserName
 			}
+		}
+	}
+	if initiatorName == "" {
+		if u, err := in.userDB.GetByID(ctx, req.FromUserID); err == nil && u != nil {
+			initiatorName = u.Name
+		} else {
+			initiatorName = req.FromUserID
 		}
 	}
 
@@ -500,7 +527,8 @@ func (in *Ingest) forwardToWebhooks(ctx context.Context, msg *model.Message) {
 		if len(mentioned) > 0 && !mentioned[wh.Name] {
 			continue
 		}
-		payload, err := tasks.NewWebhookForwardTask(wh, in.appName, msg)
+		traceID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+		payload, err := tasks.NewWebhookForwardTask(wh, in.appName, msg, traceID)
 		if err != nil {
 			logger.Warn("webhook forward task creation failed", "wh_id", wh.ID, "error", err)
 			continue

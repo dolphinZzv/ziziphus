@@ -51,6 +51,17 @@ ratelimit:
   global_rate: 100                       # req/s per IP (DDoS deterrent)
   global_burst: 200                      # burst size for global limiter
 
+# OpenTelemetry distributed tracing (OTLP)
+# Set enabled: true to export traces to a collector (e.g. Jaeger, SigNoz, Grafana Tempo).
+# When disabled (default), tracing is a no-op with zero overhead.
+otel:
+  enabled: false                  # set to true to enable tracing
+  endpoint: "localhost:4317"      # OTLP collector endpoint (gRPC)
+  protocol: "grpc"                # "grpc" or "http" (only gRPC currently supported)
+  service_name: "ziziphus"        # service name in traces
+  sample_rate: 1.0                # trace sampling rate (0.0 - 1.0)
+  insecure: true                  # disable TLS for the OTLP connection
+
 # Zap structured logger with optional file rotation (lumberjack)
 log:
   level: info           # debug, info, warn, error

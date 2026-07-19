@@ -62,6 +62,54 @@ var resetPasswordKO string
 //go:embed email_templates/reset_password_ru.html
 var resetPasswordRU string
 
+//go:embed email_templates/data_export_zh.html
+var dataExportZH string
+
+//go:embed email_templates/data_export_en.html
+var dataExportEN string
+
+//go:embed email_templates/data_export_ja.html
+var dataExportJA string
+
+//go:embed email_templates/data_export_fr.html
+var dataExportFR string
+
+//go:embed email_templates/data_export_de.html
+var dataExportDE string
+
+//go:embed email_templates/data_export_es.html
+var dataExportES string
+
+//go:embed email_templates/data_export_ko.html
+var dataExportKO string
+
+//go:embed email_templates/data_export_ru.html
+var dataExportRU string
+
+//go:embed email_templates/welcome_zh.html
+var welcomeZH string
+
+//go:embed email_templates/welcome_en.html
+var welcomeEN string
+
+//go:embed email_templates/welcome_ja.html
+var welcomeJA string
+
+//go:embed email_templates/welcome_fr.html
+var welcomeFR string
+
+//go:embed email_templates/welcome_de.html
+var welcomeDE string
+
+//go:embed email_templates/welcome_es.html
+var welcomeES string
+
+//go:embed email_templates/welcome_ko.html
+var welcomeKO string
+
+//go:embed email_templates/welcome_ru.html
+var welcomeRU string
+
 var emailTemplates = map[string]map[string]string{
 	"verify_code": {
 		"zh": verifyCodeZH,
@@ -83,6 +131,43 @@ var emailTemplates = map[string]map[string]string{
 		"ko": resetPasswordKO,
 		"ru": resetPasswordRU,
 	},
+	"data_export": {
+		"zh": dataExportZH,
+		"en": dataExportEN,
+		"ja": dataExportJA,
+		"fr": dataExportFR,
+		"de": dataExportDE,
+		"es": dataExportES,
+		"ko": dataExportKO,
+		"ru": dataExportRU,
+	},
+	"welcome": {
+		"zh": welcomeZH,
+		"en": welcomeEN,
+		"ja": welcomeJA,
+		"fr": welcomeFR,
+		"de": welcomeDE,
+		"es": welcomeES,
+		"ko": welcomeKO,
+		"ru": welcomeRU,
+	},
+}
+
+// DataExportTemplateData holds the render variables for data export emails.
+type DataExportTemplateData struct {
+	AppName  string
+	Title    string
+	Body     string
+	DataJSON string
+	Footer   string
+}
+
+// WelcomeTemplateData holds the render variables for welcome emails.
+type WelcomeTemplateData struct {
+	AppName string
+	Title   string
+	Body    string
+	Footer  string
 }
 
 type TemplateData struct {
@@ -229,6 +314,179 @@ func (m *Mailer) SendVerificationCodeLang(to, code, lang string) error {
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, TemplateData{AppName: appName, Code: code}); err != nil {
+		return fmt.Errorf("execute template: %w", err)
+	}
+
+	return m.send(to, subject, buf.String())
+}
+
+// SendWelcomeEmailLang sends a welcome email to a newly registered user
+// in their preferred language.
+func (m *Mailer) SendWelcomeEmailLang(to string, lang string) error {
+	if !m.Enabled() {
+		return fmt.Errorf("mailer disabled")
+	}
+
+	appName := m.appNameVal()
+
+	titles := map[string]string{
+		"zh": "欢迎加入 " + appName,
+		"en": "Welcome to " + appName,
+		"ja": appName + " へようこそ",
+		"fr": "Bienvenue sur " + appName,
+		"de": "Willkommen bei " + appName,
+		"es": "Bienvenido a " + appName,
+		"ko": appName + "에 오신 것을 환영합니다",
+		"ru": "Добро пожаловать в " + appName,
+	}
+	bodies := map[string]string{
+		"zh": "你已成功注册 " + appName + " 账号。现在你可以开始与朋友聊天、创建群组、分享文件等。",
+		"en": "You have successfully registered for " + appName + ". Now you can start chatting with friends, create groups, share files, and more.",
+		"ja": appName + " への登録が完了しました。友達とチャットを始めたり、グループを作成したり、ファイルを共有したりできます。",
+		"fr": "Vous vous êtes inscrit avec succès à " + appName + ". Vous pouvez maintenant discuter avec des amis, créer des groupes, partager des fichiers, etc.",
+		"de": "Sie haben sich erfolgreich bei " + appName + " registriert. Sie können jetzt mit Freunden chatten, Gruppen erstellen, Dateien teilen und mehr.",
+		"es": "Te has registrado exitosamente en " + appName + ". Ahora puedes chatear con amigos, crear grupos, compartir archivos y más.",
+		"ko": appName + "에 성공적으로 가입하셨습니다. 이제 친구들과 채팅하고, 그룹을 만들고, 파일을 공유하는 등의 활동을 할 수 있습니다.",
+		"ru": "Вы успешно зарегистрировались в " + appName + ". Теперь вы можете общаться с друзьями, создавать группы, обмениваться файлами и многое другое.",
+	}
+	footers := map[string]string{
+		"zh": "如果你没有注册此账号，请忽略此邮件。",
+		"en": "If you did not register for this account, please ignore this email.",
+		"ja": "このアカウントに登録していない場合は、このメールを無視してください。",
+		"fr": "Si vous n'avez pas créé ce compte, veuillez ignorer cet email.",
+		"de": "Wenn Sie sich nicht für dieses Konto registriert haben, ignorieren Sie bitte diese E-Mail.",
+		"es": "Si no te registraste en esta cuenta, ignora este correo.",
+		"ko": "이 계정에 가입하지 않은 경우 이 이메일을 무시하십시오.",
+		"ru": "Если вы не регистрировали эту учетную запись, проигнорируйте это письмо.",
+	}
+
+	title := "Welcome to " + appName
+	if t, ok := titles[lang]; ok {
+		title = t
+	}
+	bodyText := ""
+	if b, ok := bodies[lang]; ok {
+		bodyText = b
+	}
+	footerText := ""
+	if f, ok := footers[lang]; ok {
+		footerText = f
+	}
+
+	tmplBody := welcomeZH
+	if templates, ok := emailTemplates["welcome"]; ok {
+		if t, ok := templates[lang]; ok {
+			tmplBody = t
+		}
+	}
+
+	tmpl, err := template.New("email").Parse(tmplBody)
+	if err != nil {
+		return fmt.Errorf("parse template: %w", err)
+	}
+
+	subject := title
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, WelcomeTemplateData{
+		AppName: appName,
+		Title:   title,
+		Body:    bodyText,
+		Footer:  footerText,
+	}); err != nil {
+		return fmt.Errorf("execute template: %w", err)
+	}
+
+	return m.send(to, subject, buf.String())
+}
+
+// SendDataExportLang sends a data-export email with the exported JSON embedded
+// in the email body, rendered in the user's preferred language.
+func (m *Mailer) SendDataExportLang(to string, dataJSON string, lang string) error {
+	if !m.Enabled() {
+		return fmt.Errorf("mailer disabled")
+	}
+
+	appName := m.appNameVal()
+
+	subjects := map[string]string{
+		"zh": appName + " - 数据导出",
+		"en": appName + " - Data Export",
+		"ja": appName + " - データエクスポート",
+		"fr": appName + " - Export de données",
+		"de": appName + " - Datenexport",
+		"es": appName + " - Exportación de datos",
+		"ko": appName + " - 데이터 내보내기",
+		"ru": appName + " - Экспорт данных",
+	}
+	subject := appName + " - Data Export"
+	if s, ok := subjects[lang]; ok {
+		subject = s
+	}
+
+	titles := map[string]string{
+		"zh": "数据导出完成",
+		"en": "Data Export Complete",
+		"ja": "データエクスポート完了",
+		"fr": "Export de données terminé",
+		"de": "Datenexport abgeschlossen",
+		"es": "Exportación de datos completada",
+		"ko": "데이터 내보내기 완료",
+		"ru": "Экспорт данных завершен",
+	}
+	bodies := map[string]string{
+		"zh": "你请求的数据导出已完成。以下是你的数据文件（JSON 格式），包含个人信息、消息记录和会话记录。请妥善保管，不要分享给他人。",
+		"en": "Your requested data export is ready. Below is your data file (JSON format) containing profile info, message history, and session records. Please keep this file secure.",
+		"ja": "リクエストされたデータのエクスポートが完了しました。以下がデータファイル（JSON形式）です。プロフィール情報、メッセージ履歴、セッション記録が含まれます。",
+		"fr": "L'export de vos données est terminé. Voici votre fichier de données (format JSON) contenant profil, messages et sessions. Veuillez garder ce fichier en sécurité.",
+		"de": "Ihr angeforderter Datenexport ist fertig. Unten finden Sie Ihre Datendatei (JSON-Format) mit Profil, Nachrichten und Sitzungen. Bitte bewahren Sie diese Datei sicher auf.",
+		"es": "Su exportación de datos está lista. A continuación su archivo de datos (formato JSON) con perfil, mensajes y sesiones. Guarde este archivo de forma segura.",
+		"ko": "요청하신 데이터 내보내기가 완료되었습니다. 아래는 프로필 정보, 메시지 기록, 세션 기록이 포함된 데이터 파일(JSON 형식)입니다. 이 파일을 안전하게 보관하십시오.",
+		"ru": "Запрошенный экспорт данных готов. Ниже ваш файл данных (формат JSON) с профилем, сообщениями и сессиями. Пожалуйста, храните этот файл в безопасности.",
+	}
+	footers := map[string]string{
+		"zh": "如果你没有请求数据导出，请忽略此邮件。",
+		"en": "If you did not request this export, please ignore this email.",
+		"ja": "このエクスポートをリクエストしていない場合は、このメールを無視してください。",
+		"fr": "Si vous n'avez pas demandé cet export, veuillez ignorer cet email.",
+		"de": "Wenn Sie diesen Export nicht angefordert haben, ignorieren Sie bitte diese E-Mail.",
+		"es": "Si no solicitó esta exportación, ignore este correo.",
+		"ko": "이 내보내기를 요청하지 않은 경우 이 이메일을 무시하십시오.",
+		"ru": "Если вы не запрашивали этот экспорт, проигнорируйте это письмо.",
+	}
+
+	title := "Data Export Complete"
+	if t, ok := titles[lang]; ok {
+		title = t
+	}
+	bodyText := ""
+	if b, ok := bodies[lang]; ok {
+		bodyText = b
+	}
+	footerText := ""
+	if f, ok := footers[lang]; ok {
+		footerText = f
+	}
+
+	tmplBody := dataExportZH
+	if templates, ok := emailTemplates["data_export"]; ok {
+		if t, ok := templates[lang]; ok {
+			tmplBody = t
+		}
+	}
+
+	tmpl, err := template.New("email").Parse(tmplBody)
+	if err != nil {
+		return fmt.Errorf("parse template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, DataExportTemplateData{
+		AppName:  appName,
+		Title:    title,
+		Body:     bodyText,
+		DataJSON: dataJSON,
+		Footer:   footerText,
+	}); err != nil {
 		return fmt.Errorf("execute template: %w", err)
 	}
 

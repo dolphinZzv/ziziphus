@@ -278,6 +278,8 @@
     "all": "Все"
   },
   "profile": {
+    "exportData": "Export My Data",
+    "exportSubmitted": "Data export request submitted, the file will be sent to your email",
     "title": "Профиль",
     "edit": "Редактировать",
     "save": "Сохранить",

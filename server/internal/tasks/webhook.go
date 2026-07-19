@@ -22,9 +22,10 @@ type WebhookForwardPayload struct {
 	Body        string                `json:"body"`
 	ReplyTo     int64                 `json:"reply_to"`
 	Timestamp   int64                 `json:"timestamp"`
+	TraceID     string                `json:"trace_id,omitempty"`
 }
 
-func NewWebhookForwardTask(wh *model.ConvWebhook, appName string, msg *model.Message) (*WebhookForwardPayload, error) {
+func NewWebhookForwardTask(wh *model.ConvWebhook, appName string, msg *model.Message, traceID string) (*WebhookForwardPayload, error) {
 	return &WebhookForwardPayload{
 		CallbackURL: wh.CallbackURL,
 		APIKeyHash:  wh.APIKeyHash,
@@ -39,6 +40,7 @@ func NewWebhookForwardTask(wh *model.ConvWebhook, appName string, msg *model.Mes
 		Body:        msg.Body,
 		ReplyTo:     msg.ReplyTo,
 		Timestamp:   msg.Timestamp,
+		TraceID:     traceID,
 	}, nil
 }
 

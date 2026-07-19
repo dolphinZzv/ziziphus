@@ -327,5 +327,20 @@ func TestSetDefaults(t *testing.T) {
 		if cfg.RateLimit.BurstSize != 50 {
 			t.Errorf("RateLimit.BurstSize = %d, want 50", cfg.RateLimit.BurstSize)
 		}
+		if cfg.OTel.Endpoint != "localhost:4317" {
+			t.Errorf("OTel.Endpoint = %q, want %q", cfg.OTel.Endpoint, "localhost:4317")
+		}
+		if cfg.OTel.Protocol != "grpc" {
+			t.Errorf("OTel.Protocol = %q, want %q", cfg.OTel.Protocol, "grpc")
+		}
+		if cfg.OTel.ServiceName != "ziziphus" {
+			t.Errorf("OTel.ServiceName = %q, want %q", cfg.OTel.ServiceName, "ziziphus")
+		}
+		if cfg.OTel.SampleRate != 1.0 {
+			t.Errorf("OTel.SampleRate = %f, want 1.0", cfg.OTel.SampleRate)
+		}
+		if cfg.OTel.Insecure {
+			t.Errorf("OTel.Insecure = true, want false")
+		}
 	})
 }

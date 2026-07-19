@@ -135,14 +135,7 @@ func main() {
 			Queues:      cfg.Asynq.Queues,
 		},
 	)
-	go func() {
-		mux := asynq.NewServeMux()
-		mailHandler.RegisterHandlers(mux)
-		webhookTaskHandler.RegisterHandlers(mux)
-		if err := asynqServer.Start(mux); err != nil {
-			logger.Error("asynq server error", "error", err)
-		}
-	}()
+	// asynq mux created after all handler dependencies are ready
 
 	// Caches
 	sessCache := cache.NewSessionCache(rdb)
@@ -200,12 +193,28 @@ func main() {
 	// HTTP API handlers
 	passwordResetRepo := db.NewPasswordResetRepo(pool)
 	oauthSvc := auth.NewOAuthService(cfgMgr.Get().OAuth, sf.NextID, authSvc, userRepo, rdb)
-	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailDispatcher, passwordResetRepo, msgRepo, cfg.Server.RegistrationAllowed(), cfg.App.Name, cfg.App.Env)
+	userRegisteredDispatcher := tasks.NewUserRegisteredDispatcher(asynqClient)
+	dataExportDispatcher := tasks.NewDataExportDispatcher(asynqClient)
+	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailDispatcher, passwordResetRepo, msgRepo, cfg.Server.RegistrationAllowed(), cfg.App.Name, cfg.App.Env, userRegisteredDispatcher, dataExportDispatcher)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, receiptRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)
 	sessionHandler := api.NewSessionHandler(sessMgr, gwMgr)
 	webhookHandler := api.NewWebhookHandler(webhookRepo, sf, convMgr, userRepo, msgRepo, msgRouter, pusher, seqCache, ingest)
+
+	// Data export handler + asynq mux
+	dataExportHandler := tasks.NewDataExportHandler(userRepo, msgRepo, sessMgr, mailer)
+	userRegisteredHandler := tasks.NewUserRegisteredHandler(convMgr, mailer, cfg.Seed.AutoJoinGroup)
+	asynqMux := asynq.NewServeMux()
+	mailHandler.RegisterHandlers(asynqMux)
+	webhookTaskHandler.RegisterHandlers(asynqMux)
+	dataExportHandler.RegisterHandlers(asynqMux)
+	userRegisteredHandler.RegisterHandlers(asynqMux)
+	go func() {
+		if err := asynqServer.Start(asynqMux); err != nil {
+			logger.Error("asynq server error", "error", err)
+		}
+	}()
 
 	// Rate limiters (Redis-backed)
 	var loginRL *api.LoginRateLimiter

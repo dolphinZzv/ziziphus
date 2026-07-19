@@ -41,13 +41,11 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const json = await res.json()
-      const blob = new Blob([JSON.stringify(json.data, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `panda-export-${user?.user_id || 'user'}.json`
-      a.click()
-      URL.revokeObjectURL(url)
+      if (json.code === 0) {
+        alert(json.data?.message || t('profile.exportSubmitted', '导出请求已提交'))
+      } else {
+        console.error('export failed', json)
+      }
     } catch (e) { console.error('export failed', e) }
   }
   const handleLogout = () => { authStore.logout(); onClose(); navigate('/login') }
@@ -59,7 +57,7 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
   const isMobile = useIsMobile()
 
   const content = (
-    <>
+    <div className="flex flex-col h-full">
       {/* Banner */}
       <div className="h-28 relative flex-shrink-0"
         style={{ background: user?.cover
@@ -150,8 +148,8 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
         </div>
       )}
 
-      {/* Actions */}
-      <div className="px-4 pb-4 flex-shrink-0">
+      {/* Actions — scrollable body */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 flex-shrink-0">
         <div className=" space-y-0.5">
           {[
             { icon: Bot, label: t('profile.agentMgmt'), sheet: 'agents' },
@@ -169,18 +167,24 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-sm text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors mt-2">
             <Download size={18} /> {t('profile.exportData', 'Export My Data')}
           </button>
-          <div className="flex items-center justify-center gap-3 px-3 py-2 text-xs text-[var(--color-muted-soft)]">
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex-shrink-0 border-t border-[var(--color-hairline)]">
+        <div className="px-4 pt-3 pb-4 space-y-0.5">
+          <div className="flex items-center justify-center gap-3 py-2 text-xs text-[var(--color-muted-soft)]">
             <a href="/privacy" className="hover:text-[var(--color-primary)] transition-colors">{t('profile.privacy', 'Privacy')}</a>
             <span className="text-[var(--color-hairline)]">·</span>
             <a href="/terms" className="hover:text-[var(--color-primary)] transition-colors">{t('profile.terms', 'Terms')}</a>
           </div>
           <button onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--destructive)]/10 text-sm text-[var(--destructive)] transition-colors">
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl hover:bg-[var(--destructive)]/10 text-sm text-[var(--destructive)] transition-colors">
             <LogOut size={18} /> {t('profile.logout')}
           </button>
         </div>
       </div>
-    </>
+    </div>
   )
 
   if (isPage) {

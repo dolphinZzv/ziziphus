@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"ziziphus/pkg/i18n"
 	"ziziphus/pkg/logger"
 )
@@ -45,6 +47,23 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 	if h.GlobalRL != nil {
 		r.Use(h.GlobalRL.Middleware)
 	}
+
+	// OTel span name rewrites: after chi matches a route, rename the HTTP span
+	// from the generic "ziziphus" to the low-cardinality route pattern
+	// (e.g. GET /api/v1/users/{user_id}) so trace backends don't see
+	// thousands of unique span names from parameterised paths.
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			span := trace.SpanFromContext(r.Context())
+			if routeCtx := chi.RouteContext(r.Context()); routeCtx != nil {
+				if pattern := routeCtx.RoutePattern(); pattern != "" {
+					span.SetName(r.Method + " " + pattern)
+					span.SetAttributes(attribute.String("http.route", pattern))
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
 
 	// Public routes (login rate limited)
 	r.Group(func(r chi.Router) {
@@ -169,7 +188,8 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 }
 
 // requestLogger is a custom logger that redacts sensitive query parameters
-// (e.g. tokens) before logging the request URL.
+// (e.g. tokens) before logging the request URL. When OTel tracing is enabled,
+// the span/trace ID is also logged for end-to-end correlation.
 func requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -188,14 +208,24 @@ func requestLogger(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 
 		latency := time.Since(start)
-		logger.Info("request",
+
+		fields := []any{
 			"method", r.Method,
 			"path", sanitized,
 			"status", ww.Status(),
 			"latency_ms", latency.Milliseconds(),
 			"ip", r.RemoteAddr,
 			"ua", r.UserAgent(),
-		)
+		}
+
+		// Include the OTel trace ID so every HTTP request log can be correlated
+		// with its distributed trace across services and the WebSocket message
+		// that triggered it.
+		if span := trace.SpanFromContext(r.Context()); span.SpanContext().HasTraceID() {
+			fields = append(fields, "trace_id", span.SpanContext().TraceID().String())
+		}
+
+		logger.Info("request", fields...)
 	})
 }
 
