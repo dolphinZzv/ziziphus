@@ -52,9 +52,13 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 72,
-    overscan: 10,
+    estimateSize: (i) => items[i]?.type === 'date' ? 28 : 72,
+    overscan: 15,
+    paddingEnd: 20,
+    measureElement: (el) => el.getBoundingClientRect().height,
   })
+  const virtualizerRef = useRef(virtualizer)
+  virtualizerRef.current = virtualizer
 
   // Batch-fetch sender info
   const fetchedSendersRef = useRef(new Set<string>())
@@ -123,7 +127,7 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
     }
   }, [convId])
 
-  // ResizeObserver — auto-scroll when content grows while user is at bottom
+  // Resize observer — auto-scroll when content grows while user is at bottom
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -134,23 +138,27 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
     return () => ro.disconnect()
   }, [scrollToEnd])
 
-  // Reset on conversation change
-  const virtualizerRef = useRef(virtualizer)
-  virtualizerRef.current = virtualizer
-  const itemsLenRef = useRef(0)
-  itemsLenRef.current = items.length
-  const msgsLenRef = useRef(0)
-  msgsLenRef.current = messages.length
+  // Scroll to bottom on conversation change
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
+  const itemsRef = useRef(items)
+  itemsRef.current = items
   useLayoutEffect(() => {
     shouldAutoScroll.current = true
     initialScrollDone.current = false
     loadMoreState.current = 'idle'
-    const lastIdx = itemsLenRef.current - 1
-    if (lastIdx >= 0) virtualizerRef.current.scrollToIndex(lastIdx, { align: 'end', behavior: 'auto' })
-    prevLen.current = msgsLenRef.current
-    // Use the current messages from the ref rather than closure
-    prevFirstId.current = 0
+    const msgs = messagesRef.current
+    const itms = itemsRef.current
+    prevLen.current = msgs.length
+    prevFirstId.current = msgs[0]?.msg_id || 0
+
+    // Force virtualizer to re-measure on conversation switch
+    virtualizerRef.current.measure()
+
     requestAnimationFrame(() => {
+      if (itms.length > 0) {
+        virtualizerRef.current.scrollToIndex(itms.length - 1, { align: 'end', behavior: 'auto' })
+      }
       requestAnimationFrame(() => {
         initialScrollDone.current = true
       })
@@ -166,7 +174,6 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
 
     if (firstId > 0 && firstId !== prevFirstId.current && loadMoreState.current !== 'idle') {
       // Messages were prepended (loadMore completed).
-      // Adjust scroll position to keep visual content stable.
       const el = scrollRef.current
       if (el && loadMorePrevHeight.current > 0) {
         const heightDiff = el.scrollHeight - loadMorePrevHeight.current
@@ -190,13 +197,17 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
 
   return (
     <div className="relative h-full">
-      <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4 py-2">
+      <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4">
         <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
           {virtualizer.getVirtualItems().map(virtualRow => {
             const item = items[virtualRow.index]
+            if (!item) return null
             if (item.type === 'date') {
               return (
-                <div key={item.key} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 28, transform: `translateY(${virtualRow.start}px)` }}>
+                <div key={item.key}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}>
                   <DateSeparator timestamp={item.ts} />
                 </div>
               )
@@ -205,8 +216,10 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
             return (
               <div key={item.key}
                 id={`msg-${msg.msg_id}`}
+                data-index={virtualRow.index}
+                ref={virtualizer.measureElement}
                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
-                className="animate-msg-in"
+                className="py-1 animate-msg-in"
               >
                 <MemoBubble
                   message={msg}
@@ -218,7 +231,6 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
             )
           })}
         </div>
-        <div className="h-5" />
       </div>
       {showScrollBtn && (
         <button onClick={handleScrollBtnClick}
