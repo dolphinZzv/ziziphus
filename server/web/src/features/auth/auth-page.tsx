@@ -41,6 +41,7 @@ export default function AuthPage() {
   const [regConfirm, setRegConfirm] = useState('')
   const [regEmail, setRegEmail] = useState('')
   const [localRegError, setLocalRegError] = useState('')
+  const [agreeTerms, setAgreeTerms] = useState(false)
 
   // Forgot password state
   const [fpAccount, setFpAccount] = useState('')
@@ -128,6 +129,7 @@ export default function AuthPage() {
     if (regPassword.trim().length < 8) { setLocalRegError(t('auth.passwordTooShort', '密码至少8位')); return }
     if (regPassword.trim().length > 72) { setLocalRegError(t('auth.passwordTooLong', '密码最多72位')); return }
     if (regPassword !== regConfirm) { setLocalRegError(t('auth.passwordMismatch')); return }
+    if (!agreeTerms) { setLocalRegError(t('auth.agreeRequired', '请同意隐私政策和服务条款')); return }
     try { await authStore.register(regAccount.trim(), regName.trim(), regPassword.trim(), regEmail.trim() || undefined) } catch (e) { console.error(e) }
   }
 
@@ -295,7 +297,17 @@ export default function AuthPage() {
               {displayRegError && (
                 <div className="text-xs text-[var(--destructive)] bg-[var(--destructive)]/10 rounded-xl px-3 py-2">{displayRegError}</div>
               )}
-              <button type="submit" disabled={isLoading}
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-[var(--color-hairline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]/20 accent-[var(--color-primary)]" />
+                <span className="text-xs text-[var(--color-muted)] leading-relaxed">
+                  {t('auth.agreeTerms', '我同意')}{' '}
+                  <a href="/privacy" target="_blank" className="text-[var(--color-primary)] hover:underline">{t('auth.privacy', '隐私政策')}</a>
+                  {' '}{t('common.and', '和')}{' '}
+                  <a href="/terms" target="_blank" className="text-[var(--color-primary)] hover:underline">{t('auth.terms', '服务条款')}</a>
+                </span>
+              </label>
+              <button type="submit" disabled={isLoading || !agreeTerms}
                 className="w-full h-11 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40">
                 {isLoading ? t('auth.registering') : t('auth.register')}
               </button>
