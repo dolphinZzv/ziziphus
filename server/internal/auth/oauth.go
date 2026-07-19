@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5"
 	"ziziphus/config"
 	"ziziphus/pkg/model"
@@ -39,22 +40,45 @@ type OAuthState struct {
 }
 
 type OAuthStateStore struct {
+	rdb redis.UniversalClient
 	mu  sync.RWMutex
 	mem map[string]*OAuthState
 }
 
-func NewOAuthStateStore() *OAuthStateStore {
-	return &OAuthStateStore{mem: make(map[string]*OAuthState)}
+func NewOAuthStateStore(rdb redis.UniversalClient) *OAuthStateStore {
+	return &OAuthStateStore{
+		rdb: rdb,
+		mem: make(map[string]*OAuthState),
+	}
 }
 
 func (s *OAuthStateStore) Set(state string, data *OAuthState) {
+	data.ExpiresAt = time.Now().Add(10 * time.Minute)
+	if s.rdb != nil {
+		payload, _ := json.Marshal(data)
+		s.rdb.Set(context.Background(), "oauth_state:"+state, payload, 10*time.Minute)
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	data.ExpiresAt = time.Now().Add(10 * time.Minute)
 	s.mem[state] = data
 }
 
 func (s *OAuthStateStore) GetAndClear(state string) *OAuthState {
+	if s.rdb != nil {
+		data, err := s.rdb.GetDel(context.Background(), "oauth_state:"+state).Bytes()
+		if err != nil {
+			return nil
+		}
+		var result OAuthState
+		if err := json.Unmarshal(data, &result); err != nil {
+			return nil
+		}
+		if time.Now().After(result.ExpiresAt) {
+			return nil
+		}
+		return &result
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	data := s.mem[state]
@@ -90,14 +114,14 @@ type OAuthService struct {
 	stateStore *OAuthStateStore
 }
 
-func NewOAuthService(cfg config.OAuthConfig, idGen func() int64, svc TokenGenerator, userRepo OAuthUserRepo) *OAuthService {
+func NewOAuthService(cfg config.OAuthConfig, idGen func() int64, svc TokenGenerator, userRepo OAuthUserRepo, rdb redis.UniversalClient) *OAuthService {
 	return &OAuthService{
 		cfg:        cfg,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		idGen:      idGen,
 		svc:        svc,
 		userRepo:   userRepo,
-		stateStore: NewOAuthStateStore(),
+		stateStore: NewOAuthStateStore(rdb),
 	}
 }
 

@@ -158,6 +158,7 @@ func main() {
 
 	// Auth service
 	authSvc := auth.NewService(cfg.JWT.Secret, cfg.JWT.ExpireHours, cfg.JWT.RefreshExpireHours, userRepo, rdb, sf.NextID)
+	auth.InitSignupCodeStore(rdb)
 
 	// Session manager
 	sessMgr := session.NewManager(sessCache, sessRepo)
@@ -198,7 +199,7 @@ func main() {
 
 	// HTTP API handlers
 	passwordResetRepo := db.NewPasswordResetRepo(pool)
-	oauthSvc := auth.NewOAuthService(cfgMgr.Get().OAuth, sf.NextID, authSvc, userRepo)
+	oauthSvc := auth.NewOAuthService(cfgMgr.Get().OAuth, sf.NextID, authSvc, userRepo, rdb)
 	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailDispatcher, passwordResetRepo, msgRepo, cfg.Server.RegistrationAllowed(), cfg.App.Name, cfg.App.Env)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, receiptRepo, convMgr)

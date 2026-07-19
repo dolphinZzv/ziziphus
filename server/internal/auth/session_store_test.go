@@ -3,7 +3,47 @@ package auth
 import (
 	"sync"
 	"testing"
+
+	"github.com/alicebob/miniredis/v2"
+	"github.com/go-redis/redis/v8"
 )
+
+func TestSetSignupCode_Redis(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("miniredis.Run: %v", err)
+	}
+	defer mr.Close()
+
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	InitSignupCodeStore(rdb)
+	defer InitSignupCodeStore(nil) // Reset to memory mode
+
+	SetSignupCode("r-code-1", "user_1", 60)
+	defer ClearSignupCode("r-code-1")
+
+	userID := GetSignupCode("r-code-1")
+	if userID != "user_1" {
+		t.Errorf("GetSignupCode = %q, want user_1", userID)
+	}
+}
+
+func TestGetSignupCode_Redis_NotFound(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("miniredis.Run: %v", err)
+	}
+	defer mr.Close()
+
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	InitSignupCodeStore(rdb)
+	defer InitSignupCodeStore(nil)
+
+	userID := GetSignupCode("r-nonexistent")
+	if userID != "" {
+		t.Errorf("GetSignupCode = %q, want empty", userID)
+	}
+}
 
 func TestSetSignupCode(t *testing.T) {
 	SetSignupCode("test-code-1", "user_1", 60)
