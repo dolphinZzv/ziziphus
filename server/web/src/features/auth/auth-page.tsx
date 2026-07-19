@@ -33,6 +33,7 @@ export default function AuthPage() {
   const [remember] = useState(true)
   const [localLoginError, setLocalLoginError] = useState('')
   const [savedAccounts, setSavedAccounts] = useState(getSavedAccounts)
+  const [agreeLoginTerms, setAgreeLoginTerms] = useState(false)
 
   // Register state
   const [regAccount, setRegAccount] = useState('')
@@ -103,6 +104,7 @@ export default function AuthPage() {
     e.preventDefault()
     if (!account.trim()) { setLocalLoginError(t('auth.accountRequired', '请填写账号')); return }
     if (!password.trim()) { setLocalLoginError(t('auth.passwordRequired', '请填写密码')); return }
+    if (!agreeLoginTerms) { setLocalLoginError(t('auth.agreeRequired', '请同意隐私政策和服务条款')); return }
     try {
       await authStore.login(account.trim(), password)
       if (remember) saveAccount(account.trim())
@@ -264,7 +266,17 @@ export default function AuthPage() {
                   </div>
                 </>
               )}
-              <button type="submit" disabled={isLoading}
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" checked={agreeLoginTerms} onChange={e => setAgreeLoginTerms(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-[var(--color-hairline)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]/20 accent-[var(--color-primary)]" />
+                <span className="text-xs text-[var(--color-muted)] leading-relaxed">
+                  {t('auth.agreeTerms', 'I agree to the')}{' '}
+                  <a href="/privacy" target="_blank" className="text-[var(--color-primary)] hover:underline">{t('auth.privacy', 'Privacy Policy')}</a>
+                  {' '}{t('common.and', 'and')}{' '}
+                  <a href="/terms" target="_blank" className="text-[var(--color-primary)] hover:underline">{t('auth.terms', 'Terms of Service')}</a>
+                </span>
+              </label>
+              <button type="submit" disabled={isLoading || !agreeLoginTerms}
                 className="w-full h-12 rounded-xl bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer mt-1">
                 {isLoading ? t('auth.loggingIn') : t('auth.login')}
               </button>
