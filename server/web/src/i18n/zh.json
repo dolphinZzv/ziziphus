@@ -46,6 +46,7 @@
     "requestResetFailed": "请求失败",
     "resetFailed": "重置失败",
     "passwordTooShort": "密码至少8位",
+    "passwordTooLong": "密码最多72位",
     "accountRequired": "请填写账号",
     "nameRequired": "请填写昵称",
     "passwordRequired": "请填写密码",

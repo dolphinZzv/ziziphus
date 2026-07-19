@@ -80,6 +80,9 @@ func (s *Service) Register(ctx context.Context, name, password, account, email, 
 	if len(password) < 8 {
 		return nil, "", "", &model.AppError{Code: model.ErrBadMessage, Message: "password must be at least 8 characters", Key: "auth.password_too_short"}
 	}
+	if len(password) > 72 {
+		return nil, "", "", &model.AppError{Code: model.ErrBadMessage, Message: "password must be at most 72 characters", Key: "auth.password_too_long"}
+	}
 	if account != "" {
 		existing, _ := s.userRepo.GetByAccount(ctx, account)
 		if existing != nil {
@@ -339,6 +342,9 @@ func (s *Service) VerifyResetCode(ctx context.Context, userID, code string, rese
 func (s *Service) ResetPassword(ctx context.Context, userID, code, newPassword string, resetStore passwordResetStore, pwUpdater passwordUpdater) error {
 	if len(newPassword) < 8 {
 		return &model.AppError{Code: model.ErrBadMessage, Message: "password must be at least 8 characters", Key: "auth.password_too_short"}
+	}
+	if len(newPassword) > 72 {
+		return &model.AppError{Code: model.ErrBadMessage, Message: "password must be at most 72 characters", Key: "auth.password_too_long"}
 	}
 
 	if err := s.VerifyResetCode(ctx, userID, code, resetStore); err != nil {

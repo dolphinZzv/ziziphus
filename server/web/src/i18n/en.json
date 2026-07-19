@@ -46,6 +46,7 @@
     "requestResetFailed": "Request failed",
     "resetFailed": "Password reset failed",
     "passwordTooShort": "Password must be at least 8 characters",
+    "passwordTooLong": "Password must be at most 72 characters",
     "accountRequired": "Please enter your account",
     "nameRequired": "Please enter your nickname",
     "passwordRequired": "Please enter your password",

@@ -107,6 +107,7 @@ export default function AuthPage() {
     if (!regName.trim()) { setLocalRegError(t('auth.nameRequired', '请填写昵称')); return }
     if (!regPassword.trim()) { setLocalRegError(t('auth.passwordRequired', '请填写密码')); return }
     if (regPassword.trim().length < 8) { setLocalRegError(t('auth.passwordTooShort', '密码至少8位')); return }
+    if (regPassword.trim().length > 72) { setLocalRegError(t('auth.passwordTooLong', '密码最多72位')); return }
     if (regPassword !== regConfirm) { setLocalRegError(t('auth.passwordMismatch')); return }
     try { await authStore.register(regAccount.trim(), regName.trim(), regPassword.trim(), regEmail.trim() || undefined) } catch (e) { console.error(e) }
   }
@@ -138,6 +139,7 @@ export default function AuthPage() {
       setFpError(t('auth.fieldRequired', '请填写所有字段')); return
     }
     if (fpNewPassword.length < 8) { setFpError(t('auth.passwordTooShort', '密码至少8位')); return }
+    if (fpNewPassword.length > 72) { setFpError(t('auth.passwordTooLong', '密码最多72位')); return }
     if (fpNewPassword !== fpConfirm) { setFpError(t('auth.passwordMismatch')); return }
     setFpIsLoading(true)
     try {
