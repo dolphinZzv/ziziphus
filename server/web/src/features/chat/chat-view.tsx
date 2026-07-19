@@ -74,6 +74,7 @@ export default function ChatView() {
   const [convColor, setConvColor] = useState('')
   const [detailName, setDetailName] = useState('')
   const [detailAvatar, setDetailAvatar] = useState('')
+  const [detailConvType, setDetailConvType] = useState<ConvType | null>(null)
   const lastMarkedRef = useRef<Map<string, number>>(new Map())
 
   // --- Drag-drop handled by InputBar ---
@@ -81,7 +82,8 @@ export default function ChatView() {
   // --- End drag-drop ---
 
   const conv = conversations.find(c => c.conv_id === convId)
-  const isGroup = conv?.type === ConvType.Group
+  const convType = conv?.type ?? detailConvType
+  const isGroup = convType === ConvType.Group
 
   // Set browser chrome/tab color to conversation's primary color, fallback to user's
   useEffect(() => {
@@ -133,6 +135,7 @@ export default function ChatView() {
     chatStore.loadHistory(convId)
     // Fetch notice for this specific group
     conversationService.getDetail(convId).then(d => {
+      setDetailConvType(d.type)
       setGroupNotice(d.type === ConvType.Group && d.notice ? d.notice : '')
       setConvColor(d.primary_color || '')
       // For P2P conversations, resolve peer name/avatar from members
@@ -147,7 +150,7 @@ export default function ChatView() {
       }
       const me = d.members?.find(m => m.user_id === user?.user_id)
       setIsOwner(me?.role === ConvRole.Owner)
-    }).catch(() => { setGroupNotice(''); setConvColor(''); setDetailName(''); setDetailAvatar(''); setIsOwner(false) })
+    }).catch(() => { setDetailConvType(null); setGroupNotice(''); setConvColor(''); setDetailName(''); setDetailAvatar(''); setIsOwner(false) })
     // Fetch conversation background image
     conversationService.getSettings(convId).then(res => {
       setBgImage((res.settings as any)?.background_image || '')
@@ -189,7 +192,7 @@ export default function ChatView() {
 
   if (!convId) return null
 
-  const isSystem = conv?.type === ConvType.System || convId.startsWith('sys:')
+  const isSystem = convType === ConvType.System || convId.startsWith('sys:')
   const displayName = isSystem ? t('conversation.systemMessage') : (conv?.name || detailName || convId)
   const displayAvatar = conv?.avatar || detailAvatar || ''
   const initials = displayName.charAt(0).toUpperCase()
@@ -401,7 +404,7 @@ export default function ChatView() {
         />
       </div>
 
-      {!isSystem && <InputBar convId={convId} isP2p={conv?.type === ConvType.P2P} />}
+      {!isSystem && <InputBar convId={convId} isP2p={convType === ConvType.P2P} />}
 
       {/* History modal */}
       {activePanel === 'history' && <HistoryView convId={convId} onClose={closePanel} />}
