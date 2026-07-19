@@ -22,7 +22,7 @@ export default function ImageBubble({ body, _msgId }: Props) {
   try {
     const parsed = JSON.parse(body)
     url = parsed.url || parsed.thumbnail_url || body
-  } catch (e) { console.error(e) }
+  } catch {}
 
   if (error) {
     return (
@@ -33,17 +33,18 @@ export default function ImageBubble({ body, _msgId }: Props) {
   }
 
   return (
-    <>
-      <div className="relative max-w-[400px]">
+    <div className="relative max-w-[400px]">
+      <div className="relative w-full overflow-hidden" style={{ minHeight: 150 }}>
+        {/* Placeholder — behind the image */}
         {!loaded && (
-          <div className="w-[200px] h-[150px] bg-[var(--color-surface-soft)] rounded-xl animate-pulse flex items-center justify-center">
+          <div className="absolute inset-0 rounded-xl animate-pulse flex items-center justify-center bg-[var(--color-surface-soft)]">
             <Image size={24} className="text-[var(--color-muted)]" />
           </div>
         )}
         <img loading="lazy" decoding="async"
           src={withFileToken(thumbUrl(url))}
           alt=""
-          className={cn('rounded-xl max-w-full max-h-[360px] w-auto h-auto cursor-pointer hover:opacity-90 transition-opacity', !loaded && 'hidden')}
+          className={cn('rounded-xl max-w-full max-h-[360px] w-auto h-auto cursor-pointer hover:opacity-90 transition-opacity relative', !loaded && 'opacity-0')}
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
           onClick={() => setViewer(true)}
@@ -54,6 +55,6 @@ export default function ImageBubble({ body, _msgId }: Props) {
           <ImageViewer images={[url]} currentIndex={0} onClose={() => setViewer(false)} />
         </Suspense>
       )}
-    </>
+    </div>
   )
 }
