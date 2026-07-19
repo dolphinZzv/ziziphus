@@ -50,6 +50,9 @@
     "accountRequired": "Please enter your account",
     "nameRequired": "Please enter your nickname",
     "passwordRequired": "Please enter your password",
+    "or": "or",
+    "oauthGithub": "Sign in with GitHub",
+    "oauthGoogle": "Sign in with Google",
     "hasAccount": "Already have an account?"
   },
   "chat": {
@@ -288,6 +291,8 @@
     "userSettings": "User Settings",
     "agentMgmt": "Agent Management",
     "deviceMgmt": "Device Management",
+    "socialAccounts": "Social Accounts",
+    "bound": "Bound",
     "appSettings": "App Settings",
     "dangerZone": "Danger Zone",
     "deleteAccount": "Delete Account",

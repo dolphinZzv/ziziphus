@@ -22,6 +22,7 @@ type Handlers struct {
 	Session      *SessionHandler
 	File         *FileHandler
 	Webhook      *WebhookHandler
+	OAuth        *OAuthHandler
 	Announcement http.HandlerFunc
 	AppInfo      http.HandlerFunc
 	DB           *pgxpool.Pool
@@ -61,6 +62,8 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Get("/swagger/*", httpSwagger.WrapHandler)
 		r.Post("/api/v1/auth/mfa/verify", h.User.MFAVerifyLogin)
 		r.Post("/api/v1/webhooks/receive", h.Webhook.ReceiveMessage)
+		r.Get("/api/v1/auth/{provider}/login", h.OAuth.Login)
+		r.Get("/api/v1/auth/{provider}/callback", h.OAuth.Callback)
 	})
 
 	// Public routes without login rate limiting

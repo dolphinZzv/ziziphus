@@ -14,7 +14,20 @@ type Config struct {
 	SMTP         SMTPConfig         `mapstructure:"smtp"`
 	Asynq        AsynqConfig        `mapstructure:"asynq"`
 	Announcement AnnouncementConfig `mapstructure:"announcement"`
+	OAuth        OAuthConfig        `mapstructure:"oauth"`
 	Log          LogConfig          `mapstructure:"log"`
+}
+
+type OAuthConfig struct {
+	GitHub OAuthProviderConfig `mapstructure:"github"`
+	Google OAuthProviderConfig `mapstructure:"google"`
+}
+
+type OAuthProviderConfig struct {
+	Enabled      bool   `mapstructure:"enabled"`
+	ClientID     string `mapstructure:"client_id"`
+	ClientSecret string `mapstructure:"client_secret"`
+	RedirectURL  string `mapstructure:"redirect_url"`
 }
 
 type AsynqConfig struct {

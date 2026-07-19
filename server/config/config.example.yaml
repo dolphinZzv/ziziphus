@@ -74,3 +74,16 @@ smtp:
   user: ""           # SMTP user
   password: ""       # SMTP password
   from: ""           # From address, defaults to user if empty
+
+# OAuth provider configuration (GitHub/Google login)
+oauth:
+  github:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+    redirect_url: "http://localhost:8080/api/v1/auth/github/callback"
+  google:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+    redirect_url: "http://localhost:8080/api/v1/auth/google/callback"

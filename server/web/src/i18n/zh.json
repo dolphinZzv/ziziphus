@@ -50,6 +50,9 @@
     "accountRequired": "请填写账号",
     "nameRequired": "请填写昵称",
     "passwordRequired": "请填写密码",
+    "or": "或",
+    "oauthGithub": "使用 GitHub 登录",
+    "oauthGoogle": "使用 Google 登录",
     "hasAccount": "已有账号？"
   },
   "chat": {
@@ -288,6 +291,8 @@
     "userSettings": "用户设置",
     "agentMgmt": "Agent 管理",
     "deviceMgmt": "设备管理",
+    "socialAccounts": "社交账号",
+    "bound": "已绑定",
     "appSettings": "应用设置",
     "dangerZone": "危险操作",
     "deleteAccount": "注销账号",

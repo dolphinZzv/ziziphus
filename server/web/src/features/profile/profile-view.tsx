@@ -112,6 +112,27 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
         </div>
       </div>
 
+      {/* Social Accounts */}
+      {(user?.github_id || user?.google_id) !== undefined && (
+        <div className="px-4 mb-4 flex-shrink-0">
+          <div className="px-3 py-2 rounded-xl bg-[var(--color-surface-soft)]">
+            <div className="text-[11px] font-medium text-[var(--color-muted)] mb-2">{t('profile.socialAccounts', 'Social Accounts')}</div>
+            {user?.github_id && (
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-[var(--color-ink)]">GitHub</span>
+                <span className="text-xs text-[var(--color-muted)]">{t('profile.bound', 'Bound')}</span>
+              </div>
+            )}
+            {user?.google_id && (
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-[var(--color-ink)]">Google</span>
+                <span className="text-xs text-[var(--color-muted)]">{t('profile.bound', 'Bound')}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="px-4 pb-4 flex-shrink-0">
         <div className=" space-y-0.5">

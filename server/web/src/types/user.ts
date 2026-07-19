@@ -33,6 +33,8 @@ export interface User {
   headline?: string
   discoverable: boolean
   allow_direct_chat: boolean
+  github_id?: string
+  google_id?: string
   created_at: number
 }
 

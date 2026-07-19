@@ -54,6 +54,10 @@ type userRepo interface {
 	UpdateLanguage(ctx context.Context, userID, language string) error
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
 	UpdatePassword(ctx context.Context, userID, password string) error
+	GetByGithubID(ctx context.Context, githubID string) (*model.User, error)
+	GetByGoogleID(ctx context.Context, googleID string) (*model.User, error)
+	UpdateOAuthID(ctx context.Context, userID, provider, oauthID string) error
+	ClearOAuthID(ctx context.Context, userID, provider string) error
 }
 
 type passwordResetStore interface {

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"ziziphus/pkg/logger"
@@ -16,15 +17,15 @@ func NewUserRepo(pool DBPool) *UserRepo {
 	return &UserRepo{pool: pool}
 }
 
-var userAllCols = "id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100)"
+var userAllCols = "id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id"
 
-var userPublicCols = "id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100)"
+var userPublicCols = "id, type, name, email, avatar, cover, status, banned, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, COALESCE(conv_limit, 100), github_id, google_id"
 
 func (r *UserRepo) Create(ctx context.Context, u *model.User) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO users (id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
-		u.ID, u.Type, u.Name, u.Email, u.Avatar, u.Cover, u.Status, u.Banned, u.Password, u.ExtMeta, time.UnixMilli(u.CreatedAt), u.Account, u.PrimaryColor, u.SecondaryColor, u.UID, u.WakeMode, u.APIKey, u.Discoverable, u.AllowDirectChat, u.Headline, u.Language)
+		`INSERT INTO users (id, type, name, email, avatar, cover, status, banned, password, ext_meta, created_at, account, primary_color, secondary_color, uid, wake_mode, api_key, discoverable, allow_direct_chat, headline, language, github_id, google_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+		u.ID, u.Type, u.Name, u.Email, u.Avatar, u.Cover, u.Status, u.Banned, u.Password, u.ExtMeta, time.UnixMilli(u.CreatedAt), u.Account, u.PrimaryColor, u.SecondaryColor, u.UID, u.WakeMode, u.APIKey, u.Discoverable, u.AllowDirectChat, u.Headline, u.Language, u.GithubID, u.GoogleID)
 	return err
 }
 
@@ -33,7 +34,7 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*model.User, error) 
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
 		`SELECT `+userAllCols+` FROM users WHERE id = $1`, id).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit)
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit, &u.GithubID, &u.GoogleID)
 	if err != nil {
 		logger.Error("GetByID query failed",
 			"id", id,
@@ -55,7 +56,7 @@ func (r *UserRepo) GetByIDs(ctx context.Context, ids []string) (map[string]*mode
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit, &u.GithubID, &u.GoogleID); err != nil {
 			return nil, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -82,7 +83,7 @@ func (r *UserRepo) Search(ctx context.Context, q string, page, size int) ([]*mod
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit, &u.GithubID, &u.GoogleID); err != nil {
 			return nil, 0, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -96,7 +97,7 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*model.User, e
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
 		`SELECT `+userAllCols+` FROM users WHERE email = $1`, email).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit)
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit, &u.GithubID, &u.GoogleID)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +110,7 @@ func (r *UserRepo) GetByAccount(ctx context.Context, account string) (*model.Use
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
 		`SELECT `+userAllCols+` FROM users WHERE account = $1`, account).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit)
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit, &u.GithubID, &u.GoogleID)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +146,7 @@ func (r *UserRepo) ListAgents(ctx context.Context, uid string) ([]*model.User, e
 	for rows.Next() {
 		u := &model.User{}
 		var createdAt time.Time
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit); err != nil {
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit, &u.GithubID, &u.GoogleID); err != nil {
 			return nil, err
 		}
 		u.CreatedAt = createdAt.UnixMilli()
@@ -168,7 +169,7 @@ func (r *UserRepo) GetByAPIKey(ctx context.Context, apiKey string) (*model.User,
 	var createdAt time.Time
 	err := r.pool.QueryRow(ctx,
 		`SELECT `+userPublicCols+` FROM users WHERE api_key = $1`, apiKey).
-		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit)
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit, &u.GithubID, &u.GoogleID)
 	if err != nil {
 		return nil, err
 	}
@@ -282,6 +283,56 @@ func (r *UserRepo) DeleteAccount(ctx context.Context, userID string) error {
 	}
 
 	return tx.Commit(ctx)
+}
+
+func (r *UserRepo) GetByGithubID(ctx context.Context, githubID string) (*model.User, error) {
+	u := &model.User{}
+	var createdAt time.Time
+	err := r.pool.QueryRow(ctx,
+		`SELECT `+userAllCols+` FROM users WHERE github_id = $1`, githubID).
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit, &u.GithubID, &u.GoogleID)
+	if err != nil {
+		return nil, err
+	}
+	u.CreatedAt = createdAt.UnixMilli()
+	return u, nil
+}
+
+func (r *UserRepo) GetByGoogleID(ctx context.Context, googleID string) (*model.User, error) {
+	u := &model.User{}
+	var createdAt time.Time
+	err := r.pool.QueryRow(ctx,
+		`SELECT `+userAllCols+` FROM users WHERE google_id = $1`, googleID).
+		Scan(&u.ID, &u.Type, &u.Name, &u.Email, &u.Avatar, &u.Cover, &u.Status, &u.Banned, &u.Password, &u.ExtMeta, &createdAt, &u.Account, &u.PrimaryColor, &u.SecondaryColor, &u.UID, &u.WakeMode, &u.APIKey, &u.Discoverable, &u.AllowDirectChat, &u.Headline, &u.Language, &u.ConvLimit, &u.GithubID, &u.GoogleID)
+	if err != nil {
+		return nil, err
+	}
+	u.CreatedAt = createdAt.UnixMilli()
+	return u, nil
+}
+
+func (r *UserRepo) UpdateOAuthID(ctx context.Context, userID, provider, oauthID string) error {
+	switch provider {
+	case "github":
+		_, err := r.pool.Exec(ctx, `UPDATE users SET github_id = $1 WHERE id = $2`, oauthID, userID)
+		return err
+	case "google":
+		_, err := r.pool.Exec(ctx, `UPDATE users SET google_id = $1 WHERE id = $2`, oauthID, userID)
+		return err
+	}
+	return fmt.Errorf("unknown oauth provider: %s", provider)
+}
+
+func (r *UserRepo) ClearOAuthID(ctx context.Context, userID, provider string) error {
+	switch provider {
+	case "github":
+		_, err := r.pool.Exec(ctx, `UPDATE users SET github_id = '' WHERE id = $1`, userID)
+		return err
+	case "google":
+		_, err := r.pool.Exec(ctx, `UPDATE users SET google_id = '' WHERE id = $1`, userID)
+		return err
+	}
+	return fmt.Errorf("unknown oauth provider: %s", provider)
 }
 
 // UpdateBanned updates the banned status for a user (used in unit tests).

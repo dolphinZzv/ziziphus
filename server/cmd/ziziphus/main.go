@@ -198,6 +198,7 @@ func main() {
 
 	// HTTP API handlers
 	passwordResetRepo := db.NewPasswordResetRepo(pool)
+	oauthSvc := auth.NewOAuthService(cfgMgr.Get().OAuth, sf.NextID, authSvc, userRepo)
 	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailDispatcher, passwordResetRepo, cfg.Server.RegistrationAllowed(), cfg.App.Name, cfg.App.Env)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, receiptRepo, convMgr)
@@ -226,6 +227,10 @@ func main() {
 		logger.Info("HTTP rate limiters disabled (api_enabled=false)")
 	}
 
+	authMW := auth.AuthMiddlewareWithAPIKey(authSvc, userRepo)
+	oauthHandler := api.NewOAuthHandler(oauthSvc, authSvc, authMW, "")
+	wsAuthMW := auth.WSAuthMiddleware(authSvc, userRepo)
+
 	handlers := &api.Handlers{
 		User:         userHandler,
 		Conversation: convHandler,
@@ -234,6 +239,7 @@ func main() {
 		Session:      sessionHandler,
 		File:         fileHandler,
 		Webhook:      webhookHandler,
+		OAuth:        oauthHandler,
 		Announcement: api.Announcement(cfgMgr),
 		AppInfo:      api.AppInfo(cfgMgr),
 		DB:           pool,
@@ -242,10 +248,6 @@ func main() {
 		RegisterRL:   registerRL,
 		GlobalRL:     globalRL,
 	}
-
-	// Auth middleware
-	authMW := auth.AuthMiddlewareWithAPIKey(authSvc, userRepo)
-	wsAuthMW := auth.WSAuthMiddleware(authSvc, userRepo)
 
 	// WS handler
 	wsHandler := handler.NewWSHandler(wsAuthMW, sessMgr, gwMgr, ingest, syncHandler, receiptHandler, msgRepo)

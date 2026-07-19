@@ -43,6 +43,10 @@ type userRepository interface {
 	GetByID(ctx context.Context, id string) (*model.User, error)
 	GetByAccount(ctx context.Context, account string) (*model.User, error)
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
+	GetByGithubID(ctx context.Context, githubID string) (*model.User, error)
+	GetByGoogleID(ctx context.Context, googleID string) (*model.User, error)
+	UpdateOAuthID(ctx context.Context, userID, provider, oauthID string) error
+	ClearOAuthID(ctx context.Context, userID, provider string) error
 }
 
 type passwordResetStore interface {
