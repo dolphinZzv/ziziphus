@@ -6,7 +6,7 @@ import { uiStore } from '@/stores/ui-store'
 import { avatarUrl } from '@/lib/file'
 import { fileService } from '@/services/file-service'
 import { UserType } from '@/types/user'
-import { Edit, LogOut, Settings, Bot, Camera, Smartphone, Copy, Check, Shield, X, ArrowLeft } from 'lucide-react'
+import { Edit, LogOut, Settings, Bot, Camera, Smartphone, Copy, Check, Shield, Download, X, ArrowLeft } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-breakpoint'
 
 interface Props { onClose?: () => void; variant?: 'modal' | 'page' }
@@ -32,6 +32,23 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
     setUploadingCover(true)
     try { const r = await fileService.upload(file, file.name, 0); await authStore.updateProfile({ cover: r.url }) } catch (e) { console.error(e) }
     setUploadingCover(false)
+  }
+  const handleExport = async () => {
+    const token = authStore.state.token
+    if (!token) return
+    try {
+      const res = await fetch('/api/v1/users/me/export', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const json = await res.json()
+      const blob = new Blob([JSON.stringify(json.data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `panda-export-${user?.user_id || 'user'}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) { console.error('export failed', e) }
   }
   const handleLogout = () => { authStore.logout(); onClose(); navigate('/login') }
   const copyId = () => { navigator.clipboard.writeText(user?.user_id || ''); setCopied(true); setTimeout(() => setCopied(false), 2000) }
@@ -148,6 +165,15 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
               <Icon size={18} /> {label}
             </button>
           ))}
+          <button onClick={handleExport}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-sm text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors mt-2">
+            <Download size={18} /> {t('profile.exportData', 'Export My Data')}
+          </button>
+          <div className="flex items-center justify-center gap-3 px-3 py-2 text-xs text-[var(--color-muted-soft)]">
+            <a href="/privacy" className="hover:text-[var(--color-primary)] transition-colors">{t('profile.privacy', 'Privacy')}</a>
+            <span className="text-[var(--color-hairline)]">·</span>
+            <a href="/terms" className="hover:text-[var(--color-primary)] transition-colors">{t('profile.terms', 'Terms')}</a>
+          </div>
           <button onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--destructive)]/10 text-sm text-[var(--destructive)] transition-colors">
             <LogOut size={18} /> {t('profile.logout')}

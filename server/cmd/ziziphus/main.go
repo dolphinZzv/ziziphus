@@ -199,7 +199,7 @@ func main() {
 	// HTTP API handlers
 	passwordResetRepo := db.NewPasswordResetRepo(pool)
 	oauthSvc := auth.NewOAuthService(cfgMgr.Get().OAuth, sf.NextID, authSvc, userRepo)
-	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailDispatcher, passwordResetRepo, cfg.Server.RegistrationAllowed(), cfg.App.Name, cfg.App.Env)
+	userHandler := api.NewUserHandler(authSvc, userRepo, sessMgr, sf.NextID, mfaRepo, emailVerifyRepo, mailDispatcher, passwordResetRepo, msgRepo, cfg.Server.RegistrationAllowed(), cfg.App.Name, cfg.App.Env)
 	convHandler := api.NewConvHandler(convMgr, convRepo, seqCache, receiptHandler, ingest, userRepo, sf.NextID)
 	msgHandler := api.NewMsgHandler(msgRepo, receiptRepo, convMgr)
 	contactHandler := api.NewContactHandler(contactRepo, contactReqRepo, userRepo, sessMgr, ingest, convMgr)

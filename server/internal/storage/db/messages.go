@@ -214,6 +214,17 @@ func (r *MessageRepo) Recall(ctx context.Context, msgID int64) error {
 	return err
 }
 
+func (r *MessageRepo) GetMessagesBySender(ctx context.Context, senderID string, limit, offset int) ([]*model.Message, error) {
+	query := `SELECT msg_id, conv_id, sender_id, content_type, body, mention, reply_to, timestamp, conv_seq, status, deleted
+			 FROM messages WHERE sender_id = $1 AND deleted = false ORDER BY msg_id DESC LIMIT $2 OFFSET $3`
+	rows, err := r.pool.Query(ctx, query, senderID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanMessages(rows)
+}
+
 //nolint:unused
 func scanMessages(rows pgx.Rows) ([]*model.Message, error) {
 	var msgs []*model.Message

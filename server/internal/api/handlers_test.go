@@ -1124,7 +1124,7 @@ func newTestUserHandler(authUserRepo *testAuthUserRepo) (*UserHandler, *auth.Ser
 	authSvc := auth.NewService("test-jwt-secret", 24, 168, authUserRepo, nil, func() int64 { return time.Now().UnixNano() })
 	userRepo := &mockUserRepo{}
 	sessMgr := &mockSessionChecker{}
-	return NewUserHandler(authSvc, userRepo, sessMgr, func() int64 { return time.Now().UnixNano() }, &mockMFAStorage{}, &mockEmailVerifyHandler{}, &mockEmailSender{}, nil, true, "Ziziphus", "development"), authSvc, userRepo, sessMgr
+	return NewUserHandler(authSvc, userRepo, sessMgr, func() int64 { return time.Now().UnixNano() }, &mockMFAStorage{}, &mockEmailVerifyHandler{}, &mockEmailSender{}, nil, nil, true, "Ziziphus", "development"), authSvc, userRepo, sessMgr
 }
 
 func TestUserHandler_Register_Success(t *testing.T) {

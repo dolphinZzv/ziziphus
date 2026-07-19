@@ -93,6 +93,7 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 		r.Put("/api/v1/users/me/agents/{agent_id}", h.User.UpdateAgent)
 		r.Delete("/api/v1/users/me/agents/{agent_id}", h.User.DeleteAgent)
 		r.Delete("/api/v1/users/me", h.User.DeleteAccount)
+		r.Get("/api/v1/users/me/export", h.User.ExportData)
 		r.Put("/api/v1/users/me/agents/{agent_id}/regenerate-key", h.User.RegenerateAgentKey)
 		r.Get("/api/v1/groups/search", h.Conversation.SearchGroups)
 

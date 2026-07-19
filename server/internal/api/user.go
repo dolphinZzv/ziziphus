@@ -33,9 +33,14 @@ type UserHandler struct {
 	emailVerifyRepo   emailVerifyHandler
 	mailer            emailSender
 	passwordResetRepo passwordResetStore
+	msgRepo           exportMsgRepo
 	allowRegistration bool
 	appName           string
 	appEnv            string
+}
+
+type exportMsgRepo interface {
+	GetMessagesBySender(ctx context.Context, senderID string, limit, offset int) ([]*model.Message, error)
 }
 
 type userRepo interface {
@@ -77,8 +82,8 @@ type emailSender interface {
 	SendPasswordResetCode(to, code string) error
 }
 
-func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender, passwordResetRepo passwordResetStore, allowRegistration bool, appName string, appEnv string) *UserHandler {
-	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen, mfaRepo: mfaRepo, emailVerifyRepo: emailVerifyRepo, mailer: mailer, passwordResetRepo: passwordResetRepo, allowRegistration: allowRegistration, appName: appName, appEnv: appEnv}
+func NewUserHandler(authSvc *auth.Service, userRepo userRepo, sessMgr sessionChecker, idGen func() int64, mfaRepo mfaStorage, emailVerifyRepo emailVerifyHandler, mailer emailSender, passwordResetRepo passwordResetStore, msgRepo exportMsgRepo, allowRegistration bool, appName string, appEnv string) *UserHandler {
+	return &UserHandler{authSvc: authSvc, userRepo: userRepo, sessMgr: sessMgr, idGen: idGen, mfaRepo: mfaRepo, emailVerifyRepo: emailVerifyRepo, mailer: mailer, passwordResetRepo: passwordResetRepo, msgRepo: msgRepo, allowRegistration: allowRegistration, appName: appName, appEnv: appEnv}
 }
 
 type registerReq struct {
@@ -1192,4 +1197,49 @@ func (h *UserHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	JSON(w, map[string]any{"status": "ok"})
+}
+
+// ExportData godoc
+//
+//	@summary		Export all user data (GDPR data portability)
+//	@tags			users
+//	@produce		json
+//	@security		Bearer
+//	@success		200	{object}	object
+//	@failure		401	{object}	APIResponse
+//	@router			/users/me/export [get]
+func (h *UserHandler) ExportData(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserFromCtx(r.Context())
+	user, err := h.userRepo.GetByID(r.Context(), userID)
+	if err != nil {
+		NotFound(w, r)
+		return
+	}
+	user.Password = ""
+
+	// Collect all messages by this user
+	var allMessages []*model.Message
+	offset := 0
+	limit := 200
+	for {
+		msgs, err := h.msgRepo.GetMessagesBySender(r.Context(), userID, limit, offset)
+		if err != nil {
+			logger.Error("export messages failed", "user_id", userID, "error", err)
+			break
+		}
+		if len(msgs) == 0 {
+			break
+		}
+		allMessages = append(allMessages, msgs...)
+		offset += limit
+	}
+
+	// Get session IDs
+	sessionIDs := h.sessMgr.GetUserSessionIDs(r.Context(), userID)
+
+	JSON(w, map[string]any{
+		"user":        user,
+		"messages":    allMessages,
+		"session_ids": sessionIDs,
+	})
 }
