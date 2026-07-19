@@ -69,7 +69,7 @@ export default function AgentList({ onClose, inline }: Props) {
           <div key={agent.user_id} className="flex items-center gap-3 px-3 h-12 rounded-xl hover:bg-[var(--color-surface-soft)] group">
             <div className="relative flex-shrink-0">
               {agent.avatar ? (
-                <img src={avatarUrl(agent.avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
+                <img loading="lazy" decoding="async" src={avatarUrl(agent.avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
               ) : (
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold"
                   style={{ background: 'linear-gradient(135deg, #8B5CF6, #A78BFA)' }}>
@@ -186,7 +186,7 @@ function AgentEditDialog({ agent, onClose, onSaved }: { agent: User | null; onCl
           <button onClick={() => avatarInputRef.current?.click()} disabled={uploading}
             className="relative group cursor-pointer">
             {avatar ? (
-              <img src={avatarUrl(avatar, 160)} alt="" className="w-[72px] h-[72px] rounded-full object-cover " />
+              <img loading="lazy" decoding="async" src={avatarUrl(avatar, 160)} alt="" className="w-[72px] h-[72px] rounded-full object-cover " />
             ) : (
               <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white text-xl font-bold "
                 style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>

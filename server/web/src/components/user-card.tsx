@@ -28,7 +28,7 @@ export default function UserCard({ userId, onClose }: Props) {
   // Lazy-load contacts if not yet loaded
   useEffect(() => {
     if (contacts.length === 0) contactStore.load()
-  }, [])
+  }, [contacts.length])
   const isAgent = user?.type === UserType.Agent
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export default function UserCard({ userId, onClose }: Props) {
           <div className="flex justify-center -mt-7 mb-2">
             <div className="relative z-10">
               {user.avatar ? (
-                <img src={avatarUrl(user.avatar, 128)} alt="" className="w-14 h-14 rounded-full object-cover " />
+                <img loading="lazy" decoding="async" src={avatarUrl(user.avatar, 128)} alt="" className="w-14 h-14 rounded-full object-cover " />
               ) : (
                 <div className="w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-bold "
                   style={{ background: user.primary_color

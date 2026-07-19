@@ -109,7 +109,7 @@ export default function FormBubble({ body, msgId, convId, senderId }: Props) {
       {!isMine && (
         <div className="flex items-center gap-2">
           {form.from_user_avatar ? (
-            <img src={avatarUrl(form.from_user_avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
+            <img loading="lazy" decoding="async" src={avatarUrl(form.from_user_avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-xs font-semibold">
               {form.from_user_name?.charAt(0) || '?'}

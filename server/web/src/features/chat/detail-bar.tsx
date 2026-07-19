@@ -29,7 +29,7 @@ export default function DetailBar
         try { const users = await userService.batchGet(ids); setUserMap(users) } catch (e) { console.error(e) }
       }
     }).catch(onClose)
-  }, [convId])
+  }, [convId, onClose])
 
   if (!detail) return null
 
@@ -61,7 +61,7 @@ export default function DetailBar
         {!isGroup && peerUser && (
           <div className="flex items-center gap-3">
             {peerUser.avatar ? (
-              <img src={avatarUrl(peerUser.avatar)} alt="" className="w-10 h-10 rounded-full object-cover" />
+              <img loading="lazy" decoding="async" src={avatarUrl(peerUser.avatar)} alt="" className="w-10 h-10 rounded-full object-cover" />
             ) : (
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold"
                 style={{ background: 'var(--color-primary)' }}>{peerUser.name?.charAt(0)?.toUpperCase() || '?'}</div>
@@ -78,7 +78,7 @@ export default function DetailBar
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               {detail.avatar ? (
-                <img src={avatarUrl(detail.avatar)} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                <img loading="lazy" decoding="async" src={avatarUrl(detail.avatar)} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
               ) : (
                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
                   style={{ background: 'linear-gradient(135deg, var(--color-accent), #34D399)' }}>{detail.name?.charAt(0)?.toUpperCase() || 'G'}</div>
@@ -109,7 +109,7 @@ export default function DetailBar
                 return (
                   <div key={m.user_id} className="flex items-center gap-1 bg-[var(--color-surface-soft)] rounded-full pl-1 pr-2 py-0.5 text-[11px]" title={name}>
                     {avatar ? (
-                      <img src={avatarUrl(avatar)} alt="" className="w-4 h-4 rounded-full object-cover" />
+                      <img loading="lazy" decoding="async" src={avatarUrl(avatar)} alt="" className="w-4 h-4 rounded-full object-cover" />
                     ) : (
                       <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold"
                         style={{ background: m.user_type === 1 ? 'linear-gradient(135deg, #8B5CF6, #A78BFA)' : 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>

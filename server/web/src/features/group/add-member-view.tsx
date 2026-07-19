@@ -57,7 +57,7 @@ export default function AddMemberView({ convId: _convId, onClose, onAdded, exclu
               return (
                 <div key={user.user_id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-soft)] transition-colors">
                   {user.avatar ? (
-                    <img src={avatarUrl(user.avatar, 64)} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                    <img loading="lazy" decoding="async" src={avatarUrl(user.avatar, 64)} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                   ) : (
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
                       style={{ background: user.primary_color ? `linear-gradient(135deg, ${user.primary_color}, ${user.secondary_color || user.primary_color})` : 'var(--color-primary)' }}>

@@ -167,7 +167,7 @@ export default function GroupSettings({ convId, onClose }: Props) { const isMobi
             <div className="flex items-center gap-3">
               {bgImage ? (
                 <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-[var(--color-hairline)] flex-shrink-0">
-                  <img src={avatarUrl(bgImage, 128)} alt="" className="w-full h-full object-cover" />
+                  <img loading="lazy" decoding="async" src={avatarUrl(bgImage, 128)} alt="" className="w-full h-full object-cover" />
                   <button onClick={handleBgRemove}
                     className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/40 text-white/80 hover:bg-black/60">
                     <Trash2 size={10} />

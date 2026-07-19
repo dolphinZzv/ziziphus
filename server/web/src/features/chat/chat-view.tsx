@@ -218,7 +218,7 @@ export default function ChatView() {
           <button onClick={() => isGroup ? openPanel('info') : !isSystem ? openPanel('detail') : undefined}
             className="relative flex-shrink-0">
             {displayAvatar ? (
-              <img src={avatarUrl(displayAvatar)} alt="" className="w-7 h-7 rounded-full object-cover" />
+              <img loading="lazy" decoding="async" src={avatarUrl(displayAvatar)} alt="" className="w-7 h-7 rounded-full object-cover" />
             ) : isSystem ? (
               <div className="w-7 h-7 rounded-full flex items-center justify-center"
                 style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>

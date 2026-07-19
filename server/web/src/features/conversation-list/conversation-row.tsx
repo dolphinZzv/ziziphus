@@ -70,7 +70,7 @@ export default function ConversationRow({ conversation, isSelected, onClick }: P
     >
       <div className="relative flex-shrink-0">
         {avatar ? (
-          <img src={avatarUrl(avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
+          <img loading="lazy" decoding="async" src={avatarUrl(avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
         ) : isSystem ? (
           <div className="w-9 h-9 rounded-full flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>

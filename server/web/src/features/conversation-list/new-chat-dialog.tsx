@@ -49,7 +49,7 @@ export default function NewChatDialog({ onClose }: Props) {
               <button key={c.user_id} type="button" onClick={() => handleCreate(c.user_id)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-soft)] transition-colors">
                 {c.avatar ? (
-                  <img src={avatarUrl(c.avatar)} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                  <img loading="lazy" decoding="async" src={avatarUrl(c.avatar)} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                 ) : (
                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
                     style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>

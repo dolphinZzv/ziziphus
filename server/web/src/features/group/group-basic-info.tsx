@@ -121,7 +121,7 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
           <button onClick={() => isAdmin ? avatarInputRef.current?.click() : undefined} disabled={uploading}
             className="relative group cursor-pointer">
             {detail.avatar ? (
-              <img src={avatarUrl(detail.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
+              <img loading="lazy" decoding="async" src={avatarUrl(detail.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
             ) : (
               <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold "
                 style={{ background: 'linear-gradient(135deg, var(--color-accent), #34D399)' }}>{detail.name?.charAt(0)?.toUpperCase() || 'G'}</div>
@@ -167,7 +167,7 @@ export default function GroupBasicInfo({ convId, onClose }: Props) { const isMob
                     </div>
                     <div className="flex-1 min-w-0 text-[13px] font-medium text-[var(--color-ink)]">{uname(req.user_id)}</div>
                     <button onClick={() => actions.approve(req.user_id)} className="p-1.5 rounded-xl hover:bg-[var(--success)]/10 text-[var(--success)]"><Check size={15} /></button>
-                    <button onClick={() => actions.reject(req.user_id)} className="p-1.5 rounded-xl hover:bg-[var(--destructive)]/10 text-[var(--destructive)]"><XIcon size={15} /></button>
+                    <button onClick={() => actions.reject(req.user_id)} className="p-1.5 rounded-xl hover:bg-[var(--destructive)]/10 text-[var(--destructive)]"><X size={15} /></button>
                   </div>
                 ))}
               </div>

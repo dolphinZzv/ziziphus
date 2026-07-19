@@ -102,7 +102,7 @@ export default function GroupCardPage() {
         <div className="flex justify-center -mt-16 mb-3 relative z-10">
           <div className="w-24 h-24 rounded-full border-4 border-[var(--color-surface-card)] overflow-hidden bg-[var(--color-surface-soft)]">
             {card.avatar ? (
-              <img src={avatarUrl(card.avatar, 192)} alt={card.name} className="w-full h-full object-cover" />
+              <img loading="lazy" decoding="async" src={avatarUrl(card.avatar, 192)} alt={card.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold"
                 style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}88)` }}>

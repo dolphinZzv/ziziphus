@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { conversationService } from '@/services/conversation-service'
 import { userService } from '@/services/user-service'
@@ -19,7 +19,7 @@ export default function MemberListView({ convId, onClose }: Props) { const isMob
   const [filterQuery, setFilterQuery] = useState('')
   const currentUserId = authStore.state.user?.user_id || ''
 
-  const load = () => {
+  const load = useCallback(() => {
     conversationService.getDetail(convId).then(async d => {
       setDetail(d)
       const ids = d.members.map(m => m.user_id)
@@ -27,8 +27,8 @@ export default function MemberListView({ convId, onClose }: Props) { const isMob
         try { const users = await userService.batchGet(ids); setUserMap(users) } catch (e) { console.error(e) }
       }
     }).catch(() => {})
-  }
-  useEffect(() => { load() }, [convId])
+  }, [convId])
+  useEffect(() => { load() }, [convId, load])
 
   if (!detail) return null
 
@@ -88,7 +88,7 @@ export default function MemberListView({ convId, onClose }: Props) { const isMob
               <div key={member.user_id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[var(--color-surface-soft)] group">
                 <div className="relative flex-shrink-0">
                   {avatar ? (
-                    <img src={avatarUrl(avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
+                    <img loading="lazy" decoding="async" src={avatarUrl(avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
                   ) : (
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold"
                       style={{ background: member.user_type === 1 ? 'linear-gradient(135deg, #8B5CF6, #A78BFA)' : 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>

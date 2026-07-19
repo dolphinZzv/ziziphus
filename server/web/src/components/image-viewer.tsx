@@ -13,8 +13,8 @@ export default function ImageViewer({ images, currentIndex, onClose }: Props) {
   const [index, setIndex] = useState(currentIndex)
   const [scale, setScale] = useState(1)
 
-  const prev = () => setIndex(i => Math.max(0, i - 1))
-  const next = () => setIndex(i => Math.min(images.length - 1, i + 1))
+  const prev = useCallback(() => setIndex(i => Math.max(0, i - 1)), [])
+  const next = useCallback(() => setIndex(i => Math.min(images.length - 1, i + 1)), [images.length])
   const zoomIn = () => setScale(s => Math.min(s * 1.5, 5))
   const zoomOut = () => setScale(s => Math.max(s / 1.5, 0.5))
 
@@ -22,7 +22,7 @@ export default function ImageViewer({ images, currentIndex, onClose }: Props) {
     if (e.key === 'Escape') onClose()
     if (e.key === 'ArrowLeft') prev()
     if (e.key === 'ArrowRight') next()
-  }, [onClose])
+  }, [onClose, prev, next])
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown)
@@ -64,7 +64,7 @@ export default function ImageViewer({ images, currentIndex, onClose }: Props) {
       )}
 
       {/* Image */}
-      <img
+      <img loading="lazy" decoding="async"
         src={withFileToken(images[index])}
         alt=""
         className="max-w-[90vw] max-h-[85vh] object-contain transition-transform duration-200 select-none"

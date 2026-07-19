@@ -78,7 +78,7 @@ export default function ProfileView({ onClose, variant = 'modal' }: Props) {
         <button onClick={() => avatarInputRef.current?.click()} disabled={uploading}
           className="relative group cursor-pointer">
           {user?.avatar ? (
-            <img src={avatarUrl(user.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
+            <img loading="lazy" decoding="async" src={avatarUrl(user.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
           ) : (
             <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold "
               style={{ background: `linear-gradient(135deg, ${user?.primary_color || 'var(--color-primary)'}, ${user?.secondary_color || user?.primary_color || 'var(--color-muted)'})` }}>

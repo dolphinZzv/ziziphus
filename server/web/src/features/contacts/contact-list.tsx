@@ -64,7 +64,7 @@ export default function ContactList({ onClose, inline }: Props) { const isMobile
             <div key={contact.user_id} className="flex items-center gap-3 px-3 h-12 rounded-xl hover:bg-[var(--color-surface-soft)] group">
               <div className="relative">
                 {contact.avatar ? (
-                  <img src={avatarUrl(contact.avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
+                  <img loading="lazy" decoding="async" src={avatarUrl(contact.avatar)} alt="" className="w-9 h-9 rounded-full object-cover" />
                 ) : (
                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold"
                     style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-muted))' }}>

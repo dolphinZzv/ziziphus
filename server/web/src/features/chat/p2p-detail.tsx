@@ -103,7 +103,7 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
         {/* Avatar — overlaps banner */}
         <div className="flex justify-center -mt-10 mb-3 relative z-10">
           {peer?.avatar ? (
-            <img src={avatarUrl(peer.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
+            <img loading="lazy" decoding="async" src={avatarUrl(peer.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
           ) : (
             <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold "
               style={{ background: peer?.primary_color ? `linear-gradient(135deg, ${peer.primary_color}, ${peer.secondary_color || peer.primary_color})` : 'var(--color-primary)' }}>{initials}</div>
@@ -155,7 +155,7 @@ export default function P2PDetail({ convId, onClose }: Props) { const isMobile=u
                     <div key={member.user_id} className="flex items-center gap-3 py-1.5 px-1 rounded-xl">
                       <div className="relative flex-shrink-0">
                         {avatar ? (
-                          <img src={avatarUrl(avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          <img loading="lazy" decoding="async" src={avatarUrl(avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
                         ) : (
                           <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold"
                             style={{ background: isAI ? 'linear-gradient(135deg, #8B5CF6, #A78BFA)' : mu?.primary_color ? `linear-gradient(135deg, ${mu.primary_color}, ${mu.secondary_color || mu.primary_color})` : 'var(--color-primary)' }}>

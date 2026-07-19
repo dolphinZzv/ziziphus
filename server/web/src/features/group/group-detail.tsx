@@ -182,7 +182,7 @@ export default function GroupDetail({ convId, onClose }: Props) {
           <button onClick={() => isAdmin ? avatarInputRef.current?.click() : undefined} disabled={uploading}
             className="relative group cursor-pointer">
             {detail.avatar ? (
-              <img src={avatarUrl(detail.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
+              <img loading="lazy" decoding="async" src={avatarUrl(detail.avatar, 160)} alt="" className="w-20 h-20 rounded-full object-cover " />
             ) : (
               <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold "
                 style={{ background: 'linear-gradient(135deg, var(--color-accent), #34D399)' }}>{detail.name?.charAt(0)?.toUpperCase() || 'G'}</div>

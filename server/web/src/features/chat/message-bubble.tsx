@@ -184,7 +184,7 @@ export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, h
         className="flex-shrink-0 self-start mt-1">
         <div className="relative">
           {avatar ? (
-            <img src={avatarUrl(avatar)} alt="" className="w-8 h-8 rounded-full object-cover hover:ring-2 hover:ring-[var(--color-primary)]/30 transition-all" />
+            <img loading="lazy" decoding="async" src={avatarUrl(avatar)} alt="" className="w-8 h-8 rounded-full object-cover hover:ring-2 hover:ring-[var(--color-primary)]/30 transition-all" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-xs text-[var(--color-ink)] font-semibold overflow-hidden hover:ring-2 hover:ring-[var(--color-primary)]/30 transition-all">{name}</div>
           )}
@@ -195,7 +195,7 @@ export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, h
       <div className="flex-shrink-0 self-start mt-1">
         <div className="relative">
           {avatar ? (
-            <img src={avatarUrl(avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
+            <img loading="lazy" decoding="async" src={avatarUrl(avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-xs text-[var(--color-ink)] font-semibold overflow-hidden">{name}</div>
           )}
@@ -324,7 +324,7 @@ export default function MessageBubble({ message, isOwn, isGrouped, senderInfo, h
                         {readReceipts.map(r => (
                           <div key={r.user_id} className="flex items-center gap-2">
                             {r.avatar ? (
-                              <img src={avatarUrl(r.avatar)} alt="" className="w-5 h-5 rounded-full object-cover" />
+                              <img loading="lazy" decoding="async" src={avatarUrl(r.avatar)} alt="" className="w-5 h-5 rounded-full object-cover" />
                             ) : (
                               <div className="w-5 h-5 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-[9px] font-semibold text-[var(--color-ink)]">
                                 {r.name?.charAt(0)?.toUpperCase() || '?'}

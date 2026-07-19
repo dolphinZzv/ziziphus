@@ -191,7 +191,7 @@ export default function InputBar({ convId, isP2p }: Props) {
                 onClick={() => insertMention(m.name)}
                 className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[var(--color-surface-soft)] text-sm text-[var(--color-ink)]">
                 {m.avatar ? (
-                  <img src={avatarUrl(m.avatar, 48)} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                  <img loading="lazy" decoding="async" src={avatarUrl(m.avatar, 48)} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
                 ) : (
                   <div className="w-6 h-6 rounded-full bg-[var(--color-muted)]/20 flex items-center justify-center text-xs font-semibold flex-shrink-0">
                     {m.name.charAt(0)}

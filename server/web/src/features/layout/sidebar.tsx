@@ -56,7 +56,7 @@ export default function Sidebar() {
           className="flex items-center gap-2 pl-2 text-sm font-medium text-[var(--color-ink)] hover:opacity-80 min-w-0 btn-press"
         >
           {user?.avatar ? (
-            <img src={avatarUrl(user.avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
+            <img loading="lazy" decoding="async" src={avatarUrl(user.avatar)} alt="" className="w-8 h-8 rounded-full object-cover" />
           ) : (
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold"
               style={{ background: user?.primary_color

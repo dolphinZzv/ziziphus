@@ -40,7 +40,7 @@ export default function ImageBubble({ body, _msgId }: Props) {
             <Image size={24} className="text-[var(--color-muted)]" />
           </div>
         )}
-        <img
+        <img loading="lazy" decoding="async"
           src={withFileToken(thumbUrl(url))}
           alt=""
           className={cn('rounded-xl max-w-full max-h-[360px] w-auto h-auto cursor-pointer hover:opacity-90 transition-opacity', !loaded && 'hidden')}

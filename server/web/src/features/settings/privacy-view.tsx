@@ -151,7 +151,7 @@ export default function PrivacyView({ onClose }: Props) {
                     <p className="text-xs text-[var(--color-muted)]">使用 Authenticator App 扫描二维码或手动输入密钥</p>
                     {totpURI && (
                       <div className="flex justify-center">
-                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(totpURI)}`} alt="TOTP QR" className="w-40 h-40 rounded-xl bg-white p-2" />
+                        <img loading="lazy" decoding="async" src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(totpURI)}`} alt="TOTP QR" className="w-40 h-40 rounded-xl bg-white p-2" />
                       </div>
                     )}
                     <div className="flex items-center gap-2">
