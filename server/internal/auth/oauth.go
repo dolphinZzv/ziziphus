@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"ziziphus/config"
 	"ziziphus/pkg/model"
 )
@@ -344,7 +346,7 @@ func (s *OAuthService) FindOrCreateUser(ctx context.Context, info *OAuthUserInfo
 	case "google":
 		existing, err = s.userRepo.GetByGoogleID(ctx, info.ID)
 	}
-	if err != nil {
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, err
 	}
 	if existing != nil {
@@ -370,7 +372,7 @@ func (s *OAuthService) FindOrCreateUser(ctx context.Context, info *OAuthUserInfo
 		return nil, false, fmt.Errorf("hash password: %w", err)
 	}
 
-	userID := fmt.Sprintf("%d", s.idGen())
+	userID := model.GenerateUserID(s.idGen)
 	account := fmt.Sprintf("%s_%s", info.Provider, info.ID)
 
 	// Account conflict fallback
