@@ -56,7 +56,11 @@
     "agreeTerms": "同意します",
     "agreeRequired": "プライバシーポリシーと利用規約に同意してください",
     "privacy": "プライバシーポリシー",
-    "terms": "利用規約"
+    "terms": "利用規約",
+    "termsTitle": "利用規約",
+    "termsContent": "以下の条項に同意して続行してください：",
+    "disagree": "同意しない",
+    "agree": "同意する"
   },
   "chat": {
     "inputPlaceholder": "メッセージを入力...",

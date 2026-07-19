@@ -57,7 +57,11 @@
     "privacy": "隐私政策",
     "terms": "服务条款",
     "agreeTerms": "我同意",
-    "agreeRequired": "请同意隐私政策和服务条款"
+    "agreeRequired": "请同意隐私政策和服务条款",
+    "termsTitle": "服务条款确认",
+    "termsContent": "请阅读并同意以下条款以继续：",
+    "disagree": "不同意",
+    "agree": "同意"
   },
   "chat": {
     "inputPlaceholder": "输入消息...",

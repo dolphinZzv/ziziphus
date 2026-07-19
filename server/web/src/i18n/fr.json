@@ -56,7 +56,11 @@
     "agreeTerms": "J'accepte les",
     "agreeRequired": "Veuillez accepter la politique de confidentialité et les conditions d'utilisation",
     "privacy": "Politique de confidentialité",
-    "terms": "Conditions d'utilisation"
+    "terms": "Conditions d'utilisation",
+    "termsTitle": "Conditions d'utilisation",
+    "termsContent": "Veuillez accepter les conditions pour continuer :",
+    "disagree": "Refuser",
+    "agree": "Accepter"
   },
   "chat": {
     "inputPlaceholder": "Tapez un message...",

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { authStore } from '@/stores/auth-store'
@@ -33,6 +33,8 @@ export default function AuthPage() {
   const [remember] = useState(true)
   const [localLoginError, setLocalLoginError] = useState('')
   const [savedAccounts, setSavedAccounts] = useState(getSavedAccounts)
+  const [termsDialog, setTermsDialog] = useState<'login' | 'register' | null>(null)
+  const pendingAction = useRef<(() => Promise<void>) | null>(null)
   const [agreeLoginTerms, setAgreeLoginTerms] = useState(false)
 
   // Register state
@@ -104,7 +106,16 @@ export default function AuthPage() {
     e.preventDefault()
     if (!account.trim()) { setLocalLoginError(t('auth.accountRequired', '请填写账号')); return }
     if (!password.trim()) { setLocalLoginError(t('auth.passwordRequired', '请填写密码')); return }
-    if (!agreeLoginTerms) { setLocalLoginError(t('auth.agreeRequired', '请同意隐私政策和服务条款')); return }
+    if (!agreeLoginTerms) {
+      setLocalLoginError('')
+      pendingAction.current = async () => {
+        await authStore.login(account.trim(), password)
+        if (remember) saveAccount(account.trim())
+        setSavedAccounts(getSavedAccounts())
+      }
+      setTermsDialog('login')
+      return
+    }
     try {
       await authStore.login(account.trim(), password)
       if (remember) saveAccount(account.trim())
@@ -131,7 +142,14 @@ export default function AuthPage() {
     if (regPassword.trim().length < 8) { setLocalRegError(t('auth.passwordTooShort', '密码至少8位')); return }
     if (regPassword.trim().length > 72) { setLocalRegError(t('auth.passwordTooLong', '密码最多72位')); return }
     if (regPassword !== regConfirm) { setLocalRegError(t('auth.passwordMismatch')); return }
-    if (!agreeTerms) { setLocalRegError(t('auth.agreeRequired', '请同意隐私政策和服务条款')); return }
+    if (!agreeTerms) {
+      setLocalRegError('')
+      pendingAction.current = async () => {
+        await authStore.register(regAccount.trim(), regName.trim(), regPassword.trim(), regEmail.trim() || undefined)
+      }
+      setTermsDialog('register')
+      return
+    }
     try { await authStore.register(regAccount.trim(), regName.trim(), regPassword.trim(), regEmail.trim() || undefined) } catch (e) { console.error(e) }
   }
 
@@ -254,7 +272,7 @@ export default function AuthPage() {
                     <a href="/terms" target="_blank" className="text-[var(--color-primary)] hover:underline">{t('auth.terms', 'Terms of Service')}</a>
                   </span>
                 </label>
-                <button type="submit" disabled={isLoading || !agreeLoginTerms}
+                <button type="submit" disabled={isLoading}
                   className="w-full h-12 rounded-xl bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer">
                   {isLoading ? t('auth.loggingIn') : t('auth.login')}
                 </button>
@@ -322,7 +340,7 @@ export default function AuthPage() {
                   <a href="/terms" target="_blank" className="text-[var(--color-primary)] hover:underline">{t('auth.terms', '服务条款')}</a>
                 </span>
               </label>
-              <button type="submit" disabled={isLoading || !agreeTerms}
+              <button type="submit" disabled={isLoading}
                 className="w-full h-11 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-medium transition-colors disabled:opacity-40">
                 {isLoading ? t('auth.registering') : t('auth.register')}
               </button>
@@ -407,6 +425,40 @@ export default function AuthPage() {
       </div>
 
       <AuthFooter />
+
+      {/* Terms dialog */}
+      {termsDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => { setTermsDialog(null); pendingAction.current = null }}>
+          <div className="w-[90%] sm:w-[360px] bg-[var(--color-surface-card)] rounded-xl p-6" style={{ boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-[var(--color-ink)] mb-3">{t('auth.termsTitle', 'Terms of Service')}</h3>
+            <p className="text-xs text-[var(--color-muted)] leading-relaxed mb-4">
+              {t('auth.termsContent', 'Please read and agree to the following terms to continue:')}
+            </p>
+            <div className="flex items-center justify-center gap-3 mb-5 text-xs">
+              <a href="/privacy" target="_blank" className="text-[var(--color-primary)] hover:underline">{t('auth.privacy', 'Privacy Policy')}</a>
+              <span className="text-[var(--color-hairline)]">·</span>
+              <a href="/terms" target="_blank" className="text-[var(--color-primary)] hover:underline">{t('auth.terms', 'Terms of Service')}</a>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setTermsDialog(null); pendingAction.current = null }}
+                className="flex-1 h-11 rounded-xl border border-[var(--color-hairline)] text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer">
+                {t('auth.disagree', 'Disagree')}
+              </button>
+              <button onClick={async () => {
+                if (termsDialog === 'login') setAgreeLoginTerms(true)
+                else setAgreeTerms(true)
+                setTermsDialog(null)
+                const action = pendingAction.current
+                pendingAction.current = null
+                try { await action?.() } catch { /* handled by store */ }
+              }}
+                className="flex-1 h-11 rounded-xl bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 transition-all cursor-pointer">
+                {t('auth.agree', 'Agree')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   )
 }

@@ -56,7 +56,11 @@
     "agreeTerms": "동의합니다",
     "agreeRequired": "개인정보처리방침 및 서비스 약관에 동의해주세요",
     "privacy": "개인정보처리방침",
-    "terms": "서비스 약관"
+    "terms": "서비스 약관",
+    "termsTitle": "서비스 약관",
+    "termsContent": "계속하려면 약관에 동의해주세요:",
+    "disagree": "동의하지 않음",
+    "agree": "동의"
   },
   "chat": {
     "inputPlaceholder": "메시지 입력...",

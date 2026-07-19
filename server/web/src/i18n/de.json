@@ -56,7 +56,11 @@
     "agreeTerms": "Ich stimme zu",
     "agreeRequired": "Bitte stimmen Sie der Datenschutzerklärung und den Nutzungsbedingungen zu",
     "privacy": "Datenschutzerklärung",
-    "terms": "Nutzungsbedingungen"
+    "terms": "Nutzungsbedingungen",
+    "termsTitle": "Nutzungsbedingungen",
+    "termsContent": "Bitte stimmen Sie den Bedingungen zu, um fortzufahren:",
+    "disagree": "Ablehnen",
+    "agree": "Zustimmen"
   },
   "chat": {
     "inputPlaceholder": "Nachricht eingeben...",

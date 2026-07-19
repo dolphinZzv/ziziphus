@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"fmt"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"

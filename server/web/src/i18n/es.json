@@ -56,7 +56,11 @@
     "agreeTerms": "Acepto los",
     "agreeRequired": "Por favor, acepta la Política de Privacidad y los Términos del Servicio",
     "privacy": "Política de Privacidad",
-    "terms": "Términos del Servicio"
+    "terms": "Términos del Servicio",
+    "termsTitle": "Términos del Servicio",
+    "termsContent": "Acepte los términos para continuar:",
+    "disagree": "No acepto",
+    "agree": "Aceptar"
   },
   "chat": {
     "inputPlaceholder": "Escribe un mensaje...",

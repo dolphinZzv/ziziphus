@@ -119,8 +119,8 @@ type OTelConfig struct {
 
 // SeedConfig holds seed data configuration for development/demo environments.
 type SeedConfig struct {
-	Enabled       bool     `mapstructure:"enabled"`
-	AutoJoinGroup string   `mapstructure:"auto_join_group"`
+	Enabled       bool   `mapstructure:"enabled"`
+	AutoJoinGroup string `mapstructure:"auto_join_group"`
 }
 
 type RateLimitConfig struct {

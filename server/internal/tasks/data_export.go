@@ -5,9 +5,9 @@ import "encoding/json"
 const TypeDataExport = "data_export"
 
 type DataExportPayload struct {
-	UserID   string `json:"user_id"`
-	Lang     string `json:"lang"`
-	Email    string `json:"email"`
+	UserID string `json:"user_id"`
+	Lang   string `json:"lang"`
+	Email  string `json:"email"`
 }
 
 // NewDataExportTask creates a serialisable data export task payload.

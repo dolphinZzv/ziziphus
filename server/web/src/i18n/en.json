@@ -57,7 +57,11 @@
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "agreeTerms": "I agree to the",
-    "agreeRequired": "Please agree to the Privacy Policy and Terms of Service"
+    "agreeRequired": "Please agree to the Privacy Policy and Terms of Service",
+    "termsTitle": "Terms of Service",
+    "termsContent": "Please read and agree to the following terms:",
+    "disagree": "Disagree",
+    "agree": "Agree"
   },
   "chat": {
     "inputPlaceholder": "Type a message...",

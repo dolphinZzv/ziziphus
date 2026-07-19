@@ -33,18 +33,18 @@ type dataExporter interface {
 }
 
 type UserHandler struct {
-	authSvc           *auth.Service
-	userRepo          userRepo
-	sessMgr           sessionChecker
-	idGen             func() int64
-	mfaRepo           mfaStorage
-	emailVerifyRepo   emailVerifyHandler
-	mailer            emailSender
-	passwordResetRepo passwordResetStore
-	msgRepo           exportMsgRepo
-	allowRegistration bool
-	appName           string
-	appEnv            string
+	authSvc                *auth.Service
+	userRepo               userRepo
+	sessMgr                sessionChecker
+	idGen                  func() int64
+	mfaRepo                mfaStorage
+	emailVerifyRepo        emailVerifyHandler
+	mailer                 emailSender
+	passwordResetRepo      passwordResetStore
+	msgRepo                exportMsgRepo
+	allowRegistration      bool
+	appName                string
+	appEnv                 string
 	userRegisteredEnqueuer userRegisteredEnqueuer
 	dataExporter           dataExporter
 }

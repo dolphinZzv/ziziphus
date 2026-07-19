@@ -14,10 +14,10 @@ import (
 // DataExportHandler processes data-export tasks by collecting user data
 // and sending it to the user's email asynchronously.
 type DataExportHandler struct {
-	userRepo    userExportRepo
-	msgRepo     msgExportRepo
-	sessMgr     sessionExportRepo
-	mailer      *auth.Mailer
+	userRepo userExportRepo
+	msgRepo  msgExportRepo
+	sessMgr  sessionExportRepo
+	mailer   *auth.Mailer
 }
 
 type userExportRepo interface {

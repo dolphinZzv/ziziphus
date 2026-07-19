@@ -30,7 +30,7 @@ export default function AuthFooter() {
   const theme = useSyncExternalStore(uiStore.subscribe, () => uiStore.state.theme)
 
   return (
-    <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-3 text-xs text-[var(--color-muted)]">
+    <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-4 text-xs text-[var(--color-muted)]">
       {/* Privacy / Terms */}
       <div className="flex items-center gap-3 text-[var(--color-muted-soft)]">
         <a href="/privacy" target="_blank" className="hover:text-[var(--color-primary)] transition-colors">{t('auth.privacy', 'Privacy')}</a>
