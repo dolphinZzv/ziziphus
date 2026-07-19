@@ -1,4 +1,5 @@
-import { useEffect, useRef, useLayoutEffect, useCallback, useState, memo } from 'react'
+import { useEffect, useRef, useLayoutEffect, useCallback, useState, memo, useMemo } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import type { Message } from '@/types/message'
 import { chatStore } from '@/stores/chat-store'
 import { userService } from '@/services/user-service'
@@ -10,25 +11,53 @@ interface Props {
   convId: string
   messages: Message[]
   currentUserId: string
-  searchKeyword?: string
-  matchIndex?: number
-  searchMatches?: number[]
 }
 
 const MemoBubble = memo(MessageBubble)
 
-export default function MessageList({ convId, messages, currentUserId, searchKeyword, matchIndex, searchMatches }: Props) {
+type ListItem =
+  | { type: 'date'; ts: number; key: string }
+  | { type: 'msg'; msg: Message; index: number; key: string }
+
+export default function MessageList({ convId, messages, currentUserId }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
   const prevLen = useRef(0)
   const prevFirstId = useRef(0)
   const shouldAutoScroll = useRef(true)
   const initialScrollDone = useRef(false)
   const loadMoreState = useRef<'idle' | 'pending' | 'done'>('idle')
   const loadMorePrevHeight = useRef(0)
-  const matchRefs = useRef<(HTMLDivElement | null)[]>([])
+  const [showScrollBtn, setShowScrollBtn] = useState(false)
+
+  // Build virtual list items
+  const items = useMemo<ListItem[]>(() => {
+    const result: ListItem[] = []
+    let lastDate = 0
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i]
+      if (!isSameDay(msg.timestamp, lastDate)) {
+        result.push({ type: 'date', ts: msg.timestamp, key: `date-${msg.timestamp}` })
+        lastDate = msg.timestamp
+      }
+      result.push({
+        type: 'msg',
+        msg,
+        index: i,
+        key: msg.msg_id > 0 ? `msg-${msg.msg_id}` : `local-${msg.client_seq}`,
+      })
+    }
+    return result
+  }, [messages])
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 72,
+    overscan: 10,
+  })
 
   // Batch-fetch sender info
+  const fetchedSendersRef = useRef(new Set<string>())
   const [senderMap, setSenderMap] = useState<Record<string, { avatar?: string; isAgent: boolean }>>({})
   useEffect(() => {
     const ids = new Set<string>()
@@ -39,8 +68,9 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
     }
     const idsArr = Array.from(ids)
     if (idsArr.length === 0) return
-    const missing = idsArr.filter(id => !senderMap[id])
+    const missing = idsArr.filter(id => !fetchedSendersRef.current.has(id))
     if (missing.length === 0) return
+    missing.forEach(id => fetchedSendersRef.current.add(id))
     userService.batchGet(missing).then(users => {
       setSenderMap(prev => {
         const next = { ...prev }
@@ -54,10 +84,9 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
   }, [messages, currentUserId])
 
   const scrollToEnd = useCallback((smooth = false) => {
-    const el = scrollRef.current
-    if (!el) return
-    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'instant' })
-  }, [])
+    if (items.length === 0) return
+    virtualizer.scrollToIndex(items.length - 1, { align: 'end', behavior: smooth ? 'smooth' : 'auto' })
+  }, [virtualizer, items.length])
 
   const lastLoadMoreTime = useRef(0)
   const scrollBtnVisible = useRef(false)
@@ -74,7 +103,6 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
       loadMorePrevHeight.current = el.scrollHeight
       loadMoreState.current = 'pending'
       chatStore.loadMore(convId)
-      // Safety: reset to idle after 5s even if loadMore doesn't change messages
       setTimeout(() => {
         if (loadMoreState.current === 'pending') loadMoreState.current = 'idle'
       }, 5000)
@@ -97,7 +125,7 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
 
   // ResizeObserver — auto-scroll when content grows while user is at bottom
   useEffect(() => {
-    const el = contentRef.current
+    const el = scrollRef.current
     if (!el) return
     const ro = new ResizeObserver(() => {
       if (shouldAutoScroll.current) scrollToEnd()
@@ -107,13 +135,21 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
   }, [scrollToEnd])
 
   // Reset on conversation change
+  const virtualizerRef = useRef(virtualizer)
+  virtualizerRef.current = virtualizer
+  const itemsLenRef = useRef(0)
+  itemsLenRef.current = items.length
+  const msgsLenRef = useRef(0)
+  msgsLenRef.current = messages.length
   useLayoutEffect(() => {
     shouldAutoScroll.current = true
     initialScrollDone.current = false
     loadMoreState.current = 'idle'
-    scrollToEnd()
-    prevLen.current = messages.length
-    prevFirstId.current = messages[0]?.msg_id || 0
+    const lastIdx = itemsLenRef.current - 1
+    if (lastIdx >= 0) virtualizerRef.current.scrollToIndex(lastIdx, { align: 'end', behavior: 'auto' })
+    prevLen.current = msgsLenRef.current
+    // Use the current messages from the ref rather than closure
+    prevFirstId.current = 0
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         initialScrollDone.current = true
@@ -130,7 +166,7 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
 
     if (firstId > 0 && firstId !== prevFirstId.current && loadMoreState.current !== 'idle') {
       // Messages were prepended (loadMore completed).
-      // Adjust scroll position to keep visual content stable — no flicker.
+      // Adjust scroll position to keep visual content stable.
       const el = scrollRef.current
       if (el && loadMorePrevHeight.current > 0) {
         const heightDiff = el.scrollHeight - loadMorePrevHeight.current
@@ -140,7 +176,6 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
       }
       loadMoreState.current = 'idle'
     } else if (messages.length > prevLen.current && shouldAutoScroll.current) {
-      // New messages appended at the end
       scrollToEnd()
     }
 
@@ -148,64 +183,50 @@ export default function MessageList({ convId, messages, currentUserId, searchKey
     if (firstId > 0) prevFirstId.current = firstId
   })
 
-  // Scroll to current search match
-  useEffect(() => {
-    if (searchMatches && searchMatches.length > 0 && matchIndex !== undefined) {
-      const idx = searchMatches[matchIndex]
-      if (idx !== undefined && matchRefs.current[idx]) {
-        matchRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
-    }
-  }, [matchIndex, searchMatches])
-
-  const rows: React.ReactNode[] = []
-  let lastDate = 0
-  const lowerKeyword = searchKeyword?.toLowerCase() || ''
-
-  for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i]
-    if (!isSameDay(msg.timestamp, lastDate)) {
-      rows.push(<DateSeparator key={`date-${msg.timestamp}`} timestamp={msg.timestamp} />)
-      lastDate = msg.timestamp
-    }
-    const isMatch = searchMatches?.includes(i) ?? false
-    const isCurrentMatch = matchIndex !== undefined && searchMatches?.[matchIndex] === i
-    rows.push(
-      <div key={msg.msg_id > 0 ? `msg-${msg.msg_id}` : `local-${msg.client_seq}`}
-        id={`msg-${msg.msg_id}`}
-        ref={el => { matchRefs.current[i] = el }}
-        className="animate-msg-in"
-      >
-        <MemoBubble
-          message={msg}
-          isOwn={msg.sender_id === currentUserId}
-          isGrouped={false}
-          senderInfo={senderMap[msg.sender_id]}
-          highlight={lowerKeyword}
-          isSearchMatch={isMatch}
-          isCurrentSearchMatch={isCurrentMatch}
-        />
-      </div>
-    )
+  const handleScrollBtnClick = () => {
+    shouldAutoScroll.current = true
+    scrollToEnd(true)
   }
-
-  const [showScrollBtn, setShowScrollBtn] = useState(false)
 
   return (
     <div className="relative h-full">
-    <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4 py-2">
-      <div ref={contentRef}>
-        {rows}
+      <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4 py-2">
+        <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+          {virtualizer.getVirtualItems().map(virtualRow => {
+            const item = items[virtualRow.index]
+            if (item.type === 'date') {
+              return (
+                <div key={item.key} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 28, transform: `translateY(${virtualRow.start}px)` }}>
+                  <DateSeparator timestamp={item.ts} />
+                </div>
+              )
+            }
+            const msg = item.msg
+            return (
+              <div key={item.key}
+                id={`msg-${msg.msg_id}`}
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+                className="animate-msg-in"
+              >
+                <MemoBubble
+                  message={msg}
+                  isOwn={msg.sender_id === currentUserId}
+                  isGrouped={false}
+                  senderInfo={senderMap[msg.sender_id]}
+                />
+              </div>
+            )
+          })}
+        </div>
+        <div className="h-5" />
       </div>
-      <div className="h-5" />
-    </div>
-    {showScrollBtn && (
-      <button onClick={() => { shouldAutoScroll.current = true; scrollToEnd(true) }}
-        className="absolute bottom-3 right-6 w-8 h-8 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center hover:bg-[var(--color-surface-soft)] transition-all z-10"
-        style={{ boxShadow: 'var(--shadow-md)' }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
-    )}
+      {showScrollBtn && (
+        <button onClick={handleScrollBtnClick}
+          className="absolute bottom-3 right-6 w-8 h-8 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center hover:bg-[var(--color-surface-soft)] transition-all z-10"
+          style={{ boxShadow: 'var(--shadow-md)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      )}
     </div>
   )
 }
