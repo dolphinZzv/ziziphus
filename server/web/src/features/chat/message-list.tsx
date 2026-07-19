@@ -29,7 +29,7 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
   const loadMorePrevHeight = useRef(0)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
 
-  // Build virtual list items
+  // Build list items with date separators
   const items = useMemo<ListItem[]>(() => {
     const result: ListItem[] = []
     let lastDate = 0
@@ -54,11 +54,9 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
     getScrollElement: () => scrollRef.current,
     estimateSize: (i) => items[i]?.type === 'date' ? 28 : 72,
     overscan: 15,
-    paddingEnd: 20,
-    measureElement: (el) => el.scrollHeight,
   })
-  const virtualizerRef = useRef(virtualizer)
-  virtualizerRef.current = virtualizer
+
+  const virtualItems = virtualizer.getVirtualItems()
 
   // Batch-fetch sender info
   const fetchedSendersRef = useRef(new Set<string>())
@@ -112,14 +110,14 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
       }, 5000)
     }
 
-    // Auto-scroll hysteresis: easy to exit, hard to re-enter
+    // Auto-scroll hysteresis
     if (shouldAutoScroll.current) {
       if (distFromBottom > 100) shouldAutoScroll.current = false
     } else {
       if (distFromBottom < 5) shouldAutoScroll.current = true
     }
 
-    // Throttled scroll button
+    // Scroll button visibility
     const newBtnVisible = distFromBottom > 300
     if (newBtnVisible !== scrollBtnVisible.current) {
       scrollBtnVisible.current = newBtnVisible
@@ -127,7 +125,7 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
     }
   }, [convId])
 
-  // Resize observer — auto-scroll when content grows while user is at bottom
+  // ResizeObserver — auto-scroll when content grows while user is at bottom
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -139,30 +137,23 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
   }, [scrollToEnd])
 
   // Scroll to bottom on conversation change
-  const messagesRef = useRef(messages)
-  messagesRef.current = messages
-  const itemsRef = useRef(items)
-  itemsRef.current = items
+  const itemsLenRef = useRef(0)
+  itemsLenRef.current = items.length
   useLayoutEffect(() => {
     shouldAutoScroll.current = true
     initialScrollDone.current = false
     loadMoreState.current = 'idle'
-    const msgs = messagesRef.current
-    const itms = itemsRef.current
-    prevLen.current = msgs.length
-    prevFirstId.current = msgs[0]?.msg_id || 0
-
-    // Force virtualizer to re-measure on conversation switch
-    virtualizerRef.current.measure()
-
+    prevLen.current = messages.length
+    prevFirstId.current = messages[0]?.msg_id || 0
     requestAnimationFrame(() => {
-      if (itms.length > 0) {
-        virtualizerRef.current.scrollToIndex(itms.length - 1, { align: 'end', behavior: 'auto' })
+      if (itemsLenRef.current > 0) {
+        virtualizer.scrollToIndex(itemsLenRef.current - 1, { align: 'end', behavior: 'auto' })
       }
       requestAnimationFrame(() => {
         initialScrollDone.current = true
       })
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convId])
 
   // Handle message changes: prepend (loadMore) or append (new message)
@@ -195,11 +186,16 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
     scrollToEnd(true)
   }
 
+  const totalSize = virtualizer.getTotalSize()
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0]?.start ?? 0 : 0
+  const paddingBottom = totalSize - (virtualItems.length > 0 ? virtualItems[virtualItems.length - 1]?.end ?? 0 : 0)
+
   return (
     <div className="relative h-full">
       <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4">
-        <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
-          {virtualizer.getVirtualItems().map(virtualRow => {
+        {/* Virtual items flow naturally — padding handles positioning */}
+        <div style={{ paddingTop, paddingBottom }}>
+          {virtualItems.map(virtualRow => {
             const item = items[virtualRow.index]
             if (!item) return null
             if (item.type === 'date') {
@@ -207,7 +203,7 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
                 <div key={item.key}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: virtualRow.size, transform: `translateY(${virtualRow.start}px)`, overflow: 'visible' }}>
+                >
                   <DateSeparator timestamp={item.ts} />
                 </div>
               )
@@ -218,7 +214,6 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
                 id={`msg-${msg.msg_id}`}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: virtualRow.size, transform: `translateY(${virtualRow.start}px)`, overflow: 'visible' }}
                 className="animate-msg-in"
               >
                 <MemoBubble
