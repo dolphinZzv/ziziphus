@@ -124,7 +124,7 @@ window.close();
 	user, isNew, err := h.oauthSvc.FindOrCreateUser(r.Context(), info)
 	if err != nil {
 		logger.Error("oauth find or create user failed", "provider", provider, "error", err)
-		h.redirectError(w, r, "user_creation_failed")
+		h.redirectError(w, r, fmt.Sprintf("user_creation_failed: %s", err.Error()))
 		return
 	}
 
@@ -138,8 +138,8 @@ window.close();
 	fileToken, _ := h.authSvc.GenerateFileToken(r.Context(), user.ID)
 
 	base := h.frontendBase()
-	callbackURL := fmt.Sprintf("%s/oauth/callback?token=%s&refresh_token=%s&file_token=%s&user_id=%s&is_new=%t",
-		base, url.QueryEscape(accessToken), url.QueryEscape(refreshToken), url.QueryEscape(fileToken), url.QueryEscape(user.ID), isNew)
+	callbackURL := fmt.Sprintf("%s/oauth/callback?token=%s&refresh_token=%s&file_token=%s&user_id=%s&name=%s&is_new=%t",
+		base, url.QueryEscape(accessToken), url.QueryEscape(refreshToken), url.QueryEscape(fileToken), url.QueryEscape(user.ID), url.QueryEscape(user.Name), isNew)
 
 	http.Redirect(w, r, callbackURL, http.StatusFound)
 }
