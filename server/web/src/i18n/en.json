@@ -53,7 +53,11 @@
     "or": "or",
     "oauthGithub": "Sign in with GitHub",
     "oauthGoogle": "Sign in with Google",
-    "hasAccount": "Already have an account?"
+    "hasAccount": "Already have an account?",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "agreeTerms": "I agree to the",
+    "agreeRequired": "Please agree to the Privacy Policy and Terms of Service"
   },
   "chat": {
     "inputPlaceholder": "Type a message...",
@@ -299,7 +303,9 @@
     "deleteAccountConfirm": "Delete your account? This action cannot be undone. All data will be erased.",
     "deleteAccountConfirm2": "Confirm again: This will permanently delete all your contacts, messages, and conversations.",
     "headlinePlaceholder": "Headline",
-    "editTitle": "Edit Profile"
+    "editTitle": "Edit Profile",
+    "privacy": "Privacy",
+    "terms": "Terms"
   },
   "settings": {
     "title": "App Settings",
@@ -421,7 +427,8 @@
     "pin": "Pin",
     "unpin": "Unpin",
     "details": "Details",
-    "required": "Required"
+    "required": "Required",
+    "and": "and"
   },
   "time": {
     "justNow": "Just now",

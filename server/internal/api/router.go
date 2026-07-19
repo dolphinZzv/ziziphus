@@ -25,6 +25,8 @@ type Handlers struct {
 	OAuth        *OAuthHandler
 	Announcement http.HandlerFunc
 	AppInfo      http.HandlerFunc
+	Privacy      http.HandlerFunc
+	Terms        http.HandlerFunc
 	DB           *pgxpool.Pool
 	RDB          *redis.Client
 	LoginRL      *LoginRateLimiter
@@ -73,6 +75,8 @@ func NewRouter(h *Handlers, authMW func(http.Handler) http.Handler) *chi.Mux {
 	r.Post("/api/v1/users/password-reset/send-code", h.User.SendPasswordResetCode)
 	r.Post("/api/v1/users/password-reset/reset", h.User.ResetPassword)
 	r.Get("/api/v1/groups/card/{share_token}", h.Conversation.GetGroupCard)
+	r.Get("/privacy", h.Privacy)
+	r.Get("/terms", h.Terms)
 
 	// Authenticated routes
 	r.Group(func(r chi.Router) {

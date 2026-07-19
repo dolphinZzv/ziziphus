@@ -12,8 +12,6 @@ const ConversationsPage = lazy(() => import('@/features/conversation-list/conver
 const GroupCardPage = lazy(() => import('@/features/group/group-card-page'))
 const ChatView = lazy(() => import('@/features/chat/chat-view'))
 import OAuthCallback from '@/features/auth/oauth-callback'
-import PrivacyPage from '@/features/privacy/privacy-page'
-import TermsPage from '@/features/privacy/terms-page'
 
 const PageFallback = () => (
   <div className="h-full flex items-center justify-center text-sm text-[var(--color-muted)]">加载中...</div>
@@ -87,8 +85,6 @@ export default function App() {
         </Route>
         <Route path="/group-card/:shareToken" element={<Suspense fallback={<PageFallback />}><GroupCardPage /></Suspense>} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
         <Route path="*" element={<Navigate to="/conversations" replace />} />
         </Routes>
       </AppShell>

@@ -1,4 +1,3 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft } from 'lucide-react'
 
@@ -15,34 +14,34 @@ export default function TermsPage() {
           </a>
         </nav>
         <article className="prose prose-sm dark:prose-invert max-w-none">
-          <h1>Terms of Service</h1>
-          <p className="text-[var(--color-muted)]">Last updated: 2026-07-19</p>
+          <h1>{t('termsPage.title', 'Terms of Service')}</h1>
+          <p className="text-[var(--color-muted)]">{t('termsPage.lastUpdated', 'Last updated: 2026-07-19')}</p>
 
-          <h2>1. Acceptance of Terms</h2>
-          <p>By accessing or using this service, you agree to be bound by these Terms of Service. If you do not agree, do not use the service.</p>
+          <h2>{t('termsPage.section1Title', '1. Acceptance of Terms')}</h2>
+          <p>{t('termsPage.section1Body', 'By accessing or using this service...')}</p>
 
-          <h2>2. Description of Service</h2>
-          <p>This is a private messaging platform that allows users to communicate via text, files, and other media in one-on-one and group conversations.</p>
+          <h2>{t('termsPage.section2Title', '2. Description of Service')}</h2>
+          <p>{t('termsPage.section2Body', 'This is a private messaging platform...')}</p>
 
-          <h2>3. User Responsibilities</h2>
+          <h2>{t('termsPage.section3Title', '3. User Responsibilities')}</h2>
           <ul>
-            <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
-            <li>You may not use the service for any illegal or unauthorized purpose.</li>
-            <li>You may not transmit malware, viruses, or any harmful code.</li>
-            <li>You may not harass, abuse, or harm other users.</li>
+            <li>{t('termsPage.section3Item1', 'Account confidentiality')}</li>
+            <li>{t('termsPage.section3Item2', 'No illegal use')}</li>
+            <li>{t('termsPage.section3Item3', 'No malware')}</li>
+            <li>{t('termsPage.section3Item4', 'No harassment')}</li>
           </ul>
 
-          <h2>4. Account Termination</h2>
-          <p>We reserve the right to suspend or terminate accounts for violations of these terms. You may delete your account at any time, which will remove your data from the service.</p>
+          <h2>{t('termsPage.section4Title', '4. Account Termination')}</h2>
+          <p>{t('termsPage.section4Body', 'We reserve the right to suspend or terminate accounts...')}</p>
 
-          <h2>5. Disclaimer</h2>
-          <p>This service is provided "as is" without warranty of any kind. We are not responsible for any damages arising from the use or inability to use the service.</p>
+          <h2>{t('termsPage.section5Title', '5. Disclaimer')}</h2>
+          <p>{t('termsPage.section5Body', 'This service is provided as is...')}</p>
 
-          <h2>6. Changes to Terms</h2>
-          <p>We may update these terms at any time. Continued use of the service after changes constitutes acceptance of the new terms.</p>
+          <h2>{t('termsPage.section6Title', '6. Changes to Terms')}</h2>
+          <p>{t('termsPage.section6Body', 'We may update these terms at any time...')}</p>
 
-          <h2>7. Governing Law</h2>
-          <p>These terms shall be governed by applicable law. Any disputes shall be resolved in the competent courts.</p>
+          <h2>{t('termsPage.section7Title', '7. Governing Law')}</h2>
+          <p>{t('termsPage.section7Body', 'These terms shall be governed by applicable law...')}</p>
         </article>
       </div>
     </div>

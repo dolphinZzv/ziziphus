@@ -53,7 +53,11 @@
     "or": "或",
     "oauthGithub": "使用 GitHub 登录",
     "oauthGoogle": "使用 Google 登录",
-    "hasAccount": "已有账号？"
+    "hasAccount": "已有账号？",
+    "privacy": "隐私政策",
+    "terms": "服务条款",
+    "agreeTerms": "我同意",
+    "agreeRequired": "请同意隐私政策和服务条款"
   },
   "chat": {
     "inputPlaceholder": "输入消息...",
@@ -299,7 +303,9 @@
     "deleteAccountConfirm": "确定注销账号？此操作不可恢复，所有数据将被清除。",
     "deleteAccountConfirm2": "再次确认：注销后将清除你的联系人、消息记录、会话等所有信息。",
     "headlinePlaceholder": "个性签名",
-    "editTitle": "编辑资料"
+    "editTitle": "编辑资料",
+    "privacy": "隐私政策",
+    "terms": "服务条款"
   },
   "settings": {
     "title": "应用设置",
@@ -421,7 +427,8 @@
     "pin": "置顶",
     "unpin": "取消置顶",
     "details": "详情",
-    "required": "请填写"
+    "required": "请填写",
+    "and": "和"
   },
   "time": {
     "justNow": "刚刚",

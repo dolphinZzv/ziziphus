@@ -1,0 +1,28 @@
+Privacy Policy
+
+Last updated: 2026-07-19
+
+1. Information We Collect
+We collect information you provide when creating an account (name, email, avatar) and messages, files, and other content you send through the service. We also collect basic connection metadata (IP address, device type, session timestamps) for operational purposes.
+
+2. How We Use Your Data
+Your data is used solely to provide the messaging service: delivering messages, storing conversation history, managing contacts, and maintaining your account. We do not sell, rent, or share your personal data with third parties for their own purposes.
+
+3. Data Storage and Security
+All data is encrypted in transit (TLS) and stored with industry-standard security measures. Passwords are hashed using bcrypt. You can enable two-factor authentication (TOTP or email OTP) for additional account security.
+
+4. Your Rights
+You have the right to:
+- Access your data — view your profile, messages, and contacts at any time
+- Export your data — download all your information in a portable format
+- Delete your account — permanently remove your data from the service
+- Correct your information — update your profile details
+
+5. Data Retention
+We retain your data for as long as your account is active. When you delete your account, all associated data is permanently removed within a reasonable period.
+
+6. Third-Party Services
+We use OAuth providers (GitHub, Google) solely for authentication. No message content or personal data is shared with these providers. You can disable or unlink these connections at any time.
+
+7. Contact
+For privacy-related inquiries, please contact the server administrator.

@@ -1,0 +1,22 @@
+{
+  "title": "Privacy Policy",
+  "lastUpdated": "Last updated: 2026-07-19",
+  "section1Title": "1. Information We Collect",
+  "section1Body": "We collect information you provide when creating an account (name, email, avatar) and messages, files, and other content you send through the service. We also collect basic connection metadata (IP address, device type, session timestamps) for operational purposes.",
+  "section2Title": "2. How We Use Your Data",
+  "section2Body": "Your data is used solely to provide the messaging service: delivering messages, storing conversation history, managing contacts, and maintaining your account. We do not sell, rent, or share your personal data with third parties for their own purposes.",
+  "section3Title": "3. Data Storage and Security",
+  "section3Body": "All data is encrypted in transit (TLS) and stored with industry-standard security measures. Passwords are hashed using bcrypt. You can enable two-factor authentication (TOTP or email OTP) for additional account security.",
+  "section4Title": "4. Your Rights",
+  "section4Intro": "You have the right to:",
+  "section4Item1": "Access your data — view your profile, messages, and contacts at any time",
+  "section4Item2": "Export your data — download all your information in a portable format",
+  "section4Item3": "Delete your account — permanently remove your data from the service",
+  "section4Item4": "Correct your information — update your profile details",
+  "section5Title": "5. Data Retention",
+  "section5Body": "We retain your data for as long as your account is active. When you delete your account, all associated data is permanently removed within a reasonable period.",
+  "section6Title": "6. Third-Party Services",
+  "section6Body": "We use OAuth providers (GitHub, Google) solely for authentication. No message content or personal data is shared with these providers. You can disable or unlink these connections at any time.",
+  "section7Title": "7. Contact",
+  "section7Body": "For privacy-related inquiries, please contact the server administrator."
+}

@@ -242,6 +242,8 @@ func main() {
 		OAuth:        oauthHandler,
 		Announcement: api.Announcement(cfgMgr),
 		AppInfo:      api.AppInfo(cfgMgr),
+		Privacy:      api.PrivacyPage(),
+		Terms:        api.TermsPage(),
 		DB:           pool,
 		RDB:          rdb,
 		LoginRL:      loginRL,
