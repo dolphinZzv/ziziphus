@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { authStore } from '@/stores/auth-store'
+import { wsClient } from '@/services/websocket-client'
 import { Loader } from 'lucide-react'
 
 export default function OAuthCallback() {
@@ -37,6 +38,7 @@ export default function OAuthCallback() {
         .then(data => {
           if (data.user_id) {
             authStore.setAuth(data, token, refreshToken, '', fileToken || '')
+            wsClient.connect(token)
             navigate('/conversations', { replace: true })
           } else {
             throw new Error('Invalid user data')
@@ -64,6 +66,7 @@ export default function OAuthCallback() {
             '',
             fileToken || ''
           )
+          wsClient.connect(token)
           navigate('/conversations', { replace: true })
         })
     } else {
