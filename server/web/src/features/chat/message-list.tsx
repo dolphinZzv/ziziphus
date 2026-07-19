@@ -55,7 +55,7 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
     estimateSize: (i) => items[i]?.type === 'date' ? 28 : 72,
     overscan: 15,
     paddingEnd: 20,
-    measureElement: (el) => el.getBoundingClientRect().height,
+    measureElement: (el) => el.scrollHeight,
   })
   const virtualizerRef = useRef(virtualizer)
   virtualizerRef.current = virtualizer
@@ -207,7 +207,7 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
                 <div key={item.key}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}>
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: virtualRow.size, transform: `translateY(${virtualRow.start}px)`, overflow: 'visible' }}>
                   <DateSeparator timestamp={item.ts} />
                 </div>
               )
@@ -218,8 +218,8 @@ export default function MessageList({ convId, messages, currentUserId }: Props) 
                 id={`msg-${msg.msg_id}`}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
-                className="py-1 animate-msg-in"
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: virtualRow.size, transform: `translateY(${virtualRow.start}px)`, overflow: 'visible' }}
+                className="animate-msg-in"
               >
                 <MemoBubble
                   message={msg}
